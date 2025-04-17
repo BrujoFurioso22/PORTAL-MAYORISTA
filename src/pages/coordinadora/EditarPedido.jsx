@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { pedidosMock } from "../../mock/coordinadora/pedidos";
+import { pedidosMock } from "../../mock/coordinadora/pedidosMock";
 import { FaArrowLeft, FaSave, FaTimes, FaPlus, FaTrash, FaExclamationTriangle } from "react-icons/fa";
 
 // Estilos
