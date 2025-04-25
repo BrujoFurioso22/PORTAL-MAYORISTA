@@ -16,6 +16,7 @@ import {
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import { useAppTheme } from "../../context/AppThemeContext";
+import { ROUTES } from "../../constants/routes";
 
 // Estilos
 const PageContainer = styled.div`
@@ -725,7 +726,7 @@ const DetallePedidoCoordinador = () => {
   if (loading) {
     return (
       <PageContainer>
-        <BackButton onClick={() => navigate("/coordinador/pedidos")}>
+        <BackButton onClick={() => navigate(ROUTES.COORDINADOR.PEDIDOS)}>
           <FaArrowLeft /> Volver a la lista de pedidos
         </BackButton>
         <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -738,7 +739,7 @@ const DetallePedidoCoordinador = () => {
   if (!order) {
     return (
       <PageContainer>
-        <BackButton onClick={() => navigate("/coordinador/pedidos")}>
+        <BackButton onClick={() => navigate(ROUTES.COORDINADOR.PEDIDOS)}>
           <FaArrowLeft /> Volver a la lista de pedidos
         </BackButton>
         <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -750,7 +751,7 @@ const DetallePedidoCoordinador = () => {
 
   return (
     <PageContainer>
-      <BackButton onClick={() => navigate("/coordinador/pedidos")}>
+      <BackButton onClick={() => navigate(ROUTES.COORDINADOR.PEDIDOS)}>
         <FaArrowLeft /> Volver a la lista de pedidos
       </BackButton>
 

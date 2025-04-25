@@ -44,7 +44,7 @@ const MOCK_USERS = {
       NOMBRE_USUARIO: "Juan Cliente",
       ROLES: ["CLIENT"],
       EMAIL: "juan@example.com",
-      BUSSINES_ACCESS: [],
+      BUSSINES_ACCESS: ["maxximundo", "autollanta"],
     },
   },
 };
@@ -96,7 +96,7 @@ export function AuthProvider({ children }) {
 
   // ========== FUNCIONES REDIRECCIONAMIENTO ==========
 
-  const getHomeRouteByRole = () => {
+  const getHomeRouteByRole = (user) => {
     if (!user) return ROUTES.PUBLIC.LOGIN;
 
     if (user.ROLES.includes(ROLES.COORDINADOR)) {
@@ -108,8 +108,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const navigateToHomeByRole = () => {
-    const homeRoute = getHomeRouteByRole();
+  const navigateToHomeByRole = (userV) => {
+    let userData = userV || user;
+    const homeRoute = getHomeRouteByRole(userData);
     navigate(homeRoute);
   };
 
@@ -136,7 +137,8 @@ export function AuthProvider({ children }) {
         toast.success("Inicio de sesión exitoso");
 
         // Redireccionar según el rol del usuario
-        let redirectPath = getHomeRouteByRole();
+        let redirectPath = getHomeRouteByRole(userData);
+        console.log(redirectPath);
 
         // Pequeño retraso antes de navegar para permitir que el estado se actualice
         setTimeout(() => navigate(redirectPath), 100);

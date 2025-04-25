@@ -54,7 +54,7 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 const App = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, navigateToHomeByRole } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isEcommercePage = true; // Temporalmente true para todas las páginas
@@ -103,7 +103,7 @@ const App = () => {
             path={ROUTES.PUBLIC.LOGIN}
             element={
               isAuthenticated ? (
-                <Navigate to={ROUTES.ECOMMERCE.HOME} />
+                <Navigate to={navigateToHomeByRole} />
               ) : (
                 <Login />
               )
@@ -113,7 +113,7 @@ const App = () => {
             path={ROUTES.AUTH.REGISTER}
             element={
               isAuthenticated ? (
-                <Navigate to={ROUTES.ECOMMERCE.HOME} />
+                <Navigate to={navigateToHomeByRole} />
               ) : (
                 <Register />
               )
@@ -123,7 +123,7 @@ const App = () => {
             path={ROUTES.AUTH.FORGOT_PASSWORD}
             element={
               isAuthenticated ? (
-                <Navigate to={ROUTES.ECOMMERCE.HOME} />
+                <Navigate to={navigateToHomeByRole} />
               ) : (
                 <ForgotPassword />
               )
@@ -140,7 +140,12 @@ const App = () => {
               <Route
                 key={`ecommerce-${idx}`}
                 path={route.path}
-                element={route.element}
+                element={
+                  <ProtectedRoute
+                    allowedRoles={route.allowedRoles}
+                    element={route.element}
+                  />
+                }
                 index={route.path === "/"}
               />
             ))}

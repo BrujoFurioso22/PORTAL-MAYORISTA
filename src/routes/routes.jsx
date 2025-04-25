@@ -24,34 +24,42 @@ export const ecommerceRoutes = [
     path: ROUTES.ECOMMERCE.HOME,
     element: <Home />,
     exact: true,
+    allowedRoles: [ROLES.CLIENTE],
   },
   {
     path: ROUTES.ECOMMERCE.CATALOGO,
     element: <Catalogo />,
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
   },
   {
     path: ROUTES.ECOMMERCE.DETALLE_PRODUCTO,
     element: <DetalleProducto />,
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
   },
   {
     path: ROUTES.ECOMMERCE.CARRITO,
     element: <Carrito />,
+    allowedRoles: [ROLES.CLIENTE],
   },
   {
     path: ROUTES.ECOMMERCE.MIS_PEDIDOS,
     element: <MisPedidos />,
+    allowedRoles: [ROLES.CLIENTE],
   },
   {
     path: ROUTES.ECOMMERCE.DETALLE_PEDIDO,
     element: <DetallePedido />,
+    allowedRoles: [ROLES.CLIENTE],
   },
   {
     path: ROUTES.ECOMMERCE.PERFIL,
     element: <Perfil />,
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
   },
   {
     path: ROUTES.ECOMMERCE.SEARCH,
     element: <SearchResults />,
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
   },
 ];
 
@@ -70,7 +78,7 @@ export const adminRoutes = [
 export const coordinadorRoutes = [
   {
     path: ROUTES.COORDINADOR.PEDIDOS,
-    element: <ListaPedidos/>, // Reemplazar con el componente adecuado
+    element: <ListaPedidos />, // Reemplazar con el componente adecuado
     allowedRoles: [ROLES.COORDINADOR],
     exact: true,
   },
@@ -90,7 +98,7 @@ export const coordinadorRoutes = [
 export const publicRoutes = [
   {
     path: ROUTES.PUBLIC.LOGIN,
-    element: <Login />, 
+    element: <Login />,
     exact: true,
   },
   {

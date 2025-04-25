@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { pedidosMock } from "../../mock/coordinadora/pedidosMock";
 import { FaArrowLeft, FaSave, FaTimes, FaPlus, FaTrash, FaExclamationTriangle } from "react-icons/fa";
+import { ROUTES } from "../../constants/routes";
 
 // Estilos
 const PageContainer = styled.div`
@@ -435,7 +436,7 @@ const EditarPedidoCoordinador = () => {
   if (!pedido) {
     return (
       <PageContainer>
-        <BackButton onClick={() => navigate("/coordinador/pedidos")}>
+        <BackButton onClick={() => navigate(ROUTES.COORDINADOR.PEDIDOS)}>
           <FaArrowLeft /> Volver a pedidos
         </BackButton>
         <div>Pedido no encontrado</div>
