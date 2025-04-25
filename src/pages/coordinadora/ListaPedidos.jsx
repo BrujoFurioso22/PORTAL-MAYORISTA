@@ -471,7 +471,7 @@ const ListaPedidos = () => {
   
   // Manejar clic en ver detalle
   const handleViewDetail = (orderId) => {
-    navigate(`/coordinadora/pedidos/${orderId}`);
+    navigate(`/coordinador/pedidos/${orderId}`);
   };
   
   // Confirmar dirección nueva
@@ -660,7 +660,7 @@ const ListaPedidos = () => {
           </NoDataMessage>
           <Button 
             text="Limpiar filtros" 
-            variant="outline" 
+            variant="outlined" 
             onClick={() => {
               setStatusFilter('todos');
               setEmpresaFilter('todas');

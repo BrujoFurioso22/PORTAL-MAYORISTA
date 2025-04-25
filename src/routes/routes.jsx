@@ -13,6 +13,7 @@ import DetallePedido from "../pages/compras/DetallePedido";
 import Perfil from "../pages/usuario/Perfil";
 import SearchResults from "../pages/busqueda/SearchResults";
 import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
 import ListaPedidos from "../pages/coordinadora/ListaPedidos";
 import DetallePedidoCoordinador from "../pages/coordinadora/DetallePedido";
 import EditarPedidoCoordinador from "../pages/coordinadora/EditarPedido";
@@ -90,6 +91,11 @@ export const publicRoutes = [
   {
     path: ROUTES.PUBLIC.LOGIN,
     element: <Login />, 
+    exact: true,
+  },
+  {
+    path: ROUTES.PUBLIC.REGISTER,
+    element: <Register />,
     exact: true,
   },
   {

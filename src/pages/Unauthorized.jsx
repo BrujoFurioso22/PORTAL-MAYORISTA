@@ -1,10 +1,13 @@
 import React from "react";
 import FlexBoxComponent from "../components/common/FlexBox";
 import Button from "../components/ui/Button";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Unauthorized = () => {
-  const navigate = useNavigate();
+  const { navigateToHomeByRole } = useAuth();
+  const handleClick = () => {
+    navigateToHomeByRole();
+  };
   return (
     <FlexBoxComponent
       flexDirection="column"
@@ -15,7 +18,7 @@ const Unauthorized = () => {
       <FlexBoxComponent justifyContent="center">
         No dispone de permisos para ingresar en esta seccion
       </FlexBoxComponent>
-      <Button onClick={() => navigate("/")} text={"Regresar"} />
+      <Button onClick={handleClick} text={"Regresar"} />
     </FlexBoxComponent>
   );
 };

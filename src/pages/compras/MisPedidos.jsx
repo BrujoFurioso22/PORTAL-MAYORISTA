@@ -384,7 +384,7 @@ const MisPedidos = () => {
                     <TableCell>
                       <Button 
                         text="Ver detalle"
-                        variant="outline"
+                        variant="outlined"
                         size="small"
                         onClick={() => handleViewDetails(order.id)}
                       />
@@ -430,7 +430,7 @@ const MisPedidos = () => {
           {statusFilter !== 'todos' || dateFilter !== 'todos' || searchTerm ? (
             <Button 
               text="Limpiar filtros" 
-              variant="outline"
+              variant="outlined"
               onClick={() => {
                 setStatusFilter('todos');
                 setDateFilter('todos');

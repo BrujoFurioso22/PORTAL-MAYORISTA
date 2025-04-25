@@ -6,6 +6,7 @@ import { useCart } from "../../context/CartContext";
 import Button from "../../components/ui/Button";
 import { productosPorEmpresa } from "../../mock/products";
 import { useAppTheme } from "../../context/AppThemeContext";
+import { useAuth } from "../../context/AuthContext";
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -256,10 +257,15 @@ const DetalleProducto = () => {
   const { id } = useParams();
   const { theme } = useAppTheme();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { navigateToHomeByRole } = useAuth();
+  const { addToCart, isAdminOrCoord } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [product, setProduct] = useState(null);
   const [empresaId, setEmpresaId] = useState(null);
+
+  const handleNavigate = () => {
+    navigateToHomeByRole();
+  };
 
   useEffect(() => {
     // Buscar el producto en todas las empresas
@@ -287,7 +293,7 @@ const DetalleProducto = () => {
       setEmpresaId(foundEmpresaId);
     } else {
       console.log("Producto no encontrado, redirigiendo al home");
-      navigate("/");
+      handleNavigate();
     }
   }, [id, navigate]);
 
@@ -299,7 +305,7 @@ const DetalleProducto = () => {
     if (empresaId) {
       navigate(`/catalogo/${empresaId}`);
     } else {
-      navigate("/");
+      handleNavigate();
     }
   };
 
@@ -365,28 +371,32 @@ const DetalleProducto = () => {
             </StockText>
           </Stock>
 
-          <QuantitySelector>
-            <QuantityButton onClick={decreaseQuantity}>-</QuantityButton>
-            <QuantityInput
-              type="number"
-              min="1"
-              value={quantity}
-              onChange={handleQuantityChange}
-            />
-            <QuantityButton onClick={increaseQuantity}>+</QuantityButton>
-          </QuantitySelector>
+          {!isAdminOrCoord && (
+            <QuantitySelector>
+              <QuantityButton onClick={decreaseQuantity}>-</QuantityButton>
+              <QuantityInput
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={handleQuantityChange}
+              />
+              <QuantityButton onClick={increaseQuantity}>+</QuantityButton>
+            </QuantitySelector>
+          )}
 
-          <ButtonsContainer>
-            <Button
-              text="Agregar al carrito"
-              variant="solid"
-              onClick={handleAddToCart}
-              disabled={product.stock <= 0}
-              backgroundColor={theme.colors.primary} // O cualquier otro color del tema que prefieras
-              size="large"
-              style={{ flex: 1 }}
-            />
-          </ButtonsContainer>
+          {!isAdminOrCoord && (
+            <ButtonsContainer>
+              <Button
+                text="Agregar al carrito"
+                variant="solid"
+                onClick={handleAddToCart}
+                disabled={product.stock <= 0}
+                backgroundColor={theme.colors.primary} // O cualquier otro color del tema que prefieras
+                size="large"
+                style={{ flex: 1 }}
+              />
+            </ButtonsContainer>
+          )}
         </InfoSection>
       </ProductLayout>
     </PageContainer>

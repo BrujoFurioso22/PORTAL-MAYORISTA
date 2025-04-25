@@ -21,6 +21,8 @@ import CleanLayout from "./components/layout/CleanLayout";
 import Login from "./pages/auth/Login";
 import NotFound from "./pages/NotFound";
 import { ROUTES } from "./constants/routes";
+import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 
 const GlobalStyle = createGlobalStyle`
   *, *::before, *::after {
@@ -107,6 +109,26 @@ const App = () => {
               )
             }
           />
+          <Route
+            path={ROUTES.AUTH.REGISTER}
+            element={
+              isAuthenticated ? (
+                <Navigate to={ROUTES.ECOMMERCE.HOME} />
+              ) : (
+                <Register />
+              )
+            }
+          />
+          <Route
+            path={ROUTES.AUTH.FORGOT_PASSWORD}
+            element={
+              isAuthenticated ? (
+                <Navigate to={ROUTES.ECOMMERCE.HOME} />
+              ) : (
+                <ForgotPassword />
+              )
+            }
+          />
           <Route path={ROUTES.PUBLIC.NOT_FOUND} element={<NotFound />} />
         </Route>
 
@@ -167,7 +189,7 @@ const App = () => {
             />
           </Route>
         ) : (
-          <Route path="*" element={<Navigate to={ROUTES.PUBLIC.NOT_FOUND} />} />
+          <Route path="*" element={<Navigate to={ROUTES.PUBLIC.LOGIN} />} />
         )}
       </Routes>
 

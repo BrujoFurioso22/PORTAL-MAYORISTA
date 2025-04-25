@@ -13,6 +13,8 @@ import {
   FaSignOutAlt,
   FaHistory,
 } from "react-icons/fa";
+import { ROLES } from "../../constants/roles";
+import { ROUTES } from "../../constants/routes";
 
 const HeaderContainer = styled.header`
   width: 100%;
@@ -153,7 +155,7 @@ const UserGreeting = styled.div`
 
 export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
   const { user, logout } = useAuth();
-  const { itemCount } = useCart();
+  const { itemCount, isAdminOrCoord } = useCart();
   const { theme, isDarkMode, toggleTheme } = useAppTheme();
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -173,7 +175,15 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
   };
 
   const handleGoToHome = () => {
-    navigate("/");
+    let redirectPath = ROUTES.ECOMMERCE.HOME;
+    if (user.ROLES.includes(ROLES.COORDINADOR)) {
+      redirectPath = ROUTES.COORDINADOR.PEDIDOS;
+    } else if (user.ROLES.includes(ROLES.ADMIN)) {
+      redirectPath = ROUTES.ADMIN.USER_ADMIN;
+    } else if (user.ROLES.includes(ROLES.CLIENTE)) {
+      redirectPath = ROUTES.ECOMMERCE.HOME;
+    }
+    navigate(redirectPath);
   };
 
   const toggleUserMenu = () => {
@@ -206,7 +216,7 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
           <Button
             leftIconName={"Menu"}
             onClick={onToggleSidebar}
-            variant="outline"
+            variant="outlined"
             size="small"
             color={theme.colors.white}
             style={{ border: `solid 1px ${theme.colors.white}` }}
@@ -231,10 +241,12 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
       <FlexBoxComponent width="auto" alignItems="center">
         <UserGreeting>Hola, {user?.NOMBRE_USUARIO}</UserGreeting>
 
-        <IconButton onClick={handleGoToCart}>
-          <FaShoppingCart />
-          {itemCount > 0 && <CartCount>{itemCount}</CartCount>}
-        </IconButton>
+        {!isAdminOrCoord && (
+          <IconButton onClick={handleGoToCart}>
+            <FaShoppingCart />
+            {itemCount > 0 && <CartCount>{itemCount}</CartCount>}
+          </IconButton>
+        )}
 
         <UserMenu>
           <IconButton onClick={toggleUserMenu}>
@@ -246,10 +258,14 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
               <FaUser />
               Perfil
             </UserMenuItem>
-            <UserMenuItem onClick={handleOrderHistory}>
-              <FaHistory />
-              Mis Pedidos
-            </UserMenuItem>
+
+            {!isAdminOrCoord && (
+              <UserMenuItem onClick={handleOrderHistory}>
+                <FaHistory />
+                Mis Pedidos
+              </UserMenuItem>
+            )}
+
             <UserMenuItem onClick={toggleTheme}>
               {isDarkMode ? "☀️" : "🌙"}
               Cambiar a tema {isDarkMode ? "claro" : "oscuro"}

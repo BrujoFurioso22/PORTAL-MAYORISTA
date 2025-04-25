@@ -175,7 +175,7 @@ const SecondaryButton = styled.button`
 
 const Catalogo = () => {
   const { empresaId } = useParams();
-  const { user } = useAuth();
+  const { user, navigateToHomeByRole } = useAuth();
   const navigate = useNavigate();
 
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -197,13 +197,17 @@ const Catalogo = () => {
   const userAccess = user?.BUSSINES_ACCESS || [];
   const hasAccess = userAccess.includes(empresaId);
 
+  const handleNavigate = () => {
+    navigateToHomeByRole();
+  };
+
   // Verificar primero si la empresa existe antes de hacer cualquier otra lógica
   if (!empresaInfo) {
     return (
       <NoAccessContainer>
         <h2>Empresa no encontrada</h2>
         <p>La empresa que estás buscando no existe en nuestro sistema.</p>
-        <Button onClick={() => navigate("/")}>Volver al inicio</Button>
+        <Button onClick={handleNavigate}>Volver al inicio</Button>
       </NoAccessContainer>
     );
   }
@@ -281,7 +285,7 @@ const Catalogo = () => {
 
     setFilteredProducts(result);
   };
-  
+
   const handleSort = (e) => {
     const option = e.target.value;
     setSortOption(option);
@@ -322,7 +326,7 @@ const Catalogo = () => {
     // Aquí iría el código para enviar la solicitud de acceso
     // Por ahora solo mostraremos un toast
     toast.success("Solicitud enviada correctamente");
-    navigate("/");
+    handleNavigate();
   };
 
   if (!empresaInfo) {
@@ -330,7 +334,7 @@ const Catalogo = () => {
       <NoAccessContainer>
         <h2>Empresa no encontrada</h2>
         <p>La empresa que estás buscando no existe en nuestro sistema.</p>
-        <Button onClick={() => navigate("/")}>Volver al inicio</Button>
+        <Button onClick={handleNavigate}>Volver al inicio</Button>
       </NoAccessContainer>
     );
   }
@@ -384,7 +388,7 @@ const Catalogo = () => {
             </FormGroup>
 
             <ButtonGroup>
-              <SecondaryButton type="button" onClick={() => navigate("/")}>
+              <SecondaryButton type="button" onClick={handleNavigate}>
                 Regresar
               </SecondaryButton>
               <Button type="submit">Enviar solicitud</Button>
@@ -398,7 +402,7 @@ const Catalogo = () => {
   return (
     <PageContainer>
       <BreadCrumb>
-        <BreadCrumbLink onClick={() => navigate("/")}>Inicio</BreadCrumbLink>
+        <BreadCrumbLink onClick={handleNavigate}>Inicio</BreadCrumbLink>
         {">"}
         <span>{empresaInfo.nombre}</span>
       </BreadCrumb>

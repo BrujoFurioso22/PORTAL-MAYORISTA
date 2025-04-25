@@ -30,14 +30,14 @@ const ButtonStyled = styled.button`
   width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "auto")};
   height: max-content;
   border: ${({ $variant, theme }) =>
-    $variant === "outline" ? `solid 1px ${theme.colors.primary}` : "none"};
+    $variant === "outlined" ? `solid 1px ${theme.colors.primary}` : "none"};
   outline: none;
 
   background: ${({ $backgroundColor, $variant, theme }) =>
     $backgroundColor ||
     ($variant === "solid"
       ? theme.colors.primary
-      : $variant === "outline"
+      : $variant === "outlined"
       ? "transparent"
       : theme.colors.secondary)};
 

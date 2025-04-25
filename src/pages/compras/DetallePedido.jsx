@@ -485,7 +485,7 @@ const DetallePedido = () => {
           {canCancel && (
             <Button
               text="Cancelar pedido"
-              variant="outline"
+              variant="outlined"
               onClick={handleCancelOrder}
             />
           )}

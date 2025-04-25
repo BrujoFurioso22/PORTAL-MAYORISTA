@@ -1,12 +1,13 @@
 export const ROUTES = {
   AUTH: {
     LOGIN: "/auth/login",
+    REGISTER: "/auth/register",
+    FORGOT_PASSWORD: "/auth/forgot-password",
   },
   ADMIN: {
     USER_ADMIN: "/admin/user-admin",
   },
   COORDINADOR: {
-    HOME: "/coordinador",
     PEDIDOS: "/coordinador/pedidos",
     DETALLE_PEDIDO: "/coordinador/pedidos/:orderId",
     EDITAR_PEDIDO: "/coordinador/pedidos/:orderId/editar",

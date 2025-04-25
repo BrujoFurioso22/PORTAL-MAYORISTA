@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useAuth } from "./AuthContext";
+import { ROLES } from "../constants/roles";
 
 const CartContext = createContext();
 
@@ -14,6 +16,15 @@ export function CartProvider({ children }) {
   });
 
   const [cartTotal, setCartTotal] = useState(0);
+  const { user } = useAuth(); // Obtener el usuario actual
+
+  // Verificar si el usuario es admin o coordinadora
+  const isAdminOrCoord = () => {
+    if (!user || !user.ROLES) return false;
+    return (
+      user.ROLES.includes(ROLES.ADMIN) || user.ROLES.includes(ROLES.COORDINADOR)
+    );
+  };
 
   useEffect(() => {
     // Guardar carrito en localStorage cada vez que cambia
@@ -28,29 +39,46 @@ export function CartProvider({ children }) {
     setCartTotal(total);
   }, [cart]);
 
-  // Agregar producto al carrito
+  // Agregar producto al carrito con verificación de rol
   const addToCart = (product, quantity = 1) => {
-    // Añade un log para depuración
-    console.log('CartContext - Añadiendo:', product.id, 'cantidad:', quantity);
-    
-    setCart(prevCart => {
+    // Si el usuario es admin o coordinadora, no permitir añadir al carrito
+    if (isAdminOrCoord()) {
+      console.warn(
+        "Administradores y coordinadores no pueden realizar compras"
+      );
+      return {
+        success: false,
+        message: "Tu rol no permite realizar compras en el sistema",
+      };
+    }
+
+    console.log("CartContext - Añadiendo:", product.id, "cantidad:", quantity);
+
+    setCart((prevCart) => {
       // Buscar si el producto ya está en el carrito
-      const existingProductIndex = prevCart.findIndex(item => item.id === product.id);
-      
+      const existingProductIndex = prevCart.findIndex(
+        (item) => item.id === product.id
+      );
+
       if (existingProductIndex >= 0) {
         // Si el producto ya existe, crear una nueva copia del carrito
         const updatedCart = [...prevCart];
         // Actualizar solo la cantidad del producto existente
         updatedCart[existingProductIndex] = {
           ...updatedCart[existingProductIndex],
-          quantity: updatedCart[existingProductIndex].quantity + quantity
+          quantity: updatedCart[existingProductIndex].quantity + quantity,
         };
         return updatedCart;
       } else {
         // Si es un producto nuevo, añadirlo al carrito
-        return [...prevCart, {...product, quantity}];
+        return [...prevCart, { ...product, quantity }];
       }
     });
+
+    return {
+      success: true,
+      message: "Producto añadido al carrito",
+    };
   };
 
   // Eliminar producto del carrito
@@ -82,6 +110,7 @@ export function CartProvider({ children }) {
     updateQuantity,
     clearCart,
     itemCount: cart.reduce((count, item) => count + item.quantity, 0),
+    isAdminOrCoord: isAdminOrCoord(), // Exportar esta función para usar en componentes
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

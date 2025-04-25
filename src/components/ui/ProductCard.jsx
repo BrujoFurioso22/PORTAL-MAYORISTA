@@ -20,6 +20,7 @@ const StyledCard = styled.div`
   flex-direction: column;
 
   &:hover {
+    cursor: pointer;
     box-shadow: 0 4px 12px ${(props) => props.theme.colors.shadow};
   }
 `;
@@ -216,7 +217,7 @@ const renderSpecs = (product) => {
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, isAdminOrCoord } = useCart();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const discountedPrice = product.discount
@@ -250,8 +251,8 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <StyledCard>
-      <ImageContainer onClick={handleViewDetails}>
+    <StyledCard onClick={handleViewDetails}>
+      <ImageContainer>
         <ProductImage src={product.image} alt={product.name} />
         {product.discount > 0 && (
           <DiscountBadge>-{product.discount}%</DiscountBadge>
@@ -259,7 +260,7 @@ const ProductCard = ({ product }) => {
       </ImageContainer>
       <ContentContainer>
         <Brand>{product.brand}</Brand>
-        <ProductName onClick={handleViewDetails}>{product.name}</ProductName>
+        <ProductName>{product.name}</ProductName>
         {renderSpecs(product)}
         <Price>
           <CurrentPrice>${discountedPrice.toFixed(2)}</CurrentPrice>
@@ -270,17 +271,19 @@ const ProductCard = ({ product }) => {
         <ButtonContainer>
           <Button
             text="Ver detalle"
-            variant="outline"
+            variant="outlined"
             size="small"
             onClick={handleViewDetails}
           />
-          <Button
-            text={isAddingToCart ? "Agregando..." : "Agregar al carrito"}
-            variant="solid"
-            size="small"
-            onClick={handleAddToCart}
-            disabled={isAddingToCart}
-          />
+          {!isAdminOrCoord && (
+            <Button
+              text={isAddingToCart ? "Agregando..." : "Agregar al carrito"}
+              variant="solid"
+              size="small"
+              onClick={handleAddToCart}
+              disabled={isAddingToCart}
+            />
+          )}
         </ButtonContainer>
       </ContentContainer>
     </StyledCard>

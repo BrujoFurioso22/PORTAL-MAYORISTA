@@ -326,7 +326,7 @@ const Carrito = () => {
           
           <Button 
             text="Seguir comprando" 
-            variant="outline" 
+            variant="outlined" 
             style={{ width: '100%', marginTop: '12px' }}
             onClick={() => navigate('/')}
           />

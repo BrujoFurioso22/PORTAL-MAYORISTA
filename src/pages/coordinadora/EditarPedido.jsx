@@ -244,7 +244,7 @@ const AlertText = styled.div`
 `;
 
 const EditarPedidoCoordinador = () => {
-  const { id } = useParams();
+  const { orderId } = useParams();
   const navigate = useNavigate();
   
   const [pedido, setPedido] = useState(null);
@@ -261,7 +261,7 @@ const EditarPedidoCoordinador = () => {
   useEffect(() => {
     // Simular carga desde API
     setTimeout(() => {
-      const pedidoEncontrado = pedidosMock.find(p => p.id === id);
+      const pedidoEncontrado = pedidosMock.find(p => p.id === orderId);
       
       if (pedidoEncontrado) {
         setPedido(pedidoEncontrado);
@@ -277,7 +277,7 @@ const EditarPedidoCoordinador = () => {
       
       setLoading(false);
     }, 800);
-  }, [id]);
+  }, [orderId]);
   
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -388,7 +388,7 @@ const EditarPedidoCoordinador = () => {
     // En un caso real, aquí harías una llamada a la API
     console.log("Pedido actualizado:", updatedPedido);
     alert("Pedido actualizado correctamente. El cliente recibirá una notificación para revisar los cambios.");
-    navigate(`/coordinadora/pedidos/${id}`);
+    navigate(`/coordinador/pedidos/${orderId}`);
   };
   
   const getAvailableStatuses = () => {
@@ -435,7 +435,7 @@ const EditarPedidoCoordinador = () => {
   if (!pedido) {
     return (
       <PageContainer>
-        <BackButton onClick={() => navigate("/coordinadora/pedidos")}>
+        <BackButton onClick={() => navigate("/coordinador/pedidos")}>
           <FaArrowLeft /> Volver a pedidos
         </BackButton>
         <div>Pedido no encontrado</div>
@@ -445,7 +445,7 @@ const EditarPedidoCoordinador = () => {
   
   return (
     <PageContainer>
-      <BackButton onClick={() => navigate(`/coordinadora/pedidos/${id}`)}>
+      <BackButton onClick={() => navigate(`/coordinador/pedidos/${orderId}`)}>
         <FaArrowLeft /> Volver al detalle del pedido
       </BackButton>
       
@@ -453,7 +453,7 @@ const EditarPedidoCoordinador = () => {
         <PageTitle>Editar Pedido {pedido.id}</PageTitle>
         
         <ButtonContainer>
-          <DangerButton onClick={() => navigate(`/coordinadora/pedidos/${id}`)}>
+          <DangerButton onClick={() => navigate(`/coordinador/pedidos/${orderId}`)}>
             <FaTimes /> Cancelar
           </DangerButton>
           <PrimaryButton onClick={handleSubmit}>

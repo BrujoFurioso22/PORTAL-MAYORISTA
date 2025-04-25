@@ -239,7 +239,7 @@ const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get("q") || "";
-  const { user } = useAuth();
+  const { user, navigateToHomeByRole } = useAuth();
 
   const [results, setResults] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
@@ -248,10 +248,14 @@ const SearchResults = () => {
 
   const userAccess = user?.BUSSINES_ACCESS || [];
 
+  const handleNavigate = () => {
+    navigateToHomeByRole();
+  };
+
   // Buscar productos cuando cambia la query
   useEffect(() => {
     if (!query) {
-      navigate("/");
+      handleNavigate();
       return;
     }
 
@@ -370,7 +374,7 @@ const SearchResults = () => {
   return (
     <PageContainer>
       <PageHeader>
-        <BackButton onClick={() => navigate("/")}>
+        <BackButton onClick={handleNavigate}>
           <FaArrowLeft /> Volver al inicio
         </BackButton>
 
@@ -469,7 +473,7 @@ const SearchResults = () => {
               </NoResultsText>
               <Button
                 text="Limpiar filtros"
-                variant="outline"
+                variant="outlined"
                 onClick={() => {
                   setSortOption("relevance");
                   setPriceRange("all");
@@ -490,7 +494,7 @@ const SearchResults = () => {
             text="Volver al inicio"
             variant="solid"
             backgroundColor={(props) => props.theme.colors.primary}
-            onClick={() => navigate("/")}
+            onClick={handleNavigate}
           />
         </NoResultsContainer>
       )}

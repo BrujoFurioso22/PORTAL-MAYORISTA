@@ -725,7 +725,7 @@ const DetallePedidoCoordinador = () => {
   if (loading) {
     return (
       <PageContainer>
-        <BackButton onClick={() => navigate("/coordinadora/pedidos")}>
+        <BackButton onClick={() => navigate("/coordinador/pedidos")}>
           <FaArrowLeft /> Volver a la lista de pedidos
         </BackButton>
         <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -738,7 +738,7 @@ const DetallePedidoCoordinador = () => {
   if (!order) {
     return (
       <PageContainer>
-        <BackButton onClick={() => navigate("/coordinadora/pedidos")}>
+        <BackButton onClick={() => navigate("/coordinador/pedidos")}>
           <FaArrowLeft /> Volver a la lista de pedidos
         </BackButton>
         <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -750,7 +750,7 @@ const DetallePedidoCoordinador = () => {
 
   return (
     <PageContainer>
-      <BackButton onClick={() => navigate("/coordinadora/pedidos")}>
+      <BackButton onClick={() => navigate("/coordinador/pedidos")}>
         <FaArrowLeft /> Volver a la lista de pedidos
       </BackButton>
 
@@ -767,7 +767,7 @@ const DetallePedidoCoordinador = () => {
           {!editingProducts && (
             <Button
               text="Editar pedido"
-              variant="outline"
+              variant="outlined"
               onClick={() => setEditingProducts(true)}
               leftIcon={<FaPen size={14} />}
             />
@@ -892,7 +892,7 @@ const DetallePedidoCoordinador = () => {
                 <ButtonsGroup>
                   <Button
                     text="Cancelar"
-                    variant="outline"
+                    variant="outlined"
                     onClick={cancelProductChanges}
                     leftIcon={<FaTimes size={14} />}
                   />
@@ -972,7 +972,7 @@ const DetallePedidoCoordinador = () => {
                   </AddressAlertText>
                   <Button
                     text="Confirmar dirección"
-                    variant="outline"
+                    variant="outlined"
                     onClick={handleConfirmAddress}
                     leftIcon={<FaMapMarkerAlt size={14} />}
                   />

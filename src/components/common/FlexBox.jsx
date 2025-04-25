@@ -8,6 +8,8 @@ const FlexBox = styled.div`
   gap: ${({ $gap }) => $gap || "10px"};
   width: ${({ $width }) => $width || "100%"};
   height: ${({ $height }) => $height || "auto"};
+  padding: ${({ $padding }) => $padding};
+  max-width: ${({ $maxWidth }) => $maxWidth || "100%"};
 `;
 
 export default function FlexBoxComponent({
@@ -18,6 +20,8 @@ export default function FlexBoxComponent({
   width,
   height,
   children,
+  padding,
+  maxWidth,
   ...props
 }) {
   return (
@@ -28,6 +32,8 @@ export default function FlexBoxComponent({
       $gap={gap}
       $width={width}
       $height={height}
+      $padding={padding}
+      $maxWidth={maxWidth}
       {...props}
     >
       {children}

@@ -1,117 +1,145 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  eliminarTokens,
-  guardarRefreshToken,
-  guardarToken,
-  obtenerRefreshToken,
-  obtenerToken,
-} from "../utils/encryptToken";
 import { toast } from "react-toastify";
 import { ROUTES } from "../constants/routes";
 import api from "../constants/api";
+import { ROLES } from "../constants/roles";
+
+// Constantes para simulación (idealmente estarían en un archivo separado)
+const MOCK_USERS = {
+  "admin@mayoreo.com": {
+    password: "123456",
+    data: {
+      CODIGO_USUARIO: 1,
+      NOMBRE_USUARIO: "Administrador",
+      ROLES: ["ADMIN"],
+      EMAIL: "admin@mayoreo.com",
+      BUSSINES_ACCESS: ["maxximundo", "stox", "ikonix", "autollanta"],
+    },
+  },
+  "vendedor@mayoreo.com": {
+    password: "123456",
+    data: {
+      CODIGO_USUARIO: 2,
+      NOMBRE_USUARIO: "Vendedor",
+      ROLES: ["VENDEDOR"],
+      EMAIL: "vendedor@mayoreo.com",
+      BUSSINES_ACCESS: ["maxximundo", "stox"],
+    },
+  },
+  "coordinadora@mayoreo.com": {
+    password: "123456",
+    data: {
+      CODIGO_USUARIO: 3,
+      NOMBRE_USUARIO: "Coordinadora",
+      ROLES: ["COORDINATOR"],
+      EMAIL: "coordinadora@mayoreo.com",
+      BUSSINES_ACCESS: ["maxximundo", "autollanta"],
+    },
+  },
+  "juan@example.com": {
+    password: "123456",
+    data: {
+      CODIGO_USUARIO: 4,
+      NOMBRE_USUARIO: "Juan Cliente",
+      ROLES: ["CLIENT"],
+      EMAIL: "juan@example.com",
+      BUSSINES_ACCESS: [],
+    },
+  },
+};
+
+const MOCK_IDENTIFICATIONS = {
+  "0987654321001": {
+    email: "juan@example.com",
+    maskedEmail: "j***@e***le.com",
+    availableCompanies: [
+      {
+        id: "maxximundo",
+        name: "Maxximundo",
+        status: "active",
+        logo: "https://via.placeholder.com/50",
+      },
+      {
+        id: "autollanta",
+        name: "Autollanta",
+        status: "pending",
+        logo: "https://via.placeholder.com/50",
+      },
+      {
+        id: "stox",
+        name: "Stox",
+        status: "inactive",
+        logo: "https://via.placeholder.com/50",
+      },
+      {
+        id: "ikonix",
+        name: "Ikonix",
+        status: "inactive",
+        logo: "https://via.placeholder.com/50",
+      },
+    ],
+  },
+};
+
+// Simulación de delay de red
+const simulateNetworkDelay = (ms = 800) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Estado para verificar si el usuario está autenticado
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
-  // const logout = () => {
-  //   eliminarTokens(); // Eliminar token del localStorage
-  //   setUser(null);
-  //   navigate(ROUTES.Auth.Login); // Redirigir a la página de inicio de sesión
-  // };
+  // ========== FUNCIONES REDIRECCIONAMIENTO ==========
 
-  // const login = async (email, password) => {
-  //   let res = await auth_login({ email, password });
+  const getHomeRouteByRole = () => {
+    if (!user) return ROUTES.PUBLIC.LOGIN;
 
-  //   // const res = {
-  //   //   success: true,
-  //   //   data: {
-  //   //     token: "1010",
-  //   //     refresh_token: "2020",
-  //   //     user: { name: "admin" },
-  //   //   },
-  //   //   message: "OK",
-  //   // };
+    if (user.ROLES.includes(ROLES.COORDINADOR)) {
+      return ROUTES.COORDINADOR.PEDIDOS;
+    } else if (user.ROLES.includes(ROLES.ADMIN)) {
+      return ROUTES.ADMIN.USER_ADMIN;
+    } else {
+      return ROUTES.ECOMMERCE.HOME;
+    }
+  };
 
-  //   if (res.success) {
-  //     guardarToken(res.data.token); // Guardar token en localStorage
-  //     guardarRefreshToken(res.data.refresh_token); // Guardar refresh token en localStorage
-  //     setUser(res.data.user); // Guardar usuario en el estado
+  const navigateToHomeByRole = () => {
+    const homeRoute = getHomeRouteByRole();
+    navigate(homeRoute);
+  };
 
-  //     toast.success(res.message);
-  //     navigate("/"); // Redirigir a la página principal
-  //   } else {
-  //     toast.error(res.message);
-  //   }
-  //   return res;
-  // };
+  // ========== FUNCIONES DE AUTENTICACIÓN ==========
 
   const login = async (email, password) => {
     try {
-      // Simular delay de red
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await simulateNetworkDelay();
 
-      // Credenciales de prueba
-      if (email === "admin@mayorista.com" && password === "123456") {
-        const userData = {
-          CODIGO_USUARIO: 1,
-          NOMBRE_USUARIO: "Administrador",
-          ROLES: ["ADMIN"],
-          EMAIL: email,
-          // Acceso a todas las empresas
-          BUSSINES_ACCESS: ["maxximundo", "stox", "ikonix"],
-        };
+      const mockUser = MOCK_USERS[email];
+
+      if (mockUser && mockUser.password === password) {
+        const userData = mockUser.data;
 
         // Guardar en localStorage para persistencia
         localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("token", "mock-token-12345");
-        localStorage.setItem("auth", "true"); // Añadir un flag de autenticación
-
-        // Actualizar el estado
-        setUser(userData);
-
-        // IMPORTANTE: Añadir esta línea (falta en este caso)
-        setIsAuthenticated(true);
-
-        toast.success("Inicio de sesión exitoso");
-        // IMPORTANTE: Pequeño retraso antes de navegar
-        setTimeout(() => {
-          navigate("/");
-        }, 100);
-
-        return {
-          success: true,
-          data: userData,
-          message: "Inicio de sesión exitoso",
-        };
-      } else if (email === "vendedor@mayorista.com" && password === "123456") {
-        const userData = {
-          CODIGO_USUARIO: 2,
-          NOMBRE_USUARIO: "Vendedor",
-          ROLES: ["VENDEDOR"],
-          EMAIL: email,
-          // Acceso a solo algunas empresas
-          BUSSINES_ACCESS: ["maxximundo", "stox"],
-        };
-
-        // Guardar en localStorage para persistencia
-        localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("token", "mock-token-67890");
+        localStorage.setItem("token", `mock-token-${Date.now()}`);
+        localStorage.setItem("auth", "true");
 
         // Actualizar el estado
         setUser(userData);
         setIsAuthenticated(true);
 
         toast.success("Inicio de sesión exitoso");
-        // IMPORTANTE: Pequeño retraso antes de navegar
-        setTimeout(() => {
-          navigate("/");
-        }, 100);
+
+        // Redireccionar según el rol del usuario
+        let redirectPath = getHomeRouteByRole();
+
+        // Pequeño retraso antes de navegar para permitir que el estado se actualice
+        setTimeout(() => navigate(redirectPath), 100);
 
         return {
           success: true,
@@ -126,6 +154,7 @@ export function AuthProvider({ children }) {
         };
       }
     } catch (error) {
+      console.error("Error en login:", error);
       toast.error("Error al iniciar sesión");
       return {
         success: false,
@@ -134,39 +163,209 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // const refreshToken = async () => {
-  //   try {
-  //     const refresh = obtenerRefreshToken();
-
-  //     const res = await api.post("/auth/refreshToken", {
-  //       refreshToken: refresh,
-  //     });
-  //     // const res = { data: { token: "1010" } };
-  //     guardarToken(res.data.token); // Guardar nuevo token en localStorage
-  //     return res.data.token; // Retornar el nuevo token
-  //   } catch {
-  //     logout(); // Si falla, cerrar sesión
-  //   }
-  // };
-
   const logout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    localStorage.removeItem("cart"); // Limpiar el carrito también
-    setUser(null);
-    setIsAuthenticated(false);
-    navigate("/auth/login");
-    return { success: true };
+    try {
+      // Limpiar localStorage
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("auth");
+      localStorage.removeItem("cart");
+
+      // Actualizar estado
+      setUser(null);
+      setIsAuthenticated(false);
+
+      // Navegar a login
+      navigate(ROUTES.AUTH.LOGIN);
+
+      return { success: true, message: "Sesión cerrada correctamente" };
+    } catch (error) {
+      console.error("Error en logout:", error);
+      return { success: false, message: "Error al cerrar sesión" };
+    }
   };
 
-  // Verificar si hay un usuario en localStorage al cargar la aplicación
+  // ========== FUNCIONES DE REGISTRO ==========
+
+  const verifyIdentification = async (identification) => {
+    try {
+      await simulateNetworkDelay();
+
+      const identityData = MOCK_IDENTIFICATIONS[identification];
+
+      if (identityData) {
+        return {
+          success: true,
+          userExists: true,
+          maskedEmail: identityData.maskedEmail,
+          availableCompanies: identityData.availableCompanies,
+        };
+      } else {
+        return {
+          success: true,
+          userExists: false,
+        };
+      }
+    } catch (error) {
+      console.error("Error al verificar identificación:", error);
+      return {
+        success: false,
+        message: "Error al verificar la identificación",
+      };
+    }
+  };
+
+  const verifyExistingEmail = async (identification, email) => {
+    try {
+      await simulateNetworkDelay();
+
+      const identityData = MOCK_IDENTIFICATIONS[identification];
+
+      if (identityData && identityData.email === email) {
+        return {
+          success: true,
+          message: "Email verificado correctamente",
+        };
+      } else {
+        return {
+          success: false,
+          message: "El correo electrónico no coincide con nuestros registros",
+        };
+      }
+    } catch (error) {
+      console.error("Error al verificar email:", error);
+      return {
+        success: false,
+        message: "Error al verificar el email",
+      };
+    }
+  };
+
+  const requestAccess = async (requestData) => {
+    try {
+      await simulateNetworkDelay(1000);
+
+      console.log("Datos de solicitud:", requestData);
+
+      return {
+        success: true,
+        message: "Solicitud enviada correctamente",
+      };
+    } catch (error) {
+      console.error("Error al solicitar acceso:", error);
+      return {
+        success: false,
+        message: "Error al procesar la solicitud",
+      };
+    }
+  };
+
+  // ========== FUNCIONES DE RECUPERACIÓN DE CONTRASEÑA ==========
+
+  const verifyEmailExists = async (email) => {
+    try {
+      await simulateNetworkDelay();
+
+      const exists = Object.keys(MOCK_USERS).includes(email);
+
+      return {
+        success: true,
+        exists: exists,
+        message: exists
+          ? "Email verificado"
+          : "El email no está registrado en el sistema",
+      };
+    } catch (error) {
+      console.error("Error al verificar email:", error);
+      return {
+        success: false,
+        message: "Error al verificar el email",
+      };
+    }
+  };
+
+  const sendVerificationCode = async (email) => {
+    try {
+      await simulateNetworkDelay(1000);
+
+      // En un caso real, aquí se enviaría un email con el código
+      // Para simulación, siempre usamos el mismo código
+      const CODE = "123456";
+      console.log(`Código de verificación enviado a ${email}: ${CODE}`);
+
+      // Guardar en sessionStorage porque es temporal
+      sessionStorage.setItem("verificationCode", CODE);
+      sessionStorage.setItem("verificationEmail", email);
+
+      return {
+        success: true,
+        message: "Código de verificación enviado correctamente",
+      };
+    } catch (error) {
+      console.error("Error al enviar código:", error);
+      return {
+        success: false,
+        message: "Error al enviar el código de verificación",
+      };
+    }
+  };
+
+  const verifyCode = async (code) => {
+    try {
+      await simulateNetworkDelay(600);
+
+      const storedCode = sessionStorage.getItem("verificationCode");
+      const isValid = code === storedCode;
+
+      return {
+        success: true,
+        isValid: isValid,
+        message: isValid
+          ? "Código verificado correctamente"
+          : "El código ingresado es incorrecto",
+      };
+    } catch (error) {
+      console.error("Error al verificar código:", error);
+      return {
+        success: false,
+        message: "Error al verificar el código",
+      };
+    }
+  };
+
+  const resetPassword = async (newPassword) => {
+    try {
+      await simulateNetworkDelay(1000);
+
+      const email = sessionStorage.getItem("verificationEmail");
+
+      // Limpiar datos temporales
+      sessionStorage.removeItem("verificationCode");
+      sessionStorage.removeItem("verificationEmail");
+
+      console.log(`Contraseña actualizada para ${email}: ${newPassword}`);
+
+      return {
+        success: true,
+        message: "Contraseña actualizada correctamente",
+      };
+    } catch (error) {
+      console.error("Error al resetear contraseña:", error);
+      return {
+        success: false,
+        message: "Error al actualizar la contraseña",
+      };
+    }
+  };
+
+  // ========== INICIALIZACIÓN ==========
+
+  // Verificar estado de autenticación al cargar
   useEffect(() => {
     const checkAuthStatus = () => {
       try {
         const storedUser = localStorage.getItem("user");
         const token = localStorage.getItem("token");
-
-        // Verificar de manera explícita el estado de autenticación
         const isAuthVal = localStorage.getItem("auth");
 
         if (storedUser && token) {
@@ -176,6 +375,7 @@ export function AuthProvider({ children }) {
         } else {
           console.log("No hay usuario en localStorage");
           setIsAuthenticated(false);
+          setUser(null);
         }
       } catch (error) {
         console.error("Error al verificar la autenticación:", error);
@@ -184,7 +384,6 @@ export function AuthProvider({ children }) {
         localStorage.removeItem("auth");
         setIsAuthenticated(false);
       } finally {
-        // Siempre establecer loading a false para mostrar la aplicación
         setLoading(false);
       }
     };
@@ -192,47 +391,28 @@ export function AuthProvider({ children }) {
     checkAuthStatus();
   }, []);
 
-  // useEffect(() => {
-  //   const validateToken = async () => {
-  //     const token = obtenerToken();
-
-  //     if (!token) {
-  //       setLoading(false);
-  //       return;
-  //     }
-
-  //     try {
-  //       const res = await api.get("/auth/me");
-  //       // const res = { data: { user: { name: "admin" } } };
-  //       setUser(res.data.user); // Establecer el usuario en el estado
-  //     } catch (err) {
-  //       console.log("Refrescando token...");
-  //       if (err.response?.status === 401) {
-  //         const newToken = await refreshToken(); // Intentar refrescar el token
-
-  //         if (newToken) {
-  //           try {
-  //             const res = await api.get("/auth/me");
-  //             setUser(res.data.user); // Establecer el usuario en el estado
-  //           } catch {
-  //             logout(); // Si no se puede refrescar, cerrar sesión
-  //           }
-  //         } else {
-  //           logout(); // Si no se puede refrescar, cerrar sesión
-  //         }
-  //       } else {
-  //         logout(); // Si no se puede refrescar, cerrar sesión
-  //       }
-  //     } finally {
-  //       setLoading(false); // Cambiar el estado de carga
-  //     }
-  //   };
-  //   validateToken(); // Validar el token al cargar el componente
-  // }, []);
-
+  // Proveedor de contexto
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, loading, isAuthenticated }}
+      value={{
+        user,
+        login,
+        logout,
+        loading,
+        isAuthenticated,
+        // Registro
+        verifyIdentification,
+        verifyExistingEmail,
+        requestAccess,
+        // Recuperación de contraseña
+        verifyEmailExists,
+        sendVerificationCode,
+        verifyCode,
+        resetPassword,
+        // Funciones de redirección
+        getHomeRouteByRole,
+        navigateToHomeByRole,
+      }}
     >
       {!loading && children}
     </AuthContext.Provider>

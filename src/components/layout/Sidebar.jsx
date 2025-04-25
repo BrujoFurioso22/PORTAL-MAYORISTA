@@ -329,7 +329,7 @@ export default function Sidebar({ onToggleSidebar }) {
             iconSize={15}
             color={theme.colors.text}
             size="small"
-            variant="outline"
+            variant="outlined"
             style={{ borderColor: theme.colors.transparent, paddingRight: 0 }}
           />
         </FlexBoxComponent>

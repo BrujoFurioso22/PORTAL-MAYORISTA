@@ -1,10 +1,14 @@
 import React from "react";
 import FlexBoxComponent from "../components/common/FlexBox";
 import Button from "../components/ui/Button";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const NotFound = () => {
-  const navigate = useNavigate();
+  const { navigateToHomeByRole } = useAuth();
+
+  const handleClick = () => {
+    navigateToHomeByRole();
+  };
   return (
     <FlexBoxComponent
       flexDirection="column"
@@ -15,7 +19,7 @@ const NotFound = () => {
       <FlexBoxComponent justifyContent="center">
         404 | Page Not Found
       </FlexBoxComponent>
-      <Button onClick={() => navigate("/")} text={"Home"} />
+      <Button onClick={handleClick} text={"Home"} />
     </FlexBoxComponent>
   );
 };
