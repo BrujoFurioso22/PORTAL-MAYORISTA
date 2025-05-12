@@ -123,7 +123,7 @@ const UserMenuDropdown = styled.div`
   width: 200px;
   z-index: 100;
   overflow: hidden;
-  display: ${({ isOpen }) => (isOpen ? "block" : "none")};
+  display: ${({ $isOpen }) => ($isOpen ? "block" : "none")};
 `;
 
 const UserMenuItem = styled.div`
@@ -175,15 +175,15 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
   };
 
   const handleGoToHome = () => {
-    let redirectPath = ROUTES.ECOMMERCE.HOME;
-    if (user.ROLES.includes(ROLES.COORDINADOR)) {
-      redirectPath = ROUTES.COORDINADOR.PEDIDOS;
-    } else if (user.ROLES.includes(ROLES.ADMIN)) {
-      redirectPath = ROUTES.ADMIN.USER_ADMIN;
-    } else if (user.ROLES.includes(ROLES.CLIENTE)) {
-      redirectPath = ROUTES.ECOMMERCE.HOME;
+    if (!user) return ROUTES.PUBLIC.LOGIN;
+
+    if (user.ROLE === ROLES.COORDINADOR) {
+      return ROUTES.COORDINADOR.PEDIDOS;
+    } else if (user.ROLE === ROLES.ADMIN) {
+      return ROUTES.ADMIN.USER_ADMIN;
+    } else {
+      return ROUTES.ECOMMERCE.HOME;
     }
-    navigate(redirectPath);
   };
 
   const toggleUserMenu = () => {
@@ -239,7 +239,7 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
       </SearchBar>
 
       <FlexBoxComponent width="auto" alignItems="center">
-        <UserGreeting>Hola, {user?.NOMBRE_USUARIO}</UserGreeting>
+        <UserGreeting>Hola, {user?.NAME}</UserGreeting>
 
         {!isAdminOrCoord && (
           <IconButton onClick={handleGoToCart}>
@@ -253,7 +253,7 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
             <FaUser />
           </IconButton>
 
-          <UserMenuDropdown isOpen={isUserMenuOpen}>
+          <UserMenuDropdown $isOpen={isUserMenuOpen}>
             <UserMenuItem onClick={handleProfile}>
               <FaUser />
               Perfil

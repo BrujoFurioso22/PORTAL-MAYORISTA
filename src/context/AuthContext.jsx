@@ -2,8 +2,16 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { ROUTES } from "../constants/routes";
-import api from "../constants/api";
 import { ROLES } from "../constants/roles";
+import { auth_login } from "../services/auth/login";
+import { auth_me, auth_refresh } from "../services/auth/auth";
+import {
+  eliminarTokens,
+  guardarRefreshToken,
+  guardarToken,
+  obtenerToken,
+  obtenerRefreshToken,
+} from "../utils/encryptToken";
 
 // Constantes para simulación (idealmente estarían en un archivo separado)
 const MOCK_USERS = {
@@ -94,14 +102,64 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
+  // ========== FUNCIONES PARA LOS TOKENS ==========
+
+  const refreshToken = async () => {
+    try {
+      const refreshToken = obtenerRefreshToken();
+      if (!refreshToken) {
+        throw new Error("No hay refresh token");
+      }
+
+      const response = await auth_refresh(refreshToken);
+
+      if (response && response.token) {
+        guardarToken(response.token);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error al refrescar token:", error);
+      return false;
+    }
+  };
+
+  const verifyToken = async () => {
+    try {
+      const token = obtenerToken();
+      if (!token) return false;
+
+      const response = await auth_me();
+
+      if (response && response.user) {
+        // Actualizar la información del usuario
+        setUser(response.user);
+        setIsAuthenticated(true);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error al verificar token:", error);
+
+      // Si el error es por token expirado, intentar refrescar
+      if (error.response && error.response.status === 401) {
+        const refreshSuccess = await refreshToken();
+        if (refreshSuccess) {
+          return await verifyToken(); // Reintentar verificación con nuevo token
+        }
+      }
+      return false;
+    }
+  };
+
   // ========== FUNCIONES REDIRECCIONAMIENTO ==========
 
   const getHomeRouteByRole = (user) => {
     if (!user) return ROUTES.PUBLIC.LOGIN;
 
-    if (user.ROLES.includes(ROLES.COORDINADOR)) {
+    if (user.ROLE === ROLES.COORDINADOR) {
       return ROUTES.COORDINADOR.PEDIDOS;
-    } else if (user.ROLES.includes(ROLES.ADMIN)) {
+    } else if (user.ROLE === ROLES.ADMIN) {
       return ROUTES.ADMIN.USER_ADMIN;
     } else {
       return ROUTES.ECOMMERCE.HOME;
@@ -118,17 +176,23 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      await simulateNetworkDelay();
+      const response = await auth_login({ email, password });
+      console.log(response);
 
-      const mockUser = MOCK_USERS[email];
+      if (response.success) {
+        const userData = response.data.user;
+        const token = response.data.token;
+        const refreshToken = response.data.refresh_token;
 
-      if (mockUser && mockUser.password === password) {
-        const userData = mockUser.data;
-
-        // Guardar en localStorage para persistencia
+        // Guardar datos de usuario en localStorage
         localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("token", `mock-token-${Date.now()}`);
         localStorage.setItem("auth", "true");
+
+        // Usar funciones de encriptación para los tokens
+        guardarToken(token);
+        if (refreshToken) {
+          guardarRefreshToken(refreshToken);
+        }
 
         // Actualizar el estado
         setUser(userData);
@@ -169,9 +233,11 @@ export function AuthProvider({ children }) {
     try {
       // Limpiar localStorage
       localStorage.removeItem("user");
-      localStorage.removeItem("token");
       localStorage.removeItem("auth");
       localStorage.removeItem("cart");
+
+      // Función para eliminar tokens encriptados
+      eliminarTokens();
 
       // Actualizar estado
       setUser(null);
@@ -364,33 +430,84 @@ export function AuthProvider({ children }) {
 
   // Verificar estado de autenticación al cargar
   useEffect(() => {
-    const checkAuthStatus = () => {
-      try {
-        const storedUser = localStorage.getItem("user");
-        const token = localStorage.getItem("token");
-        const isAuthVal = localStorage.getItem("auth");
+    const validateToken = async () => {
+      const token = obtenerToken();
 
-        if (storedUser && token) {
-          setUser(JSON.parse(storedUser));
+      if (!token) {
+        setIsAuthenticated(false);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Intentar verificar el token actual
+        const response = await auth_me();
+        console.log(response);
+
+        if (response && response.user) {
+          // Token válido, establecer usuario
+          setUser(response.user);
           setIsAuthenticated(true);
-          console.log("Usuario autenticado desde localStorage");
-        } else {
-          console.log("No hay usuario en localStorage");
-          setIsAuthenticated(false);
-          setUser(null);
+          localStorage.setItem("user", JSON.stringify(response.user));
+          localStorage.setItem("auth", "true");
         }
       } catch (error) {
-        console.error("Error al verificar la autenticación:", error);
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-        localStorage.removeItem("auth");
-        setIsAuthenticated(false);
+        // Si el error es de autorización (token expirado/inválido)
+        if (error.response?.status === 401) {
+          try {
+            // Intentar refrescar el token
+            const refreshToken = obtenerRefreshToken();
+            if (!refreshToken) {
+              throw new Error("No hay refresh token disponible");
+            }
+
+            const refreshResponse = await auth_refresh(refreshToken);
+
+            if (refreshResponse && refreshResponse.token) {
+              // Guardar el nuevo token
+              guardarToken(refreshResponse.token);
+
+              try {
+                // Verificar nuevamente con el token refrescado
+                const newResponse = await auth_me();
+
+                if (newResponse && newResponse.user) {
+                  // Token refrescado válido
+                  setUser(newResponse.user);
+                  setIsAuthenticated(true);
+                  localStorage.setItem(
+                    "user",
+                    JSON.stringify(newResponse.user)
+                  );
+                  localStorage.setItem("auth", "true");
+                  console.log("Usuario verificado con token refrescado");
+                  navigateToHomeByRole(newResponse.user);
+                } else {
+                  throw new Error(
+                    "Verificación fallida después de refrescar token"
+                  );
+                }
+              } catch (secondError) {
+                logout();
+              }
+            } else {
+              throw new Error("Refresco de token fallido");
+            }
+          } catch (refreshError) {
+            logout();
+          }
+        } else {
+          // Cualquier otro tipo de error, cerrar sesión
+          console.error("Error no relacionado con autorización:", error);
+          logout();
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    checkAuthStatus();
+    validateToken();
   }, []);
 
   // Proveedor de contexto

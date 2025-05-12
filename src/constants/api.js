@@ -9,7 +9,7 @@ const api = axios.create({
 // Interceptor para agregar token si es necesario
 api.interceptors.request.use(
   (config) => {
-    const token = obtenerToken(); // aquí puedes desencriptarlo si está encriptado
+    const token = obtenerToken(); // Desencriptarlo si está encriptado
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
@@ -23,7 +23,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Puedes redirigir al login o mostrar mensaje
       console.warn("No autorizado");
     }
     return Promise.reject(error);

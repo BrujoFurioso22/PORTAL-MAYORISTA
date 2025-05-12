@@ -17,6 +17,7 @@ import Register from "../pages/auth/Register";
 import ListaPedidos from "../pages/coordinadora/ListaPedidos";
 import DetallePedidoCoordinador from "../pages/coordinadora/DetallePedido";
 import EditarPedidoCoordinador from "../pages/coordinadora/EditarPedido";
+import UsersAdmin from "../pages/admin/users_admin/UsersAdmin";
 
 // Rutas de E-commerce (accesibles para todos los usuarios autenticados)
 export const ecommerceRoutes = [
@@ -67,7 +68,7 @@ export const ecommerceRoutes = [
 export const adminRoutes = [
   {
     path: ROUTES.ADMIN.USER_ADMIN,
-    element: <></>,
+    element: <UsersAdmin/>,
     allowedRoles: [ROLES.ADMIN],
     exact: true,
   },

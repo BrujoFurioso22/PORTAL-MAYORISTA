@@ -6,7 +6,7 @@ const InputContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 5px;
-  width: 100%;
+  width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "auto")};
 `;
 
 const Label = styled.label`
@@ -95,12 +95,13 @@ export default function Input({
   interpolate = false,
   multiline = false,
   disabled = false,
+  fullWidth = false,
   ...props
 }) {
   const { theme } = useAppTheme(); // Obtener el tema completo
 
   return (
-    <InputContainer>
+    <InputContainer $fullWidth={fullWidth}>
       {label && (
         <Label $color={labelColor}>
           {label}

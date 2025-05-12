@@ -169,9 +169,9 @@ const Login = () => {
           </ForgotPasswordLink>
 
           <Button
-            type="submit"
+            type="button"
             text={isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
-            loading={isLoading}
+            onClick={handleLogin}
             fullWidth
           />
 
@@ -184,7 +184,6 @@ const Login = () => {
               text="Registrarse"
               onClick={handleRegisterClick}
               variant="outlined"
-              fullWidth
             />
           </RegisterContainer>
         </LoginForm>

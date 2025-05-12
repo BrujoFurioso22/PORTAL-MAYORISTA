@@ -20,10 +20,8 @@ export function CartProvider({ children }) {
 
   // Verificar si el usuario es admin o coordinadora
   const isAdminOrCoord = () => {
-    if (!user || !user.ROLES) return false;
-    return (
-      user.ROLES.includes(ROLES.ADMIN) || user.ROLES.includes(ROLES.COORDINADOR)
-    );
+    if (!user || !user.ROLE) return false;
+    return user.ROLE === ROLES.ADMIN || user.ROLE === ROLES.COORDINADOR;
   };
 
   useEffect(() => {
