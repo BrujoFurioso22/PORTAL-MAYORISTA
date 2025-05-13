@@ -43,7 +43,7 @@ const InputWrapper = styled.div`
   }
 `;
 
-const StyledInput = styled.input.attrs((as) => ({
+const StyledInput = styled.input.attrs(({as}) => ({
   as: as || "input",
 }))`
   flex: 1;
