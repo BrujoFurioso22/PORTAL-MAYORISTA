@@ -7,7 +7,11 @@ import Input from "../../../components/ui/Input";
 import { useAppTheme } from "../../../context/AppThemeContext";
 import { useAuth } from "../../../context/AuthContext";
 import RenderIcon from "../../../components/ui/RenderIcon";
-import { users_create, users_getAll, users_update } from "../../../services/users/users";
+import {
+  users_create,
+  users_getAll,
+  users_update,
+} from "../../../services/users/users";
 import { roles_getAll } from "../../../services/users/roles";
 
 // Estilos
@@ -15,12 +19,12 @@ const PageContainer = styled.div`
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
-  background-color: ${(props) => props.theme.colors.background};
+  background-color: ${({ theme }) => theme.colors.background};
 `;
 
 const PageTitle = styled.h1`
   margin: 0 0 24px 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const ActionsContainer = styled.div`
@@ -44,13 +48,13 @@ const SearchInput = styled.input`
   padding: 10px 16px;
   padding-left: 40px;
   border-radius: 8px;
-  border: 1px solid ${(props) => props.theme.colors.border};
-  background-color: ${(props) => props.theme.colors.surface};
-  color: ${(props) => props.theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
 
   &:focus {
     outline: none;
-    border-color: ${(props) => props.theme.colors.primary};
+    border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
@@ -59,7 +63,7 @@ const SearchIcon = styled.div`
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const FiltersContainer = styled.div`
@@ -71,13 +75,13 @@ const FiltersContainer = styled.div`
 const FilterSelect = styled.select`
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid ${(props) => props.theme.colors.border};
-  background-color: ${(props) => props.theme.colors.surface};
-  color: ${(props) => props.theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
 
   &:focus {
     outline: none;
-    border-color: ${(props) => props.theme.colors.primary};
+    border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
@@ -88,33 +92,33 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background-color: ${(props) => props.theme.colors.surface};
-  border-bottom: 2px solid ${(props) => props.theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.surface};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border};
 `;
 
 const TableHeaderCell = styled.th`
   padding: 16px;
   text-align: left;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   font-weight: 500;
 `;
 
 const TableBody = styled.tbody`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${(props) => props.theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: ${(props) => props.theme.colors.background};
+    background-color: ${({ theme }) => theme.colors.background};
   }
 `;
 
 const TableCell = styled.td`
   padding: 16px;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const StatusBadge = styled.span`
@@ -123,22 +127,22 @@ const StatusBadge = styled.span`
   border-radius: 50px;
   font-size: 0.8rem;
   font-weight: 500;
-  background-color: ${(props) =>
-    props.status === "active"
-      ? props.theme.colors.success + "33"
-      : props.status === "pending"
-      ? props.theme.colors.warning + "33"
-      : props.status === "inactive"
-      ? props.theme.colors.error + "33"
-      : props.theme.colors.border};
-  color: ${(props) =>
-    props.status === "active"
-      ? props.theme.colors.success
-      : props.status === "pending"
-      ? props.theme.colors.warning
-      : props.status === "inactive"
-      ? props.theme.colors.error
-      : props.theme.colors.textLight};
+  background-color: ${({ status, theme }) =>
+    status === "active"
+      ? theme.colors.success + "33"
+      : status === "pending"
+      ? theme.colors.warning + "33"
+      : status === "inactive"
+      ? theme.colors.error + "33"
+      : theme.colors.border};
+  color: ${({ status, theme }) =>
+    status === "active"
+      ? theme.colors.success
+      : status === "pending"
+      ? theme.colors.warning
+      : status === "inactive"
+      ? theme.colors.error
+      : theme.colors.textLight};
 `;
 
 const ActionsGroup = styled.div`
@@ -149,20 +153,20 @@ const ActionsGroup = styled.div`
 const ActionButton = styled.button`
   background: none;
   border: none;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
 
   &:hover {
-    background-color: ${(props) => props.theme.colors.primary + "22"};
+    background-color: ${({ theme }) => theme.colors.primary + "22"};
   }
 
   &.delete {
-    color: ${(props) => props.theme.colors.error};
+    color: ${({ theme }) => theme.colors.error};
 
     &:hover {
-      background-color: ${(props) => props.theme.colors.error + "22"};
+      background-color: ${({ theme }) => theme.colors.error + "22"};
     }
   }
 `;
@@ -176,11 +180,11 @@ const Pagination = styled.div`
 
 const PageButton = styled.button`
   padding: 6px 12px;
-  border: 1px solid ${(props) => props.theme.colors.border};
-  background-color: ${(props) =>
-    props.active ? props.theme.colors.primary : props.theme.colors.surface};
-  color: ${(props) =>
-    props.active ? props.theme.colors.white : props.theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme, $active }) =>
+    $active ? theme.colors.primary : theme.colors.surface};
+  color: ${({ theme, $active }) =>
+    $active ? theme.colors.white : theme.colors.text};
   border-radius: 4px;
   cursor: pointer;
 
@@ -204,7 +208,7 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
   padding: 24px;
   border-radius: 8px;
   width: 100%;
@@ -221,18 +225,18 @@ const ModalHeader = styled.div`
 
 const ModalTitle = styled.h2`
   margin: 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   font-size: 1.5rem;
   cursor: pointer;
 
   &:hover {
-    color: ${(props) => props.theme.colors.text};
+    color: ${({ theme }) => theme.colors.text};
   }
 `;
 
@@ -629,7 +633,7 @@ const AdminHomeComponent = () => {
             return (
               <PageButton
                 key={pageNum}
-                active={currentPage === pageNum}
+                $active={currentPage === pageNum}
                 onClick={() => setCurrentPage(pageNum)}
               >
                 {pageNum}

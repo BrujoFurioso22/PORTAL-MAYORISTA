@@ -13,8 +13,8 @@ import {
 
 const PageContainer = styled.div`
   padding: 20px;
-  background-color: ${(props) =>
-    props.theme.colors.background}; // Asegurar fondo correcto
+  background-color: ${({ theme }) =>
+    theme.colors.background}; // Asegurar fondo correcto
 `;
 
 const PageHeader = styled.div`
@@ -23,7 +23,7 @@ const PageHeader = styled.div`
 
 const PageTitle = styled.h1`
   margin: 0 0 8px 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const BreadCrumb = styled.div`
@@ -32,19 +32,19 @@ const BreadCrumb = styled.div`
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const BreadCrumbLink = styled.span`
   cursor: pointer;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
   &:hover {
     text-decoration: underline;
   }
 `;
 
 const ProductsCount = styled.p`
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   margin: 0;
 `;
 
@@ -67,13 +67,12 @@ const NoAccessContainer = styled.div`
   justify-content: center;
   padding: 3rem;
   text-align: center;
-  background-color: ${(props) =>
-    props.theme.colors.surface}; // Usar surface en lugar de "white" fijo
-  color: ${(props) =>
-    props.theme.colors.text}; // Añadir color de texto explícito
+  background-color: ${({ theme }) =>
+    theme.colors.surface}; // Usar surface en lugar de "white" fijo
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto explícito
   border-radius: 8px;
-  box-shadow: ${(props) =>
-    props.theme.shadows.md}; // Corregir referencia a shadows
+  box-shadow: ${({ theme }) =>
+    theme.shadows.md}; // Corregir referencia a shadows
   margin: 2rem auto;
   max-width: 600px;
 `;
@@ -87,10 +86,10 @@ const SortContainer = styled.div`
 const SortSelect = styled.select`
   padding: 8px;
   border-radius: 4px;
-  border: 1px solid ${(props) => props.theme.colors.border};
-  background-color: ${(props) =>
-    props.theme.colors.surface}; // Añadir color de fondo
-  color: ${(props) => props.theme.colors.text}; // Añadir color de texto
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) =>
+    theme.colors.surface}; // Añadir color de fondo
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
 `;
 
 const FormContainer = styled.div`
@@ -101,53 +100,52 @@ const FormContainer = styled.div`
 
 const FormGroup = styled.div`
   margin-bottom: 1.5rem;
-  color: ${(props) =>
-    props.theme.colors.text}; // Asegurar buen contraste del texto
+  color: ${({ theme }) =>
+    theme.colors.text}; // Asegurar buen contraste del texto
 `;
 
 const Label = styled.label`
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: ${(props) =>
-    props.theme.colors.text}; // Asegurar buen contraste para etiquetas
+  color: ${({ theme }) =>
+    theme.colors.text}; // Asegurar buen contraste para etiquetas
 `;
 
 const Input = styled.input`
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid ${(props) => props.theme.colors.border};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
-  background-color: ${(props) =>
-    props.theme.colors.surface}; // Añadir color de fondo
-  color: ${(props) => props.theme.colors.text}; // Añadir color de texto
+  background-color: ${({ theme }) =>
+    theme.colors.surface}; // Añadir color de fondo
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid ${(props) => props.theme.colors.border};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
   min-height: 120px;
-  background-color: ${(props) =>
-    props.theme.colors.surface}; // Añadir color de fondo
-  color: ${(props) => props.theme.colors.text}; // Añadir color de texto
+  background-color: ${({ theme }) =>
+    theme.colors.surface}; // Añadir color de fondo
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
 `;
 
 const Button = styled.button`
   padding: 0.75rem 1.5rem;
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) =>
-    props.theme.colors
-      .white}; // Usar theme.colors.white en lugar de "white" fijo
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) =>
+    theme.colors.white}; // Usar theme.colors.white en lugar de "white" fijo
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
 
   &:hover {
-    background-color: ${(props) =>
-      props.theme.colors.accent}; // Cambiar a accent para mejor contraste
+    background-color: ${({ theme }) =>
+      theme.colors.accent}; // Cambiar a accent para mejor contraste
   }
 `;
 
@@ -162,14 +160,14 @@ const ButtonGroup = styled.div`
 const SecondaryButton = styled.button`
   padding: 0.75rem 1.5rem;
   background-color: transparent;
-  color: ${(props) => props.theme.colors.text};
-  border: 1px solid ${(props) => props.theme.colors.border};
+  color: ${({ theme }) => theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
 
   &:hover {
-    background-color: ${(props) => props.theme.colors.background};
+    background-color: ${({ theme }) => theme.colors.background};
   }
 `;
 

@@ -2,7 +2,14 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { pedidosMock } from "../../mock/coordinadora/pedidosMock";
-import { FaArrowLeft, FaSave, FaTimes, FaPlus, FaTrash, FaExclamationTriangle } from "react-icons/fa";
+import {
+  FaArrowLeft,
+  FaSave,
+  FaTimes,
+  FaPlus,
+  FaTrash,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 import { ROUTES } from "../../constants/routes";
 
 // Estilos
@@ -15,7 +22,7 @@ const PageContainer = styled.div`
 const BackButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -38,7 +45,7 @@ const PageHeader = styled.div`
 
 const PageTitle = styled.h1`
   margin: 0;
-  color: ${props => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const ButtonContainer = styled.div`
@@ -58,54 +65,54 @@ const Button = styled.button`
 `;
 
 const PrimaryButton = styled(Button)`
-  background-color: ${props => props.theme.colors.primary};
+  background-color: ${({ theme }) => theme.colors.primary};
   color: white;
   border: none;
-  
+
   &:hover {
-    background-color: ${props => props.theme.colors.primaryDark};
+    background-color: ${({ theme }) => theme.colors.primaryDark};
   }
 `;
 
 const SecondaryButton = styled(Button)`
   background-color: transparent;
-  color: ${props => props.theme.colors.primary};
-  border: 1px solid ${props => props.theme.colors.primary};
-  
+  color: ${({ theme }) => theme.colors.primary};
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+
   &:hover {
-    background-color: ${props => props.theme.colors.primary + "10"};
+    background-color: ${({ theme }) => theme.colors.primary + "10"};
   }
 `;
 
 const DangerButton = styled(Button)`
   background-color: transparent;
-  color: ${props => props.theme.colors.error};
-  border: 1px solid ${props => props.theme.colors.error};
-  
+  color: ${({ theme }) => theme.colors.error};
+  border: 1px solid ${({ theme }) => theme.colors.error};
+
   &:hover {
-    background-color: ${props => props.theme.colors.error + "10"};
+    background-color: ${({ theme }) => theme.colors.error + "10"};
   }
 `;
 
 const Section = styled.section`
-  background-color: ${props => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px ${props => props.theme.colors.shadow};
+  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
 `;
 
 const SectionTitle = styled.h2`
   margin: 0 0 16px 0;
   font-size: 1.2rem;
-  color: ${props => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const FormRow = styled.div`
   display: flex;
   gap: 16px;
   margin-bottom: 16px;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
   }
@@ -118,7 +125,7 @@ const FormGroup = styled.div`
 const Label = styled.label`
   display: block;
   margin-bottom: 8px;
-  color: ${props => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   font-size: 0.9rem;
 `;
 
@@ -126,14 +133,14 @@ const Input = styled.input`
   width: 100%;
   padding: 10px 12px;
   border-radius: 4px;
-  border: 1px solid ${props => props.theme.colors.border};
-  background-color: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.text};
-  
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
+
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}33;
+    border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary}33;
   }
 `;
 
@@ -141,13 +148,13 @@ const Select = styled.select`
   width: 100%;
   padding: 10px 12px;
   border-radius: 4px;
-  border: 1px solid ${props => props.theme.colors.border};
-  background-color: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.text};
-  
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
+
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.colors.primary};
+    border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
 
@@ -155,16 +162,16 @@ const TextArea = styled.textarea`
   width: 100%;
   padding: 10px 12px;
   border-radius: 4px;
-  border: 1px solid ${props => props.theme.colors.border};
-  background-color: ${props => props.theme.colors.background};
-  color: ${props => props.theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
   min-height: 100px;
   resize: vertical;
-  
+
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}33;
+    border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary}33;
   }
 `;
 
@@ -175,19 +182,19 @@ const Table = styled.table`
 `;
 
 const TableHead = styled.thead`
-  background-color: ${props => props.theme.colors.background};
+  background-color: ${({ theme }) => theme.colors.background};
 `;
 
 const TableHeaderCell = styled.th`
   padding: 12px 16px;
   text-align: left;
-  color: ${props => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   font-weight: 500;
   font-size: 0.9rem;
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${props => props.theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   &:last-child {
     border-bottom: none;
   }
@@ -195,7 +202,7 @@ const TableRow = styled.tr`
 
 const TableCell = styled.td`
   padding: 16px;
-  color: ${props => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const ProductCell = styled(TableCell)`
@@ -216,8 +223,8 @@ const NumberInput = styled(Input)`
 `;
 
 const AlertBox = styled.div`
-  background-color: ${props => props.theme.colors.warning}20;
-  border-left: 4px solid ${props => props.theme.colors.warning};
+  background-color: ${({ theme }) => theme.colors.warning}20;
+  border-left: 4px solid ${({ theme }) => theme.colors.warning};
   padding: 16px;
   margin-bottom: 24px;
   display: flex;
@@ -226,7 +233,7 @@ const AlertBox = styled.div`
 `;
 
 const AlertIcon = styled.div`
-  color: ${props => props.theme.colors.warning};
+  color: ${({ theme }) => theme.colors.warning};
   font-size: 1.5rem;
   margin-top: 2px;
 `;
@@ -247,7 +254,7 @@ const AlertText = styled.div`
 const EditarPedidoCoordinador = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  
+
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -255,15 +262,15 @@ const EditarPedidoCoordinador = () => {
     observaciones: "",
     items: [],
     envio: {
-      direccion: {}
-    }
+      direccion: {},
+    },
   });
-  
+
   useEffect(() => {
     // Simular carga desde API
     setTimeout(() => {
-      const pedidoEncontrado = pedidosMock.find(p => p.id === orderId);
-      
+      const pedidoEncontrado = pedidosMock.find((p) => p.id === orderId);
+
       if (pedidoEncontrado) {
         setPedido(pedidoEncontrado);
         setFormData({
@@ -271,100 +278,104 @@ const EditarPedidoCoordinador = () => {
           observaciones: pedidoEncontrado.observaciones || "",
           items: [...pedidoEncontrado.items],
           envio: {
-            ...pedidoEncontrado.envio
-          }
+            ...pedidoEncontrado.envio,
+          },
         });
       }
-      
+
       setLoading(false);
     }, 800);
   }, [orderId]);
-  
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
-  
+
   const handleShippingChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       envio: {
         ...prev.envio,
-        [name]: value
-      }
+        [name]: value,
+      },
     }));
   };
-  
+
   const handleAddressChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       envio: {
         ...prev.envio,
         direccion: {
           ...prev.envio.direccion,
-          [name]: value
-        }
-      }
+          [name]: value,
+        },
+      },
     }));
   };
-  
+
   const handleItemChange = (index, field, value) => {
     const updatedItems = [...formData.items];
-    
-    if (field === 'cantidad' || field === 'precio' || field === 'descuento') {
+
+    if (field === "cantidad" || field === "precio" || field === "descuento") {
       value = parseFloat(value) || 0;
-      
+
       // Recalcular subtotal
       const item = updatedItems[index];
-      const precio = field === 'precio' ? value : item.precio;
-      const cantidad = field === 'cantidad' ? value : item.cantidad;
-      const descuento = field === 'descuento' ? value : item.descuento;
-      
+      const precio = field === "precio" ? value : item.precio;
+      const cantidad = field === "cantidad" ? value : item.cantidad;
+      const descuento = field === "descuento" ? value : item.descuento;
+
       // Actualizar el subtotal
       const precioConDescuento = precio * (1 - descuento / 100);
       updatedItems[index] = {
         ...item,
         [field]: value,
-        subtotal: Number((precioConDescuento * cantidad).toFixed(2))
+        subtotal: Number((precioConDescuento * cantidad).toFixed(2)),
       };
     } else {
       updatedItems[index] = {
         ...updatedItems[index],
-        [field]: value
+        [field]: value,
       };
     }
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
-      items: updatedItems
+      items: updatedItems,
     }));
   };
-  
+
   const removeItem = (index) => {
     const updatedItems = formData.items.filter((_, i) => i !== index);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      items: updatedItems
+      items: updatedItems,
     }));
   };
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Calcular totales
-    const subtotal = formData.items.reduce((total, item) => total + item.subtotal, 0);
+    const subtotal = formData.items.reduce(
+      (total, item) => total + item.subtotal,
+      0
+    );
     const totalDescuento = formData.items.reduce(
-      (total, item) => total + (item.precio * item.cantidad * (item.descuento / 100)), 
+      (total, item) =>
+        total + item.precio * item.cantidad * (item.descuento / 100),
       0
     );
     const impuestos = subtotal * 0.12; // Ejemplo: IVA del 12%
     const totalFinal = subtotal + impuestos + formData.envio.costoEnvio;
-    
+
     const updatedPedido = {
       ...pedido,
       estado: formData.estado,
@@ -380,51 +391,57 @@ const EditarPedidoCoordinador = () => {
           fecha: new Date(),
           estado: formData.estado,
           usuario: "Coordinador",
-          comentario: "Pedido editado"
+          comentario: "Pedido editado",
         },
-        ...pedido.historial
-      ]
+        ...pedido.historial,
+      ],
     };
-    
+
     // En un caso real, aquí harías una llamada a la API
     console.log("Pedido actualizado:", updatedPedido);
-    alert("Pedido actualizado correctamente. El cliente recibirá una notificación para revisar los cambios.");
+    alert(
+      "Pedido actualizado correctamente. El cliente recibirá una notificación para revisar los cambios."
+    );
     navigate(`/coordinador/pedidos/${orderId}`);
   };
-  
+
   const getAvailableStatuses = () => {
     return [
-      "Pendiente", 
-      "En proceso", 
+      "Pendiente",
+      "En proceso",
       "En proceso con observación",
       "Completado",
       "Despachado",
       "Rechazado",
-      "Cancelado por cliente"
+      "Cancelado por cliente",
     ];
   };
-  
+
   const calculateTotals = () => {
-    const subtotal = formData.items.reduce((total, item) => total + item.subtotal, 0);
+    const subtotal = formData.items.reduce(
+      (total, item) => total + item.subtotal,
+      0
+    );
     const totalDescuento = formData.items.reduce(
-      (total, item) => total + (item.precio * item.cantidad * (item.descuento / 100)), 
+      (total, item) =>
+        total + item.precio * item.cantidad * (item.descuento / 100),
       0
     );
     const impuestos = subtotal * 0.12; // Ejemplo: IVA del 12%
     const costoEnvio = parseFloat(formData.envio.costoEnvio) || 0;
     const totalFinal = subtotal + impuestos + costoEnvio;
-    
+
     return {
       subtotal: subtotal.toFixed(2),
       descuento: totalDescuento.toFixed(2),
       impuestos: impuestos.toFixed(2),
       costoEnvio: costoEnvio.toFixed(2),
-      total: totalFinal.toFixed(2)
+      total: totalFinal.toFixed(2),
     };
   };
-  
+
   const totals = calculateTotals();
-  
+
   if (loading) {
     return (
       <PageContainer>
@@ -432,7 +449,7 @@ const EditarPedidoCoordinador = () => {
       </PageContainer>
     );
   }
-  
+
   if (!pedido) {
     return (
       <PageContainer>
@@ -443,18 +460,20 @@ const EditarPedidoCoordinador = () => {
       </PageContainer>
     );
   }
-  
+
   return (
     <PageContainer>
       <BackButton onClick={() => navigate(`/coordinador/pedidos/${orderId}`)}>
         <FaArrowLeft /> Volver al detalle del pedido
       </BackButton>
-      
+
       <PageHeader>
         <PageTitle>Editar Pedido {pedido.id}</PageTitle>
-        
+
         <ButtonContainer>
-          <DangerButton onClick={() => navigate(`/coordinador/pedidos/${orderId}`)}>
+          <DangerButton
+            onClick={() => navigate(`/coordinador/pedidos/${orderId}`)}
+          >
             <FaTimes /> Cancelar
           </DangerButton>
           <PrimaryButton onClick={handleSubmit}>
@@ -462,7 +481,7 @@ const EditarPedidoCoordinador = () => {
           </PrimaryButton>
         </ButtonContainer>
       </PageHeader>
-      
+
       <AlertBox>
         <AlertIcon>
           <FaExclamationTriangle />
@@ -470,47 +489,49 @@ const EditarPedidoCoordinador = () => {
         <AlertContent>
           <AlertTitle>Atención</AlertTitle>
           <AlertText>
-            Los cambios realizados en este pedido deberán ser aprobados por el cliente. 
-            Se enviará una notificación solicitando su confirmación.
+            Los cambios realizados en este pedido deberán ser aprobados por el
+            cliente. Se enviará una notificación solicitando su confirmación.
           </AlertText>
         </AlertContent>
       </AlertBox>
-      
+
       <Section>
         <SectionTitle>Estado del pedido</SectionTitle>
         <FormRow>
           <FormGroup>
             <Label>Estado</Label>
-            <Select 
-              name="estado" 
-              value={formData.estado} 
+            <Select
+              name="estado"
+              value={formData.estado}
               onChange={handleInputChange}
             >
-              {getAvailableStatuses().map(status => (
-                <option key={status} value={status}>{status}</option>
+              {getAvailableStatuses().map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
               ))}
             </Select>
           </FormGroup>
           <FormGroup>
             <Label>Observaciones</Label>
-            <TextArea 
-              name="observaciones" 
-              value={formData.observaciones} 
+            <TextArea
+              name="observaciones"
+              value={formData.observaciones}
               onChange={handleInputChange}
               placeholder="Ingrese observaciones adicionales sobre este pedido"
             />
           </FormGroup>
         </FormRow>
       </Section>
-      
+
       <Section>
         <SectionTitle>Información de envío</SectionTitle>
         <FormRow>
           <FormGroup>
             <Label>Método de envío</Label>
-            <Select 
-              name="metodoEnvio" 
-              value={formData.envio.metodoEnvio} 
+            <Select
+              name="metodoEnvio"
+              value={formData.envio.metodoEnvio}
               onChange={handleShippingChange}
             >
               <option value="Estándar">Estándar</option>
@@ -520,24 +541,24 @@ const EditarPedidoCoordinador = () => {
           </FormGroup>
           <FormGroup>
             <Label>Costo de envío ($)</Label>
-            <Input 
-              type="number" 
-              name="costoEnvio" 
-              min="0" 
+            <Input
+              type="number"
+              name="costoEnvio"
+              min="0"
               step="0.01"
-              value={formData.envio.costoEnvio} 
+              value={formData.envio.costoEnvio}
               onChange={handleShippingChange}
             />
           </FormGroup>
         </FormRow>
-        
+
         <SectionTitle>Dirección de envío</SectionTitle>
         <FormRow>
           <FormGroup>
             <Label>Dirección</Label>
-            <Input 
-              name="calle" 
-              value={formData.envio.direccion.calle || ""} 
+            <Input
+              name="calle"
+              value={formData.envio.direccion.calle || ""}
               onChange={handleAddressChange}
             />
           </FormGroup>
@@ -545,31 +566,31 @@ const EditarPedidoCoordinador = () => {
         <FormRow>
           <FormGroup>
             <Label>Ciudad</Label>
-            <Input 
-              name="ciudad" 
-              value={formData.envio.direccion.ciudad || ""} 
+            <Input
+              name="ciudad"
+              value={formData.envio.direccion.ciudad || ""}
               onChange={handleAddressChange}
             />
           </FormGroup>
           <FormGroup>
             <Label>Provincia</Label>
-            <Input 
-              name="provincia" 
-              value={formData.envio.direccion.provincia || ""} 
+            <Input
+              name="provincia"
+              value={formData.envio.direccion.provincia || ""}
               onChange={handleAddressChange}
             />
           </FormGroup>
           <FormGroup>
             <Label>Código postal</Label>
-            <Input 
-              name="codigoPostal" 
-              value={formData.envio.direccion.codigoPostal || ""} 
+            <Input
+              name="codigoPostal"
+              value={formData.envio.direccion.codigoPostal || ""}
               onChange={handleAddressChange}
             />
           </FormGroup>
         </FormRow>
       </Section>
-      
+
       <Section>
         <SectionTitle>Productos del pedido</SectionTitle>
         <Table>
@@ -590,7 +611,7 @@ const EditarPedidoCoordinador = () => {
                   <ProductImage src={item.imagen} alt={item.nombre} />
                   <div>
                     <div>{item.nombre}</div>
-                    <div style={{ fontSize: '0.85rem', color: '#777' }}>
+                    <div style={{ fontSize: "0.85rem", color: "#777" }}>
                       SKU: {item.sku}
                     </div>
                   </div>
@@ -601,7 +622,9 @@ const EditarPedidoCoordinador = () => {
                     min="0"
                     step="0.01"
                     value={item.precio}
-                    onChange={e => handleItemChange(index, 'precio', e.target.value)}
+                    onChange={(e) =>
+                      handleItemChange(index, "precio", e.target.value)
+                    }
                   />
                 </TableCell>
                 <TableCell>
@@ -609,7 +632,9 @@ const EditarPedidoCoordinador = () => {
                     type="number"
                     min="1"
                     value={item.cantidad}
-                    onChange={e => handleItemChange(index, 'cantidad', e.target.value)}
+                    onChange={(e) =>
+                      handleItemChange(index, "cantidad", e.target.value)
+                    }
                   />
                 </TableCell>
                 <TableCell>
@@ -618,7 +643,9 @@ const EditarPedidoCoordinador = () => {
                     min="0"
                     max="100"
                     value={item.descuento}
-                    onChange={e => handleItemChange(index, 'descuento', e.target.value)}
+                    onChange={(e) =>
+                      handleItemChange(index, "descuento", e.target.value)
+                    }
                   />
                 </TableCell>
                 <TableCell>${item.subtotal.toFixed(2)}</TableCell>
@@ -631,51 +658,67 @@ const EditarPedidoCoordinador = () => {
             ))}
           </tbody>
         </Table>
-        
-        <div style={{ marginTop: '24px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ width: '300px' }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                marginBottom: '8px' 
-              }}>
+
+        <div
+          style={{
+            marginTop: "24px",
+            borderTop: "1px solid #eee",
+            paddingTop: "20px",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ width: "300px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "8px",
+                }}
+              >
                 <span>Subtotal:</span>
                 <span>${totals.subtotal}</span>
               </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                marginBottom: '8px' 
-              }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "8px",
+                }}
+              >
                 <span>Descuentos:</span>
                 <span>-${totals.descuento}</span>
               </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                marginBottom: '8px' 
-              }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "8px",
+                }}
+              >
                 <span>Impuestos:</span>
                 <span>${totals.impuestos}</span>
               </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                marginBottom: '8px' 
-              }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "8px",
+                }}
+              >
                 <span>Envío:</span>
                 <span>${totals.costoEnvio}</span>
               </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                fontWeight: 'bold',
-                marginTop: '12px',
-                paddingTop: '12px',
-                borderTop: '1px solid #eee',
-                fontSize: '1.1rem'
-              }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontWeight: "bold",
+                  marginTop: "12px",
+                  paddingTop: "12px",
+                  borderTop: "1px solid #eee",
+                  fontSize: "1.1rem",
+                }}
+              >
                 <span>Total:</span>
                 <span>${totals.total}</span>
               </div>

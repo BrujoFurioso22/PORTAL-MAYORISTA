@@ -20,9 +20,7 @@ const InputWrapper = styled.div`
   align-items: center;
   gap: 5px;
   background: ${({ disabled, theme }) =>
-    disabled
-      ? theme.colors.background
-      : theme.colors.surface};
+    disabled ? theme.colors.background : theme.colors.surface};
   border: ${({ disabled, theme, $error }) =>
     disabled
       ? `1px solid ${theme.colors.border}`
@@ -37,12 +35,16 @@ const InputWrapper = styled.div`
 
   &:focus-within {
     border-color: ${({ theme, disabled, $error }) =>
-      disabled ? theme.colors.border : $error ? theme.colors.error : theme.colors.primary};
+      disabled
+        ? theme.colors.border
+        : $error
+        ? theme.colors.error
+        : theme.colors.primary};
   }
 `;
 
-const StyledInput = styled.input.attrs((props) => ({
-  as: props.as || "input",
+const StyledInput = styled.input.attrs((as) => ({
+  as: as || "input",
 }))`
   flex: 1;
   border: none;
@@ -50,13 +52,11 @@ const StyledInput = styled.input.attrs((props) => ({
   outline: none;
   font-size: 16px;
   color: ${({ disabled, theme }) =>
-    disabled
-      ? theme.colors.textLight
-      : theme.colors.text};
+    disabled ? theme.colors.textLight : theme.colors.text};
   padding: 5px;
   resize: vertical;
-  min-height: ${(props) => (props.as === "textarea" ? "30px" : "auto")};
-  max-height: ${(props) => (props.as === "textarea" ? "200px" : "auto")};
+  min-height: ${({ as }) => (as === "textarea" ? "30px" : "auto")};
+  max-height: ${({ as }) => (as === "textarea" ? "200px" : "auto")};
 
   ::placeholder {
     color: ${({ theme, disabled }) =>
@@ -69,8 +69,8 @@ const IconContainer = styled.span`
   align-items: center;
   justify-content: center;
   padding: 5px;
-  cursor: ${(props) => (props.onClick ? "pointer" : "default")};
-  color: ${({ theme, disabled }) => 
+  cursor: ${(onClick) => (onClick ? "pointer" : "default")};
+  color: ${({ theme, disabled }) =>
     disabled ? theme.colors.textLight : theme.colors.text};
 `;
 
@@ -102,17 +102,13 @@ export default function Input({
 
   return (
     <InputContainer $fullWidth={fullWidth}>
-      {label && (
-        <Label $color={labelColor}>
-          {label}
-        </Label>
-      )}
-      <InputWrapper
-        $error={!!errorMessage}
-        disabled={disabled}
-      >
+      {label && <Label $color={labelColor}>{label}</Label>}
+      <InputWrapper $error={!!errorMessage} disabled={disabled}>
         {leftIconName && (
-          <IconContainer onClick={disabled ? undefined : onLeftIconClick} disabled={disabled}>
+          <IconContainer
+            onClick={disabled ? undefined : onLeftIconClick}
+            disabled={disabled}
+          >
             <RenderIcon
               name={leftIconName}
               size={20}
@@ -129,7 +125,10 @@ export default function Input({
           {...props}
         />
         {rightIconName && (
-          <IconContainer onClick={disabled ? undefined : onRightIconClick} disabled={disabled}>
+          <IconContainer
+            onClick={disabled ? undefined : onRightIconClick}
+            disabled={disabled}
+          >
             <RenderIcon
               name={rightIconName}
               size={20}

@@ -23,13 +23,13 @@ const PageContainer = styled.div`
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
-  background-color: ${(props) => props.theme.colors.background};
+  background-color: ${({theme}) => theme.colors.background};
 `;
 
 const BackButton = styled.button`
   background: none;
   border: none;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({theme}) => theme.colors.primary};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -59,12 +59,12 @@ const OrderInfo = styled.div``;
 
 const OrderId = styled.h1`
   margin: 0 0 8px 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const OrderDate = styled.p`
   margin: 0;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({theme}) => theme.colors.textLight};
   font-size: 0.9rem;
 `;
 
@@ -89,9 +89,9 @@ const ContentGrid = styled.div`
 `;
 
 const Card = styled.div`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({theme}) => theme.colors.surface};
   border-radius: 8px;
-  box-shadow: 0 2px 8px ${(props) => props.theme.colors.shadow};
+  box-shadow: 0 2px 8px ${({theme}) => theme.colors.shadow};
   padding: 24px;
   margin-bottom: 24px;
 `;
@@ -106,13 +106,13 @@ const CardHeader = styled.div`
 const CardTitle = styled.h2`
   margin: 0;
   font-size: 1.2rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const CardAction = styled.button`
   background: none;
   border: none;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({theme}) => theme.colors.primary};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -130,13 +130,13 @@ const ProductsTable = styled.table`
 `;
 
 const TableHead = styled.thead`
-  border-bottom: 1px solid ${(props) => props.theme.colors.border};
+  border-bottom: 1px solid ${({theme}) => theme.colors.border};
 `;
 
 const TableHeader = styled.th`
   text-align: left;
   padding: 12px;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({theme}) => theme.colors.textLight};
   font-weight: 500;
   font-size: 0.9rem;
 `;
@@ -144,7 +144,7 @@ const TableHeader = styled.th`
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid ${(props) => props.theme.colors.border};
+  border-bottom: 1px solid ${({theme}) => theme.colors.border};
 
   &:last-child {
     border-bottom: none;
@@ -153,7 +153,7 @@ const TableRow = styled.tr`
 
 const TableCell = styled.td`
   padding: 12px;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
   vertical-align: middle;
 `;
 
@@ -179,7 +179,7 @@ const ProductName = styled.div`
 
 const ProductSku = styled.div`
   font-size: 0.8rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({theme}) => theme.colors.textLight};
 `;
 
 const EditableQuantity = styled.div`
@@ -191,11 +191,11 @@ const QuantityInput = styled.input`
   width: 60px;
   padding: 4px 8px;
   border: 1px solid
-    ${(props) => (props.editing ? props.theme.colors.primary : "transparent")};
+    ${({theme}) => (editing ? theme.colors.primary : "transparent")};
   border-radius: 4px;
-  background-color: ${(props) =>
-    props.editing ? props.theme.colors.background : "transparent"};
-  color: ${(props) => props.theme.colors.text};
+  background-color: ${({theme}) =>
+    editing ? theme.colors.background : "transparent"};
+  color: ${({theme}) => theme.colors.text};
   text-align: center;
 
   &:focus {
@@ -204,20 +204,20 @@ const QuantityInput = styled.input`
 `;
 
 const PriceDisplay = styled.div`
-  ${(props) =>
-    props.editing
+  ${({theme}) =>
+    editing
       ? `
     padding: 4px 8px;
-    border: 1px solid ${props.theme.colors.primary};
+    border: 1px solid ${theme.colors.primary};
     border-radius: 4px;
-    background-color: ${props.theme.colors.background};
+    background-color: ${theme.colors.background};
   `
       : ""}
 `;
 
 const TotalSummary = styled.div`
   margin-top: 20px;
-  border-top: 1px solid ${(props) => props.theme.colors.border};
+  border-top: 1px solid ${({theme}) => theme.colors.border};
   padding-top: 16px;
 `;
 
@@ -228,12 +228,12 @@ const SummaryRow = styled.div`
 `;
 
 const SummaryLabel = styled.span`
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({theme}) => theme.colors.textLight};
 `;
 
 const SummaryValue = styled.span`
-  color: ${(props) => props.theme.colors.text};
-  font-weight: ${(props) => (props.bold ? "600" : "normal")};
+  color: ${({theme}) => theme.colors.text};
+  font-weight: ${({theme}) => (bold ? "600" : "normal")};
 `;
 
 const InfoSection = styled.div`
@@ -247,7 +247,7 @@ const InfoSection = styled.div`
 const InfoTitle = styled.h3`
   margin: 0 0 12px 0;
   font-size: 1rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const InfoGrid = styled.div`
@@ -266,12 +266,12 @@ const InfoItem = styled.div`
 
 const InfoLabel = styled.div`
   font-size: 0.9rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({theme}) => theme.colors.textLight};
   margin-bottom: 4px;
 `;
 
 const InfoValue = styled.div`
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const StatusSection = styled.div`
@@ -281,7 +281,7 @@ const StatusSection = styled.div`
 const StatusTitle = styled.h3`
   margin: 0 0 16px 0;
   font-size: 1rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const StatusOptions = styled.div`
@@ -295,38 +295,38 @@ const StatusOption = styled.button`
   padding: 8px 16px;
   border-radius: 20px;
   border: 1px solid
-    ${(props) =>
-      props.selected ? props.theme.colors.primary : props.theme.colors.border};
-  background-color: ${(props) =>
-    props.selected
-      ? props.theme.colors.primary + "20"
-      : props.theme.colors.surface};
-  color: ${(props) =>
-    props.selected ? props.theme.colors.primary : props.theme.colors.textLight};
+    ${({theme}) =>
+      selected ? theme.colors.primary : theme.colors.border};
+  background-color: ${({theme}) =>
+    selected
+      ? theme.colors.primary + "20"
+      : theme.colors.surface};
+  color: ${({theme}) =>
+    selected ? theme.colors.primary : theme.colors.textLight};
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.2s;
 
   &:hover {
-    border-color: ${(props) => props.theme.colors.primary};
-    color: ${(props) => props.theme.colors.primary};
+    border-color: ${({theme}) => theme.colors.primary};
+    color: ${({theme}) => theme.colors.primary};
   }
 `;
 
 const StatusNotes = styled.textarea`
   width: 100%;
   padding: 12px;
-  border: 1px solid ${(props) => props.theme.colors.border};
+  border: 1px solid ${({theme}) => theme.colors.border};
   border-radius: 8px;
-  background-color: ${(props) => props.theme.colors.background};
-  color: ${(props) => props.theme.colors.text};
+  background-color: ${({theme}) => theme.colors.background};
+  color: ${({theme}) => theme.colors.text};
   min-height: 100px;
   margin-bottom: 16px;
   resize: vertical;
 
   &:focus {
     outline: none;
-    border-color: ${(props) => props.theme.colors.primary};
+    border-color: ${({theme}) => theme.colors.primary};
   }
 `;
 
@@ -334,23 +334,23 @@ const AddressAlert = styled.div`
   margin-top: 16px;
   padding: 16px;
   border-radius: 8px;
-  background-color: ${(props) =>
-    props.confirmed
-      ? props.theme.colors.success + "20"
-      : props.theme.colors.warning + "20"};
+  background-color: ${({theme}) =>
+    confirmed
+      ? theme.colors.success + "20"
+      : theme.colors.warning + "20"};
   border-left: 4px solid
-    ${(props) =>
-      props.confirmed
-        ? props.theme.colors.success
-        : props.theme.colors.warning};
+    ${({theme}) =>
+      confirmed
+        ? theme.colors.success
+        : theme.colors.warning};
   display: flex;
   align-items: flex-start;
   gap: 16px;
 `;
 
 const AddressAlertIcon = styled.div`
-  color: ${(props) =>
-    props.confirmed ? props.theme.colors.success : props.theme.colors.warning};
+  color: ${({theme}) =>
+    confirmed ? theme.colors.success : theme.colors.warning};
   font-size: 1.2rem;
   margin-top: 2px;
 `;
@@ -361,26 +361,26 @@ const AddressAlertContent = styled.div`
 
 const AddressAlertTitle = styled.h4`
   margin: 0 0 8px 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const AddressAlertText = styled.p`
   margin: 0 0 12px 0;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({theme}) => theme.colors.textLight};
 `;
 
 const EditMode = styled.div`
   margin-top: 20px;
   padding: 16px;
-  background-color: ${(props) => props.theme.colors.primary + "10"};
+  background-color: ${({theme}) => theme.colors.primary + "10"};
   border-radius: 8px;
-  border: 1px dashed ${(props) => props.theme.colors.primary};
+  border: 1px dashed ${({theme}) => theme.colors.primary};
   text-align: center;
 `;
 
 const EditModeText = styled.p`
   margin: 0 0 16px 0;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({theme}) => theme.colors.primary};
   font-weight: 500;
 `;
 

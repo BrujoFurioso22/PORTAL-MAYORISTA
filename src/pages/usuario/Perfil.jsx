@@ -11,17 +11,17 @@ const PageContainer = styled.div`
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
-  background-color: ${(props) => props.theme.colors.background};
+  background-color: ${({theme}) => theme.colors.background};
 `;
 
 const PageTitle = styled.h1`
   margin: 0 0 24px 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const TabsContainer = styled.div`
   display: flex;
-  border-bottom: 1px solid ${(props) => props.theme.colors.border};
+  border-bottom: 1px solid ${({theme}) => theme.colors.border};
   margin-bottom: 24px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -32,35 +32,35 @@ const TabButton = styled.button`
   background: none;
   border: none;
   border-bottom: 2px solid
-    ${(props) => (props.active ? props.theme.colors.primary : "transparent")};
-  color: ${(props) =>
-    props.active ? props.theme.colors.primary : props.theme.colors.textLight};
-  font-weight: ${(props) => (props.active ? "600" : "400")};
+    ${({theme}) => (active ? theme.colors.primary : "transparent")};
+  color: ${({theme}) =>
+    active ? theme.colors.primary : theme.colors.textLight};
+  font-weight: ${({theme}) => (active ? "600" : "400")};
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    color: ${(props) => props.theme.colors.primary};
+    color: ${({theme}) => theme.colors.primary};
   }
 `;
 
 const TabContent = styled.div`
-  display: ${(props) => (props.active ? "block" : "none")};
+  display: ${({theme}) => (active ? "block" : "none")};
 `;
 
 const Card = styled.div`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({theme}) => theme.colors.surface};
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px ${(props) => props.theme.colors.shadow};
+  box-shadow: 0 2px 8px ${({theme}) => theme.colors.shadow};
 `;
 
 const CardTitle = styled.h2`
   font-size: 1.2rem;
   margin-top: 0;
   margin-bottom: 24px;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const ProfileSection = styled.div`
@@ -85,7 +85,7 @@ const Avatar = styled.div`
   border-radius: 50%;
   overflow: hidden;
   margin-bottom: 16px;
-  border: 3px solid ${(props) => props.theme.colors.primary};
+  border: 3px solid ${({theme}) => theme.colors.primary};
 `;
 
 const AvatarImage = styled.img`
@@ -134,7 +134,7 @@ const PreferenceItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 16px 0;
-  border-bottom: 1px solid ${(props) => props.theme.colors.border};
+  border-bottom: 1px solid ${({theme}) => theme.colors.border};
 
   &:last-child {
     border-bottom: none;
@@ -146,18 +146,18 @@ const PreferenceText = styled.div``;
 const PreferenceTitle = styled.h3`
   margin: 0 0 4px 0;
   font-size: 1rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const PreferenceDescription = styled.p`
   margin: 0;
   font-size: 0.9rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({theme}) => theme.colors.textLight};
 `;
 
 const AddressCard = styled.div`
   padding: 16px;
-  border: 1px solid ${(props) => props.theme.colors.border};
+  border: 1px solid ${({theme}) => theme.colors.border};
   border-radius: 8px;
   margin-bottom: 16px;
   position: relative;
@@ -173,7 +173,7 @@ const AddressCardHeader = styled.div`
 const AddressName = styled.h3`
   margin: 0;
   font-size: 1rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const AddressActions = styled.div`
@@ -184,7 +184,7 @@ const AddressActions = styled.div`
 const ActionButton = styled.button`
   background: none;
   border: none;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({theme}) => theme.colors.primary};
   cursor: pointer;
   font-size: 0.9rem;
   padding: 0;
@@ -196,14 +196,14 @@ const ActionButton = styled.button`
 
 const AddressDetails = styled.div`
   font-size: 0.9rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
   line-height: 1.5;
 `;
 
 const DefaultBadge = styled.span`
   display: inline-block;
-  background-color: ${(props) => props.theme.colors.success + "33"};
-  color: ${(props) => props.theme.colors.success};
+  background-color: ${({theme}) => theme.colors.success + "33"};
+  color: ${({theme}) => theme.colors.success};
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.8rem;
@@ -223,7 +223,7 @@ const SwitchInput = styled.input.attrs({ type: "checkbox" })`
   height: 0;
 
   &:checked + span {
-    background-color: ${(props) => props.theme.colors.primary};
+    background-color: ${({theme}) => theme.colors.primary};
   }
 
   &:checked + span:before {
@@ -238,7 +238,7 @@ const Slider = styled.span`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: ${(props) => props.theme.colors.border};
+  background-color: ${({theme}) => theme.colors.border};
   transition: 0.4s;
   border-radius: 34px;
 

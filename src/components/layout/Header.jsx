@@ -175,15 +175,7 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
   };
 
   const handleGoToHome = () => {
-    if (!user) return ROUTES.PUBLIC.LOGIN;
-
-    if (user.ROLE === ROLES.COORDINADOR) {
-      return ROUTES.COORDINADOR.PEDIDOS;
-    } else if (user.ROLE === ROLES.ADMIN) {
-      return ROUTES.ADMIN.USER_ADMIN;
-    } else {
-      return ROUTES.ECOMMERCE.HOME;
-    }
+    navigate("/");
   };
 
   const toggleUserMenu = () => {

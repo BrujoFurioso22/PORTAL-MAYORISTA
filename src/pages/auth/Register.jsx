@@ -19,22 +19,22 @@ const styles = {
 };
 
 const FormCard = styled(FlexBoxComponent)`
-  border: solid 1px ${(props) => props.theme.colors.border};
+  border: solid 1px ${({theme}) => theme.colors.border};
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({theme}) => theme.colors.surface};
 `;
 
 const Title = styled.h1`
   margin-bottom: 0.5rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const Subtitle = styled.h2`
   margin-bottom: 1.5rem;
   font-size: 1.2rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({theme}) => theme.colors.text};
 `;
 
 const StepsIndicator = styled.div`
@@ -48,8 +48,8 @@ const StepDot = styled.div`
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: ${(props) =>
-    props.active ? props.theme.colors.primary : props.theme.colors.border};
+  background-color: ${({theme, $active}) =>
+    $active ? theme.colors.primary : theme.colors.border};
   margin: 0 6px;
   transition: background-color 0.3s;
 `;
@@ -59,13 +59,13 @@ const CompanyList = styled.div`
   max-height: 150px;
   overflow-y: auto;
   width: 100%;
-  border: 1px solid ${(props) => props.theme.colors.border};
+  border: 1px solid ${({theme}) => theme.colors.border};
   border-radius: 4px;
 `;
 
 const CompanyItem = styled.div`
   padding: 12px 16px;
-  border-bottom: 1px solid ${(props) => props.theme.colors.border};
+  border-bottom: 1px solid ${({theme}) => theme.colors.border};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -76,7 +76,7 @@ const CompanyItem = styled.div`
   }
 
   &:hover {
-    background-color: ${(props) => props.theme.colors.background};
+    background-color: ${({theme}) => theme.colors.background};
   }
 `;
 
@@ -90,7 +90,7 @@ const CompanyName = styled.span`
 
 const MaskedEmail = styled.div`
   padding: 12px;
-  background-color: ${(props) => props.theme.colors.background + "80"};
+  background-color: ${({theme}) => theme.colors.background + "80"};
   border-radius: 4px;
   margin-bottom: 1rem;
   font-family: monospace;
@@ -101,21 +101,21 @@ const InfoMessage = styled.div`
   padding: 12px;
   margin: 12px 0;
   border-radius: 4px;
-  background-color: ${(props) => props.theme.colors.info + "20"};
-  border-left: 3px solid ${(props) => props.theme.colors.info};
+  background-color: ${({theme}) => theme.colors.info + "20"};
+  border-left: 3px solid ${({theme}) => theme.colors.info};
   font-size: 0.9rem;
 `;
 const PasswordRequirements = styled.ul`
   margin: 8px 0;
   padding-left: 20px;
   font-size: 0.85rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({theme}) => theme.colors.textLight};
 `;
 
 const RequirementItem = styled.li`
   margin-bottom: 4px;
-  color: ${(props) =>
-    props.met ? props.theme.colors.success : props.theme.colors.textLight};
+  color: ${({theme, $met}) =>
+    $met ? theme.colors.success : theme.colors.textLight};
 `;
 
 const Register = () => {
@@ -467,16 +467,16 @@ const Register = () => {
 
             <PasswordRequirements>
               <>
-                <RequirementItem met={checkPasswordRequirements().hasMinLength}>
+                <RequirementItem $met={checkPasswordRequirements().hasMinLength}>
                   Al menos 8 caracteres
                 </RequirementItem>
-                <RequirementItem met={checkPasswordRequirements().hasUpperCase}>
+                <RequirementItem $met={checkPasswordRequirements().hasUpperCase}>
                   Al menos una letra mayúscula
                 </RequirementItem>
-                <RequirementItem met={checkPasswordRequirements().hasLowerCase}>
+                <RequirementItem $met={checkPasswordRequirements().hasLowerCase}>
                   Al menos una letra minúscula
                 </RequirementItem>
-                <RequirementItem met={checkPasswordRequirements().hasNumber}>
+                <RequirementItem $met={checkPasswordRequirements().hasNumber}>
                   Al menos un número
                 </RequirementItem>
               </>
@@ -679,10 +679,10 @@ const Register = () => {
         maxWidth="500px"
       >
         <StepsIndicator>
-          <StepDot active={step >= 1} />
-          <StepDot active={step >= 2} />
-          <StepDot active={step >= 3} />
-          <StepDot active={step >= 4} />
+          <StepDot $active={step >= 1} />
+          <StepDot $active={step >= 2} />
+          <StepDot $active={step >= 3} />
+          <StepDot $active={step >= 4} />
         </StepsIndicator>
 
         {renderCurrentStep()}

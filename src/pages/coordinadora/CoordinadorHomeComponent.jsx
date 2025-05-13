@@ -20,12 +20,12 @@ const PageContainer = styled.div`
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
-  background-color: ${(props) => props.theme.colors.background};
+  background-color: ${({ theme }) => theme.colors.background};
 `;
 
 const PageTitle = styled.h1`
   margin: 0 0 24px 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const FiltersRow = styled.div`
@@ -55,7 +55,7 @@ const FilterGroup = styled.div`
 
 const FilterLabel = styled.label`
   font-size: 0.9rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -64,9 +64,9 @@ const FilterLabel = styled.label`
 const FilterSelect = styled.select`
   padding: 8px 12px;
   border-radius: 4px;
-  border: 1px solid ${(props) => props.theme.colors.border};
-  background-color: ${(props) => props.theme.colors.surface};
-  color: ${(props) => props.theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const SearchInputContainer = styled.div`
@@ -83,9 +83,9 @@ const SearchInput = styled.input`
   padding: 8px 12px;
   padding-right: 40px;
   border-radius: 4px;
-  border: 1px solid ${(props) => props.theme.colors.border};
-  background-color: ${(props) => props.theme.colors.surface};
-  color: ${(props) => props.theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
   width: 100%;
 `;
 
@@ -94,52 +94,52 @@ const SearchIcon = styled.div`
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   cursor: pointer;
 `;
 
 const OrdersTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  box-shadow: 0 2px 8px ${(props) => props.theme.colors.shadow};
+  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
   border-radius: 8px;
   overflow: hidden;
 `;
 
 const TableHeader = styled.thead`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
 `;
 
 const TableHeaderCell = styled.th`
   padding: 16px;
   text-align: left;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   font-weight: 600;
-  border-bottom: 2px solid ${(props) => props.theme.colors.border};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border};
 `;
 
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
 
   &:nth-child(odd) {
-    background-color: ${(props) =>
-      props.theme.mode === "dark"
-        ? props.theme.colors.backgroundAlt
-        : props.theme.colors.backgroundLight};
+    background-color: ${({ theme }) =>
+      theme.mode === "dark"
+        ? theme.colors.backgroundAlt
+        : theme.colors.backgroundLight};
   }
 
   &:hover {
-    background-color: ${(props) =>
-      props.theme.colors.border + "40"}; // 40 = 25% opacity
+    background-color: ${({ theme }) =>
+      theme.colors.border + "40"}; // 40 = 25% opacity
   }
 `;
 
 const TableCell = styled.td`
   padding: 12px 16px;
-  border-bottom: 1px solid ${(props) => props.theme.colors.border};
-  color: ${(props) => props.theme.colors.text};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const StatusBadge = styled.span`
@@ -148,41 +148,41 @@ const StatusBadge = styled.span`
   border-radius: 12px;
   font-size: 0.85rem;
   font-weight: 500;
-  background-color: ${(props) => {
-    switch (props.status) {
+  background-color: ${({ theme, status }) => {
+    switch (status) {
       case "pendiente":
-        return props.theme.colors.warning + "33";
+        return theme.colors.warning + "33";
       case "en_proceso":
-        return props.theme.colors.info + "33";
+        return theme.colors.info + "33";
       case "en_proceso_observacion":
-        return props.theme.colors.info + "66";
+        return theme.colors.info + "66";
       case "rechazado":
-        return props.theme.colors.error + "33";
+        return theme.colors.error + "33";
       case "cancelado_cliente":
-        return props.theme.colors.error + "66";
+        return theme.colors.error + "66";
       case "completado":
-        return props.theme.colors.success + "33";
+        return theme.colors.success + "33";
       case "despachado":
-        return props.theme.colors.success + "66";
+        return theme.colors.success + "66";
       default:
-        return props.theme.colors.border;
+        return theme.colors.border;
     }
   }};
-  color: ${(props) => {
-    switch (props.status) {
+  color: ${({ theme, status }) => {
+    switch (status) {
       case "pendiente":
-        return props.theme.colors.warning;
+        return theme.colors.warning;
       case "en_proceso":
       case "en_proceso_observacion":
-        return props.theme.colors.info;
+        return theme.colors.info;
       case "rechazado":
       case "cancelado_cliente":
-        return props.theme.colors.error;
+        return theme.colors.error;
       case "completado":
       case "despachado":
-        return props.theme.colors.success;
+        return theme.colors.success;
       default:
-        return props.theme.colors.textLight;
+        return theme.colors.textLight;
     }
   }};
 `;
@@ -195,7 +195,7 @@ const ActionButtons = styled.div`
 const ActionButton = styled.button`
   background: none;
   border: none;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -205,14 +205,14 @@ const ActionButton = styled.button`
   font-size: 0.85rem;
 
   &:hover {
-    background-color: ${(props) => props.theme.colors.border};
+    background-color: ${({ theme }) => theme.colors.border};
   }
 `;
 
 const AddressAlert = styled.div`
   position: relative;
-  background-color: ${(props) => props.theme.colors.warning + "20"};
-  border-left: 3px solid ${(props) => props.theme.colors.warning};
+  background-color: ${({ theme }) => theme.colors.warning + "20"};
+  border-left: 3px solid ${({ theme }) => theme.colors.warning};
   padding: 8px 12px;
   margin-bottom: 16px;
   border-radius: 4px;
@@ -223,7 +223,7 @@ const AddressAlert = styled.div`
 
 const AlertText = styled.span`
   font-size: 0.9rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const AlertActions = styled.div`
@@ -233,7 +233,7 @@ const AlertActions = styled.div`
 
 const NewAddressCount = styled.span`
   display: inline-block;
-  background-color: ${(props) => props.theme.colors.warning};
+  background-color: ${({ theme }) => theme.colors.warning};
   color: white;
   border-radius: 50%;
   width: 20px;
@@ -247,15 +247,15 @@ const NewAddressCount = styled.span`
 const NoDataContainer = styled.div`
   padding: 40px;
   text-align: center;
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
-  box-shadow: 0 2px 8px ${(props) => props.theme.colors.shadow};
+  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
   margin-top: 20px;
 `;
 
 const NoDataMessage = styled.p`
   font-size: 1.1rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   margin: 0 0 16px 0;
 `;
 
@@ -270,12 +270,12 @@ const Pagination = styled.div`
 const PageButton = styled.button`
   padding: 6px 12px;
   border: 1px solid
-    ${(props) =>
-      props.active ? props.theme.colors.primary : props.theme.colors.border};
-  background-color: ${(props) =>
-    props.active ? props.theme.colors.primary : props.theme.colors.surface};
-  color: ${(props) =>
-    props.active ? props.theme.colors.white : props.theme.colors.text};
+    ${({ theme, $active }) =>
+      $active ? theme.colors.primary : theme.colors.border};
+  background-color: ${({ theme, $active }) =>
+    $active ? theme.colors.primary : theme.colors.surface};
+  color: ${({ theme, $active }) =>
+    $active ? theme.colors.white : theme.colors.text};
   border-radius: 4px;
   cursor: pointer;
 
@@ -467,9 +467,10 @@ const CoordinadorHomeComponent = () => {
         setLoading(false);
       }
     };
+    console.log("Empresas de acceso:", empresasAcceso);
 
     loadOrders();
-  }, [empresasAcceso]);
+  }, []);
 
   // Aplicar filtros
   useEffect(() => {
@@ -691,7 +692,7 @@ const CoordinadorHomeComponent = () => {
               {[...Array(totalPages).keys()].map((number) => (
                 <PageButton
                   key={number + 1}
-                  active={currentPage === number + 1}
+                  $active={currentPage === number + 1}
                   onClick={() => paginate(number + 1)}
                 >
                   {number + 1}

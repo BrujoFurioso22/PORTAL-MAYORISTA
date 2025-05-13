@@ -6,13 +6,13 @@ import Button from "../ui/Button";
 import { toast } from "react-toastify";
 
 const StyledCard = styled.div`
-  background-color: ${(props) =>
-    props.theme.colors.surface}; // En lugar de "white" fijo
-  color: ${(props) => props.theme.colors.text}; // Añadir color de texto
+  background-color: ${({ theme }) =>
+    theme.colors.surface}; // En lugar de "white" fijo
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
   border-radius: 8px;
   overflow: hidden;
   transition: box-shadow 0.3s ease;
-  box-shadow: 0 2px 8px ${(props) => props.theme.colors.shadow};
+  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
 
   /* Asegurar que la tarjeta tenga un alto consistente */
   height: 100%;
@@ -21,7 +21,7 @@ const StyledCard = styled.div`
 
   &:hover {
     cursor: pointer;
-    box-shadow: 0 4px 12px ${(props) => props.theme.colors.shadow};
+    box-shadow: 0 4px 12px ${({ theme }) => theme.colors.shadow};
   }
 `;
 
@@ -44,7 +44,7 @@ const DiscountBadge = styled.div`
   position: absolute;
   top: 10px;
   right: 10px;
-  background-color: ${(props) => props.theme.colors.tertiary};
+  background-color: ${({ theme }) => theme.colors.tertiary};
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
@@ -64,13 +64,13 @@ const ContentContainer = styled.div`
 const ProductName = styled.h3`
   margin: 0 0 8px 0;
   font-size: 1rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const Brand = styled.span`
   display: block;
   font-size: 0.8rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   margin-bottom: 8px;
 `;
 
@@ -84,13 +84,13 @@ const Price = styled.div`
 const CurrentPrice = styled.span`
   font-size: 1.2rem;
   font-weight: bold;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 const OriginalPrice = styled.span`
   font-size: 0.9rem;
   text-decoration: line-through;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const ButtonContainer = styled.div`
@@ -108,7 +108,7 @@ const SpecsList = styled.ul`
 
 const SpecItem = styled.li`
   margin-bottom: 4px;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

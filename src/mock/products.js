@@ -4,25 +4,28 @@ export const empresas = [
     id: "autollanta",
     nombre: "Autollanta",
     descripcion: "Especialistas en neumáticos de alta calidad",
-    logo: "https://via.placeholder.com/300x200?text=Autollanta",
+    logo: "/src/assets/enterprises/AutollantaLogo.png",
     color: "#0056b3",
-    marcas: ["Fortune", "Roadcruza"]
+    marcas: ["Fortune", "Roadcruza"],
+    products: 210,
   },
   {
     id: "maxximundo",
     nombre: "Maxximundo",
     descripcion: "Neumáticos y lubricantes de calidad superior",
-    logo: "https://via.placeholder.com/300x200?text=Maxximundo",
+    logo: "/src/assets/enterprises/MaxximundoLogo.png",
     color: "#28a745",
-    marcas: ["Maxxis", "Shell", "CST"]
+    marcas: ["Maxxis", "Shell", "Roadcruza", "Aplus"],
+    products: 312,
   },
   {
     id: "stox",
     nombre: "Stox",
     descripcion: "Soluciones automotrices integrales",
-    logo: "https://via.placeholder.com/300x200?text=Stox",
+    logo: "/src/assets/enterprises/StoxLogo.png",
     color: "#dc3545",
-    marcas: ["Hahua", "PowerMax", "RimTech"]
+    marcas: ["CST", "Farroad", "Ansu", "Bayi-Rubber"],
+    products: 240,
   },
   {
     id: "automax",
@@ -30,16 +33,18 @@ export const empresas = [
     descripcion: "Accesorios y repuestos para vehículos",
     logo: "https://via.placeholder.com/300x200?text=Automax",
     color: "#fd7e14",
-    marcas: ["Cost"]
+    marcas: ["Cost"],
+    products: 200,
   },
   {
     id: "ikonix",
     nombre: "Ikonix",
     descripcion: "Herramientas profesionales y sistemas de iluminación",
-    logo: "https://via.placeholder.com/300x200?text=Ikonix",
+    logo: "/src/assets/enterprises/IkonixLogo.png",
     color: "#6610f2",
-    marcas: ["Uyustools", "LumC"]
-  }
+    marcas: ["Uyustools", "FSL"],
+    products: 347,
+  },
 ];
 
 // Definir categorías por tipo de producto
@@ -49,32 +54,36 @@ export const categorias = {
     { id: 2, name: "suv", displayName: "Para SUV/Camionetas" },
     { id: 3, name: "camion", displayName: "Para Camiones" },
     { id: 4, name: "moto", displayName: "Para Motocicletas" },
-    { id: 5, name: "todoterreno", displayName: "Todo Terreno" }
+    { id: 5, name: "todoterreno", displayName: "Todo Terreno" },
   ],
   lubricantes: [
     { id: 6, name: "aceite_motor", displayName: "Aceite de Motor" },
     { id: 7, name: "aceite_transmision", displayName: "Aceite de Transmisión" },
     { id: 8, name: "liquido_frenos", displayName: "Líquido de Frenos" },
     { id: 9, name: "refrigerante", displayName: "Refrigerante" },
-    { id: 10, name: "aditivos", displayName: "Aditivos" }
+    { id: 10, name: "aditivos", displayName: "Aditivos" },
   ],
   herramientas: [
     { id: 11, name: "manuales", displayName: "Herramientas Manuales" },
     { id: 12, name: "electricas", displayName: "Herramientas Eléctricas" },
     { id: 13, name: "neumaticas", displayName: "Herramientas Neumáticas" },
-    { id: 14, name: "especialidad", displayName: "Herramientas de Especialidad" }
+    {
+      id: 14,
+      name: "especialidad",
+      displayName: "Herramientas de Especialidad",
+    },
   ],
   iluminacion: [
     { id: 15, name: "interior", displayName: "Iluminación Interior" },
     { id: 16, name: "exterior", displayName: "Iluminación Exterior" },
     { id: 17, name: "led", displayName: "Tecnología LED" },
-    { id: 18, name: "accesorios", displayName: "Accesorios de Iluminación" }
-  ]
+    { id: 18, name: "accesorios", displayName: "Accesorios de Iluminación" },
+  ],
 };
 
 // Exportar todas las categorías en un solo array para compatibilidad con el código existente
 export const categories = [].concat(
-  ...Object.values(categorias).map(catArray => catArray)
+  ...Object.values(categorias).map((catArray) => catArray)
 );
 
 // Función para generar productos por empresa
@@ -89,7 +98,8 @@ function generarProductosPorEmpresa() {
     {
       id: idCounter++,
       name: "Neumático Fortune FSR-303 225/65R17",
-      description: "Neumático para SUV con excelente agarre en superficie húmeda y seca.",
+      description:
+        "Neumático para SUV con excelente agarre en superficie húmeda y seca.",
       price: 129.99,
       discount: 5,
       image: "https://via.placeholder.com/300x300?text=Fortune+FSR303",
@@ -105,14 +115,15 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "H",
         indiceCarga: "102",
         tipo: "Radial",
-        perfil: "Asimétrico"
-      }
+        perfil: "Asimétrico",
+      },
     },
     {
       id: idCounter++,
       name: "Neumático Fortune FSR-201 195/55R15",
-      description: "Neumático deportivo para sedán con excelente respuesta en curvas.",
-      price: 89.50,
+      description:
+        "Neumático deportivo para sedán con excelente respuesta en curvas.",
+      price: 89.5,
       discount: 0,
       image: "https://via.placeholder.com/300x300?text=Fortune+FSR201",
       categories: ["sedan"],
@@ -126,14 +137,15 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "V",
         indiceCarga: "85",
         tipo: "Radial",
-        perfil: "Deportivo"
-      }
+        perfil: "Deportivo",
+      },
     },
     // Roadcruza
     {
       id: idCounter++,
       name: "Neumático Roadcruza RA1100 265/70R16",
-      description: "Neumático todo terreno con alta durabilidad y tracción superior.",
+      description:
+        "Neumático todo terreno con alta durabilidad y tracción superior.",
       price: 145.75,
       discount: 10,
       image: "https://via.placeholder.com/300x300?text=Roadcruza+RA1100",
@@ -148,14 +160,15 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "S",
         indiceCarga: "112",
         tipo: "Radial",
-        perfil: "All-Terrain"
-      }
+        perfil: "All-Terrain",
+      },
     },
     {
       id: idCounter++,
       name: "Neumático Roadcruza RA510 185/65R14",
-      description: "Neumático económico con buen rendimiento para vehículos compactos.",
-      price: 75.90,
+      description:
+        "Neumático económico con buen rendimiento para vehículos compactos.",
+      price: 75.9,
       discount: 0,
       image: "https://via.placeholder.com/300x300?text=Roadcruza+RA510",
       categories: ["sedan"],
@@ -169,9 +182,9 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "T",
         indiceCarga: "86",
         tipo: "Radial",
-        perfil: "Estándar"
-      }
-    }
+        perfil: "Estándar",
+      },
+    },
   ];
 
   // Para Maxximundo (Neumáticos y Lubricantes)
@@ -180,7 +193,8 @@ function generarProductosPorEmpresa() {
     {
       id: idCounter++,
       name: "Neumático Maxxis AT980E 245/75R16",
-      description: "Neumático todo terreno para camionetas con rendimiento extremo en superficies difíciles.",
+      description:
+        "Neumático todo terreno para camionetas con rendimiento extremo en superficies difíciles.",
       price: 189.99,
       discount: 0,
       image: "https://via.placeholder.com/300x300?text=Maxxis+AT980E",
@@ -195,14 +209,15 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "Q",
         indiceCarga: "120/116",
         tipo: "Radial",
-        perfil: "Mud Terrain"
-      }
+        perfil: "Mud Terrain",
+      },
     },
     {
       id: idCounter++,
       name: "Neumático Maxxis MA-Z4S 215/45ZR17",
-      description: "Neumático ultra-high performance para vehículos deportivos.",
-      price: 165.50,
+      description:
+        "Neumático ultra-high performance para vehículos deportivos.",
+      price: 165.5,
       discount: 5,
       image: "https://via.placeholder.com/300x300?text=Maxxis+MA-Z4S",
       categories: ["sedan"],
@@ -216,14 +231,15 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "W",
         indiceCarga: "91",
         tipo: "Radial",
-        perfil: "Ultra High Performance"
-      }
+        perfil: "Ultra High Performance",
+      },
     },
     // CST (Neumáticos)
     {
       id: idCounter++,
       name: "Neumático CST Adreno AT 235/75R15",
-      description: "Neumático all-terrain para camionetas con excelente durabilidad.",
+      description:
+        "Neumático all-terrain para camionetas con excelente durabilidad.",
       price: 132.75,
       discount: 0,
       image: "https://via.placeholder.com/300x300?text=CST+Adreno",
@@ -238,15 +254,16 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "S",
         indiceCarga: "109",
         tipo: "Radial",
-        perfil: "All Terrain"
-      }
+        perfil: "All Terrain",
+      },
     },
     // Shell (Lubricantes)
     {
       id: idCounter++,
       name: "Aceite Shell Helix Ultra 5W-40 4L",
-      description: "Aceite 100% sintético de alto rendimiento para motores modernos.",
-      price: 58.90,
+      description:
+        "Aceite 100% sintético de alto rendimiento para motores modernos.",
+      price: 58.9,
       discount: 10,
       image: "https://via.placeholder.com/300x300?text=Shell+Helix+Ultra",
       categories: ["aceite_motor"],
@@ -260,8 +277,8 @@ function generarProductosPorEmpresa() {
         tipo: "Sintético",
         capacidad: "4L",
         apiSn: true,
-        aceaC3: true
-      }
+        aceaC3: true,
+      },
     },
     {
       id: idCounter++,
@@ -280,9 +297,9 @@ function generarProductosPorEmpresa() {
         tipo: "50/50 Mezcla",
         capacidad: "3.78L",
         color: "Verde",
-        temperatura: "-34°C a +103°C"
-      }
-    }
+        temperatura: "-34°C a +103°C",
+      },
+    },
   ];
 
   // Para Stox
@@ -292,7 +309,7 @@ function generarProductosPorEmpresa() {
       id: idCounter++,
       name: "Neumático Hahua HH301 205/60R16",
       description: "Neumático para sedán con excelente rendimiento en ciudad.",
-      price: 92.50,
+      price: 92.5,
       discount: 5,
       image: "https://via.placeholder.com/300x300?text=Hahua+HH301",
       categories: ["sedan"],
@@ -306,8 +323,8 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "H",
         indiceCarga: "92",
         tipo: "Radial",
-        perfil: "Turismo"
-      }
+        perfil: "Turismo",
+      },
     },
     // PowerMax
     {
@@ -328,15 +345,16 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "T",
         indiceCarga: "82",
         tipo: "Radial",
-        perfil: "Económico"
-      }
+        perfil: "Económico",
+      },
     },
     // RimTech
     {
       id: idCounter++,
       name: "Aro RimTech Sport R17 Negro Mate",
-      description: "Aros deportivos de alta resistencia con acabado negro mate.",
-      price: 210.00,
+      description:
+        "Aros deportivos de alta resistencia con acabado negro mate.",
+      price: 210.0,
       discount: 0,
       image: "https://via.placeholder.com/300x300?text=RimTech+R17",
       categories: ["sedan", "suv"],
@@ -346,13 +364,13 @@ function generarProductosPorEmpresa() {
       destacado: true,
       empresaId: "stox",
       specs: {
-        diametro: "17\"",
+        diametro: '17"',
         anchura: "7.5J",
         offset: "ET35",
         pcd: "5x114.3",
-        acabado: "Negro Mate"
-      }
-    }
+        acabado: "Negro Mate",
+      },
+    },
   ];
 
   // Para Automax
@@ -376,13 +394,14 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "Q",
         indiceCarga: "109",
         tipo: "Radial",
-        perfil: "Off-road"
-      }
+        perfil: "Off-road",
+      },
     },
     {
       id: idCounter++,
       name: "Neumático Cost EcoSport 185/70R14",
-      description: "Neumático para uso diario con buen rendimiento y economía de combustible.",
+      description:
+        "Neumático para uso diario con buen rendimiento y economía de combustible.",
       price: 69.99,
       discount: 10,
       image: "https://via.placeholder.com/300x300?text=Cost+EcoSport",
@@ -397,9 +416,9 @@ function generarProductosPorEmpresa() {
         indiceVelocidad: "T",
         indiceCarga: "88",
         tipo: "Radial",
-        perfil: "Turismo"
-      }
-    }
+        perfil: "Turismo",
+      },
+    },
   ];
 
   // Para Ikonix (Herramientas e Iluminación)
@@ -409,7 +428,7 @@ function generarProductosPorEmpresa() {
       id: idCounter++,
       name: "Taladro Inalámbrico Uyustools 20V",
       description: "Taladro a batería con 2 velocidades y alto torque.",
-      price: 145.00,
+      price: 145.0,
       discount: 15,
       image: "https://via.placeholder.com/300x300?text=Uyustools+Taladro",
       categories: ["electricas"],
@@ -423,14 +442,15 @@ function generarProductosPorEmpresa() {
         velocidad: "0-450/0-1800 RPM",
         bateria: "Li-Ion 2.0Ah",
         mandril: "13mm",
-        incluye: "2 baterías, cargador, maletín"
-      }
+        incluye: "2 baterías, cargador, maletín",
+      },
     },
     {
       id: idCounter++,
       name: "Juego de Llaves Uyustools 40 piezas",
-      description: "Juego completo de llaves combinadas en medidas métricas y pulgadas.",
-      price: 89.90,
+      description:
+        "Juego completo de llaves combinadas en medidas métricas y pulgadas.",
+      price: 89.9,
       discount: 0,
       image: "https://via.placeholder.com/300x300?text=Uyustools+Llaves",
       categories: ["manuales"],
@@ -443,16 +463,16 @@ function generarProductosPorEmpresa() {
         piezas: 40,
         material: "Acero Cromo-Vanadio",
         acabado: "Cromado",
-        medidas: "8-19mm y 5/16\"-3/4\"",
-        estuche: "Plástico resistente"
-      }
+        medidas: '8-19mm y 5/16"-3/4"',
+        estuche: "Plástico resistente",
+      },
     },
     // LumC (Iluminación)
     {
       id: idCounter++,
       name: "Foco LED LumC 12W E27 Luz Blanca",
       description: "Foco LED de alta eficiencia para iluminación interior.",
-      price: 8.50,
+      price: 8.5,
       discount: 5,
       image: "https://via.placeholder.com/300x300?text=LumC+LED",
       categories: ["interior", "led"],
@@ -466,8 +486,8 @@ function generarProductosPorEmpresa() {
         socket: "E27",
         lumen: "1200lm",
         colorTemp: "6500K (Blanco frío)",
-        vidaUtil: "25000 horas"
-      }
+        vidaUtil: "25000 horas",
+      },
     },
     {
       id: idCounter++,
@@ -487,9 +507,9 @@ function generarProductosPorEmpresa() {
         lumen: "5000lm",
         colorTemp: "6000K (Blanco frío)",
         ip: "IP65 (Resistente al agua)",
-        angulo: "120°"
-      }
-    }
+        angulo: "120°",
+      },
+    },
   ];
 
   return productosPorEmpresa;
@@ -513,6 +533,5 @@ export const brands = [
   { id: 8, name: "RimTech" },
   { id: 9, name: "Cost" },
   { id: 10, name: "Uyustools" },
-  { id: 11, name: "LumC" }
+  { id: 11, name: "LumC" },
 ];
-

@@ -3,10 +3,11 @@ import styled from "styled-components";
 // import { brands, categories } from '../../mock/products';
 
 const SidebarContainer = styled.div`
-  background: ${(props) => props.theme.colors.surface}; // Usar surface en lugar de "white"
-  color: ${(props) => props.theme.colors.text}; // Añadir color de texto
+  background: ${({ theme }) =>
+    theme.colors.surface}; // Usar surface en lugar de "white"
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
   border-radius: 8px;
-  box-shadow: 0 2px 6px ${(props) => props.theme.colors.shadow};
+  box-shadow: 0 2px 6px ${({ theme }) => theme.colors.shadow};
   padding: 20px;
   margin-right: 20px;
   min-width: 250px;
@@ -16,7 +17,7 @@ const SectionTitle = styled.h3`
   margin-top: 0;
   margin-bottom: 16px;
   font-size: 1rem;
-  border-bottom: 1px solid ${(props) => props.theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   padding-bottom: 8px;
 `;
 
@@ -35,7 +36,7 @@ const CheckboxItem = styled.label`
   align-items: center;
   cursor: pointer;
   font-size: 0.9rem;
-  color: ${(props) => props.theme.colors.text}; // Añadir color de texto
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
 `;
 
 const Checkbox = styled.input`
@@ -58,9 +59,10 @@ const PriceInput = styled.input`
   width: 80px;
   padding: 6px;
   border-radius: 4px;
-  border: 1px solid ${(props) => props.theme.colors.border};
-  background-color: ${(props) => props.theme.colors.surface}; // Añadir color de fondo
-  color: ${(props) => props.theme.colors.text}; // Añadir color de texto
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) =>
+    theme.colors.surface}; // Añadir color de fondo
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
 `;
 
 const RangeSlider = styled.input`
@@ -70,15 +72,15 @@ const RangeSlider = styled.input`
 
 const ApplyButton = styled.button`
   padding: 8px 16px;
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.white}; // Usar theme.colors.white
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.white}; // Usar theme.colors.white
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
-  
+
   &:hover {
-    background-color: ${(props) => props.theme.colors.accent};
+    background-color: ${({ theme }) => theme.colors.accent};
   }
 `;
 

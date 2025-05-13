@@ -18,7 +18,7 @@ const PageContainer = styled.div`
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
-  background-color: ${(props) => props.theme.colors.background};
+  background-color: ${({ theme }) => theme.colors.background};
 `;
 
 const PageHeader = styled.div`
@@ -31,7 +31,7 @@ const PageHeader = styled.div`
 const BackButton = styled.button`
   background: none;
   border: none;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -47,21 +47,21 @@ const BackButton = styled.button`
 
 const PageTitle = styled.h1`
   margin: 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1.8rem;
 `;
 
 const SearchInfo = styled.p`
   margin: 0;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const FiltersBar = styled.div`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 24px;
-  box-shadow: 0 2px 4px ${(props) => props.theme.colors.shadow};
+  box-shadow: 0 2px 4px ${({ theme }) => theme.colors.shadow};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -77,7 +77,7 @@ const FilterGroup = styled.div`
 
 const FilterLabel = styled.label`
   font-size: 0.9rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -91,9 +91,9 @@ const FilterSelect = styled.select`
   padding: 8px 12px;
   padding-right: 32px;
   border-radius: 4px;
-  border: 1px solid ${(props) => props.theme.colors.border};
-  background-color: ${(props) => props.theme.colors.background};
-  color: ${(props) => props.theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
   appearance: none;
   cursor: pointer;
 `;
@@ -104,7 +104,7 @@ const SelectIcon = styled.div`
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const ProductsGrid = styled.div`
@@ -114,27 +114,27 @@ const ProductsGrid = styled.div`
 `;
 
 const NoResultsContainer = styled.div`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 40px;
   text-align: center;
-  box-shadow: 0 2px 4px ${(props) => props.theme.colors.shadow};
+  box-shadow: 0 2px 4px ${({ theme }) => theme.colors.shadow};
 `;
 
 const NoResultsIcon = styled.div`
   font-size: 3rem;
   margin-bottom: 16px;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const NoResultsTitle = styled.h2`
   margin: 0 0 16px 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const NoResultsText = styled.p`
   margin: 0 0 24px 0;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   max-width: 500px;
   margin-left: auto;
   margin-right: auto;
@@ -142,7 +142,7 @@ const NoResultsText = styled.p`
 
 // Nuevos estilos para productos sin acceso
 const RestrictedProductCard = styled.div`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -173,17 +173,17 @@ const RestrictedOverlay = styled.div`
 `;
 
 const RestrictedMessageContainer = styled.div`
-  background-color: ${(props) => props.theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   width: 85%;
   max-width: 250px;
-  border: 2px solid ${(props) => props.theme.colors.primary}; // Borde destacado
+  border: 2px solid ${({ theme }) => theme.colors.primary}; // Borde destacado
 `;
 
 const RestrictedIcon = styled.div`
-  background-color: ${(props) => props.theme.colors.primary};
+  background-color: ${({ theme }) => theme.colors.primary};
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -192,11 +192,11 @@ const RestrictedIcon = styled.div`
   justify-content: center;
   margin-bottom: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  color: ${(props) => props.theme.colors.white}; // Texto blanco para contraste
+  color: ${({ theme }) => theme.colors.white}; // Texto blanco para contraste
   font-size: 1.5rem;
 `;
 const RestrictedText = styled.p`
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-weight: 600; // Más negrita
   font-size: 1.1rem; // Más grande
   margin: 0 0 16px 0;
@@ -226,13 +226,13 @@ const RestrictedContent = styled.div`
 const RestrictedName = styled.h3`
   margin: 0 0 8px 0;
   font-size: 1rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const RestrictedBrand = styled.p`
   margin: 0;
   font-size: 0.8rem;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const SearchResults = () => {
@@ -453,7 +453,7 @@ const SearchResults = () => {
                         variant="solid" // Cambiado de outline a solid para mayor visibilidad
                         size="small"
                         onClick={() => handleRequestAccess(product.empresaId)}
-                        backgroundColor={(props) => props.theme.colors.primary}
+                        backgroundColor={({ theme }) => theme.colors.primary}
                       />
                     </RestrictedMessageContainer>
                   </RestrictedOverlay>
@@ -493,7 +493,7 @@ const SearchResults = () => {
           <Button
             text="Volver al inicio"
             variant="solid"
-            backgroundColor={(props) => props.theme.colors.primary}
+            backgroundColor={({theme}) => theme.colors.primary}
             onClick={handleNavigate}
           />
         </NoResultsContainer>

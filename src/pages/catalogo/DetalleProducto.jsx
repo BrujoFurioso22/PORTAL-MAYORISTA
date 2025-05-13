@@ -12,17 +12,17 @@ const PageContainer = styled.div`
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
-  background-color: ${(props) =>
-    props.theme.colors.background}; // Añadir color de fondo
-  color: ${(props) => props.theme.colors.text}; // Añadir color de texto
+  background-color: ${({ theme }) =>
+    theme.colors.background}; // Añadir color de fondo
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
 `;
 
 const ProductLayout = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 40px;
-  background-color: ${(props) =>
-    props.theme.colors.background}; // Añadir color de fondo
+  background-color: ${({ theme }) =>
+    theme.colors.background}; // Añadir color de fondo
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -39,9 +39,9 @@ const MainImage = styled.img`
   height: auto;
   object-fit: contain;
   border-radius: 8px;
-  background-color: ${(props) =>
-    props.theme.colors.white}; // Fondo blanco para imágenes
-  box-shadow: 0 4px 10px ${(props) => props.theme.colors.shadow}; // Usar shadow del tema
+  background-color: ${({ theme }) =>
+    theme.colors.white}; // Fondo blanco para imágenes
+  box-shadow: 0 4px 10px ${({ theme }) => theme.colors.shadow}; // Usar shadow del tema
 `;
 
 const InfoSection = styled.div`
@@ -50,21 +50,21 @@ const InfoSection = styled.div`
 `;
 
 const Category = styled.div`
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
   font-size: 0.9rem;
   margin-bottom: 8px;
 `;
 
 const ProductTitle = styled.h1`
   margin: 0 0 16px 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   font-size: 1.8rem;
 `;
 
 const Brand = styled.div`
   margin-bottom: 20px;
   font-weight: 500;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const PriceContainer = styled.div`
@@ -77,18 +77,18 @@ const PriceContainer = styled.div`
 const CurrentPrice = styled.span`
   font-size: 2rem;
   font-weight: bold;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
 `;
 
 const OriginalPrice = styled.span`
   font-size: 1.2rem;
   text-decoration: line-through;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const Discount = styled.span`
-  background-color: ${(props) => props.theme.colors.tertiary};
-  color: ${(props) => props.theme.colors.white}; // Solo una definición de color
+  background-color: ${({ theme }) => theme.colors.tertiary};
+  color: ${({ theme }) => theme.colors.white}; // Solo una definición de color
   padding: 4px 8px;
   border-radius: 4px;
   font-weight: bold;
@@ -97,7 +97,7 @@ const Discount = styled.span`
 
 const Description = styled.p`
   line-height: 1.6;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
   margin-bottom: 24px;
 `;
 
@@ -112,13 +112,13 @@ const StockDot = styled.span`
   height: 12px;
   width: 12px;
   border-radius: 50%;
-  background-color: ${(props) =>
-    props.inStock ? props.theme.colors.success : props.theme.colors.error};
+  background-color: ${({ theme, $inStock }) =>
+    $inStock ? theme.colors.success : theme.colors.error};
 `;
 
 const StockText = styled.span`
-  color: ${(props) =>
-    props.inStock ? props.theme.colors.success : props.theme.colors.error};
+  color: ${({ theme, $inStock }) =>
+    $inStock ? theme.colors.success : theme.colors.error};
 `;
 
 const QuantitySelector = styled.div`
@@ -130,11 +130,10 @@ const QuantitySelector = styled.div`
 const QuantityButton = styled.button`
   width: 36px;
   height: 36px;
-  border: 1px solid ${(props) => props.theme.colors.border};
-  background-color: ${(props) =>
-    props.theme.colors.surface}; // Usar surface en lugar de "white"
-  color: ${(props) =>
-    props.theme.colors.text}; // Añadir color de texto explícito
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) =>
+    theme.colors.surface}; // Usar surface en lugar de "white"
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto explícito
   display: flex;
   align-items: center;
   justify-content: center;
@@ -150,21 +149,21 @@ const QuantityButton = styled.button`
   }
 
   &:hover {
-    background-color: ${(props) => props.theme.colors.background};
+    background-color: ${({ theme }) => theme.colors.background};
   }
 `;
 
 const QuantityInput = styled.input`
   width: 50px;
   height: 36px;
-  border: 1px solid ${(props) => props.theme.colors.border};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-left: none;
   border-right: none;
   text-align: center;
   font-size: 1rem;
-  background-color: ${(props) =>
-    props.theme.colors.surface}; // Añadir color de fondo
-  color: ${(props) => props.theme.colors.text}; // Añadir color de texto
+  background-color: ${({ theme }) =>
+    theme.colors.surface}; // Añadir color de fondo
+  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
 `;
 
 const ButtonsContainer = styled.div`
@@ -176,7 +175,7 @@ const ButtonsContainer = styled.div`
 const BackLink = styled.button`
   background: none;
   border: none;
-  color: ${(props) => props.theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primary};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -193,13 +192,13 @@ const BackLink = styled.button`
 const SpecificationsSection = styled.div`
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid ${(props) => props.theme.colors.border};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const SpecificationsTitle = styled.h3`
   margin: 0 0 16px 0;
   font-size: 1.1rem;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const SpecificationsTable = styled.table`
@@ -208,7 +207,7 @@ const SpecificationsTable = styled.table`
 `;
 
 const SpecRow = styled.tr`
-  border-bottom: 1px solid ${(props) => props.theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   &:last-child {
     border-bottom: none;
@@ -219,12 +218,12 @@ const SpecLabel = styled.td`
   padding: 8px 0;
   font-weight: 500;
   width: 40%;
-  color: ${(props) => props.theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const SpecValue = styled.td`
   padding: 8px 0;
-  color: ${(props) => props.theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 // En el componente DetalleProducto, agregar esta función para renderizar especificaciones
@@ -363,8 +362,8 @@ const DetalleProducto = () => {
           </PriceContainer>
 
           <Stock>
-            <StockDot inStock={product.stock > 0} />
-            <StockText inStock={product.stock > 0}>
+            <StockDot $inStock={product.stock > 0} />
+            <StockText $inStock={product.stock > 0}>
               {product.stock > 0
                 ? `En stock (${product.stock} unidades disponibles)`
                 : "Agotado"}
