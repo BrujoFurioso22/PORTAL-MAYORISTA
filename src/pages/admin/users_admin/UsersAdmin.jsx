@@ -6,9 +6,9 @@ import Button from "../../../components/ui/Button";
 import Input from "../../../components/ui/Input";
 import { useAppTheme } from "../../../context/AppThemeContext";
 import { useAuth } from "../../../context/AuthContext";
-import { ROLES } from "../../../constants/roles";
 import RenderIcon from "../../../components/ui/RenderIcon";
-import { users_getAll } from "../../../services/users/users";
+import { users_create, users_getAll, users_update } from "../../../services/users/users";
+import { roles_getAll } from "../../../services/users/roles";
 
 // Estilos
 const PageContainer = styled.div`
@@ -267,10 +267,9 @@ const UsersAdmin = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("todos");
-  const [statusFilter, setStatusFilter] = useState("todos");
-  const [companyFilter, setCompanyFilter] = useState("todas");
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(10);
+  const [roles, setRoles] = useState([]);
 
   // Estados para modales
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -290,7 +289,7 @@ const UsersAdmin = () => {
   // Cargar datos iniciales
   useEffect(() => {
     // Aquí se cargarían los usuarios desde la API
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       const response = await users_getAll();
 
       if (response.success) {
@@ -299,8 +298,16 @@ const UsersAdmin = () => {
       } else {
         toast.error(response.message || "Error al cargar usuarios");
       }
+
+      // Cargar roles
+      const rolesResponse = await roles_getAll();
+      if (rolesResponse.success) {
+        setRoles(rolesResponse.data);
+      } else {
+        toast.error(rolesResponse.message || "Error al cargar roles");
+      }
     };
-    fetchUsers();
+    fetchData();
   }, []);
 
   // Filtrar usuarios
@@ -318,7 +325,9 @@ const UsersAdmin = () => {
 
     // Aplicar filtro de rol
     if (roleFilter !== "todos") {
-      result = result.filter((user) => user.ROLE_USER === roleFilter);
+      result = result.filter(
+        (user) => user.ROLE_USER.toString() === roleFilter.toString()
+      );
     }
 
     setFilteredUsers(result);
@@ -385,7 +394,7 @@ const UsersAdmin = () => {
   };
 
   // Funciones CRUD
-  const handleCreateUser = (e) => {
+  const handleCreateUser = async (e) => {
     e.preventDefault();
 
     // Validaciones
@@ -402,18 +411,33 @@ const UsersAdmin = () => {
     // Aquí se enviaría la petición a la API
     // Por ahora simulamos la creación
     const newUser = {
-      id: users.length + 1,
       name: formData.name,
       email: formData.email,
-      role: formData.role,
+      password: formData.password,
+      role: parseInt(formData.role),
     };
 
-    setUsers([...users, newUser]);
+    const response = await users_create(newUser);
+    if (!response.success) {
+      toast.error(response.message || "Error al crear usuario");
+      return;
+    }
+
+    // Recargar la lista de usuarios para obtener los datos actualizados
+    const fetchUsers = async () => {
+      const response = await users_getAll();
+      if (response.success) {
+        setUsers(response.data);
+        setFilteredUsers(response.data);
+      }
+    };
+    await fetchUsers();
+
     toast.success("Usuario creado correctamente");
     handleCloseModals();
   };
 
-  const handleUpdateUser = (e) => {
+  const handleUpdateUser = async (e) => {
     e.preventDefault();
 
     // Validaciones
@@ -427,22 +451,43 @@ const UsersAdmin = () => {
       return;
     }
 
-    // Aquí se enviaría la petición a la API
-    // Por ahora simulamos la actualización
-    const updatedUsers = users.map((user) =>
-      user.id === currentUser.id
-        ? {
-            ...user,
-            name: formData.name,
-            email: formData.email,
-            role: formData.role,
-          }
-        : user
-    );
+    // Preparar datos para la API
+    const userData = {
+      id: currentUser.ID_USER,
+      name: formData.name,
+      email: formData.email,
+      role: parseInt(formData.role),
+    };
 
-    setUsers(updatedUsers);
-    toast.success("Usuario actualizado correctamente");
-    handleCloseModals();
+    // Solo incluir contraseña si se ha ingresado una nueva
+    if (formData.password) {
+      userData.password = formData.password;
+    }
+    try {
+      // Llamar al servicio de actualización
+      const response = await users_update(userData);
+
+      if (!response.success) {
+        toast.error(response.message || "Error al actualizar usuario");
+        return;
+      }
+
+      // Recargar lista de usuarios para obtener datos actualizados
+      const fetchUsers = async () => {
+        const response = await users_getAll();
+        if (response.success) {
+          setUsers(response.data);
+          setFilteredUsers(response.data);
+        }
+      };
+      await fetchUsers();
+
+      toast.success("Usuario actualizado correctamente");
+      handleCloseModals();
+    } catch (error) {
+      console.error("Error al actualizar usuario:", error);
+      toast.error("Ocurrió un error al actualizar el usuario");
+    }
   };
 
   const handleDeleteUser = () => {
@@ -454,19 +499,6 @@ const UsersAdmin = () => {
     setUsers(updatedUsers);
     toast.success("Usuario eliminado correctamente");
     handleCloseModals();
-  };
-
-  // Formatear fecha
-  const formatDate = (dateString) => {
-    if (!dateString) return "Nunca";
-    const date = new Date(dateString);
-    return date.toLocaleString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   return (
@@ -493,9 +525,11 @@ const UsersAdmin = () => {
               onChange={(e) => setRoleFilter(e.target.value)}
             >
               <option value="todos">Todos los roles</option>
-              <option value="ADMIN">Administradores</option>
-              <option value="COORDINADOR">Coordinadores</option>
-              <option value="CLIENTE">Clientes</option>
+              {roles.map((role) => (
+                <option key={role.ID_ROLE} value={role.ID_ROLE.toString()}>
+                  {role.NAME_ROLE}
+                </option>
+              ))}
             </FilterSelect>
           </FiltersContainer>
         </div>
@@ -672,37 +706,13 @@ const UsersAdmin = () => {
                   required
                 >
                   <option value="">Seleccionar rol</option>
-                  {Object.values(ROLES).map((role) => (
-                    <option key={role} value={role}>
-                      {role}
+                  {roles.map((role) => (
+                    <option key={role.ID_ROLE} value={role.ID_ROLE.toString()}>
+                      {role.NAME_ROLE}
                     </option>
                   ))}
                 </select>
               </FormGroup>
-
-              <FormRow>
-                {/* <FormGroup>
-                  <label>Estado</label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    style={{
-                      width: "100%",
-                      padding: "10px",
-                      borderRadius: "4px",
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: theme.colors.surface,
-                      color: theme.colors.text,
-                      marginTop: "8px",
-                    }}
-                  >
-                    <option value="active">Activo</option>
-                    <option value="pending">Pendiente</option>
-                    <option value="inactive">Inactivo</option>
-                  </select>
-                </FormGroup> */}
-              </FormRow>
 
               <FormRow>
                 <FormGroup>
@@ -785,7 +795,7 @@ const UsersAdmin = () => {
                 <select
                   name="role"
                   value={formData.role}
-                  onChange={handleInputChange}
+                  onChange={handleRoleChange}
                   style={{
                     width: "100%",
                     padding: "10px",
@@ -798,37 +808,13 @@ const UsersAdmin = () => {
                   required
                 >
                   <option value="">Seleccionar rol</option>
-                  {Object.values(ROLES).map((role) => (
-                    <option key={role} value={role}>
-                      {role}
+                  {roles.map((role) => (
+                    <option key={role.ID_ROLE} value={role.ID_ROLE.toString()}>
+                      {role.NAME_ROLE}
                     </option>
                   ))}
                 </select>
               </FormGroup>
-
-              <FormRow>
-                {/* <FormGroup>
-                  <label>Estado</label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    style={{
-                      width: "100%",
-                      padding: "10px",
-                      borderRadius: "4px",
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: theme.colors.surface,
-                      color: theme.colors.text,
-                      marginTop: "8px",
-                    }}
-                  >
-                    <option value="active">Activo</option>
-                    <option value="pending">Pendiente</option>
-                    <option value="inactive">Inactivo</option>
-                  </select>
-                </FormGroup> */}
-              </FormRow>
 
               <FormRow>
                 <FormGroup>

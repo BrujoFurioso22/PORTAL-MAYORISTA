@@ -18,14 +18,15 @@ import ListaPedidos from "../pages/coordinadora/ListaPedidos";
 import DetallePedidoCoordinador from "../pages/coordinadora/DetallePedido";
 import EditarPedidoCoordinador from "../pages/coordinadora/EditarPedido";
 import UsersAdmin from "../pages/admin/users_admin/UsersAdmin";
+import RootRedirect from "../components/RootRedirect";
 
 // Rutas de E-commerce (accesibles para todos los usuarios autenticados)
 export const ecommerceRoutes = [
   {
     path: ROUTES.ECOMMERCE.HOME,
-    element: <Home />,
+    element: <RootRedirect />,
     exact: true,
-    allowedRoles: [ROLES.CLIENTE],
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
   },
   {
     path: ROUTES.ECOMMERCE.CATALOGO,

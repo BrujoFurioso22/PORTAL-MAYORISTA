@@ -36,6 +36,11 @@ const ProtectedRoute = ({
       />
     );
   }
+  console.log("ProtectedRoute - isAuthenticated:", isAuthenticated);
+  console.log("ProtectedRoute - user:", user);
+  console.log("ProtectedRoute - allowedRoles:", allowedRoles);
+  
+  
 
   // Si se especifican roles y el usuario no tiene los permisos necesarios
   if (
