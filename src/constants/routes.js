@@ -5,10 +5,10 @@ export const ROUTES = {
     FORGOT_PASSWORD: "/auth/forgot-password",
   },
   ADMIN: {
-    USER_ADMIN: "/admin/user-admin",
+    USER_ADMIN: "/",
   },
   COORDINADOR: {
-    PEDIDOS: "/coordinador/pedidos",
+    PEDIDOS: "/",
     DETALLE_PEDIDO: "/coordinador/pedidos/:orderId",
     EDITAR_PEDIDO: "/coordinador/pedidos/:orderId/editar",
     PRODUCTOS: "/coordinador/productos",

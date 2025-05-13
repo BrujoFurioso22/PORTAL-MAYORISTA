@@ -312,7 +312,7 @@ const AddressIndicator = styled.div`
 `;
 
 // Componente principal
-const ListaPedidos = () => {
+const CoordinadorHomeComponent = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -729,4 +729,4 @@ const ListaPedidos = () => {
   );
 };
 
-export default ListaPedidos;
+export default CoordinadorHomeComponent;

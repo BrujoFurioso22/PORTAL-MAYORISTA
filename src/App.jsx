@@ -1,8 +1,7 @@
-import "./App.css";
 import "react-toastify/dist/ReactToastify.css";
 
 import { useState } from "react";
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import {
   adminRoutes,
   ecommerceRoutes,
@@ -13,16 +12,11 @@ import { createGlobalStyle } from "styled-components";
 import { useAuth } from "./context/AuthContext";
 import { ToastContainer } from "react-toastify";
 import ProtectedRoute from "./routes/ProtectedRoutes";
-import Layout from "./components/layout/Layout";
-import Header from "./components/layout/Header";
-import Sidebar from "./components/layout/Sidebar";
-import MainContent from "./components/layout/MainContent";
 import CleanLayout from "./components/layout/CleanLayout";
-import Login from "./pages/auth/Login";
-import NotFound from "./pages/NotFound";
+import AuthenticatedLayout from "./components/layout/AuthenticatedLayout";
 import { ROUTES } from "./constants/routes";
-import Register from "./pages/auth/Register";
-import ForgotPassword from "./pages/auth/ForgotPassword";
+import { ROLES } from "./constants/roles";
+import Home from "./pages/Home";
 
 const GlobalStyle = createGlobalStyle`
   *, *::before, *::after {
@@ -54,148 +48,98 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 const App = () => {
-  const { isAuthenticated, navigateToHomeByRole } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const isEcommercePage = true; // Temporalmente true para todas las páginas
-
-  // Determinar si estamos en una página de catálogo
-  // const isEcommercePage =
-  //   location.pathname === "/" ||
-  //   location.pathname.startsWith("/catalogo") ||
-  //   location.pathname.startsWith("/productos") ||
-  //   location.pathname.startsWith("/carrito");
-
-  // Toggle sidebar
-  const toggleSidebar = () => {
-    if (!isEcommercePage) {
-      setSidebarOpen((prev) => !prev);
-    }
-  };
-
-  // Componente interno para manejar el layout con autenticación
-  const AuthenticatedLayout = () => (
-    <Layout>
-      <Header
-        onToggleSidebar={toggleSidebar}
-        showSidebarToggle={!isEcommercePage}
-      />
-      <MainContent>
-        {!isEcommercePage && (
-          <Sidebar onToggleSidebar={toggleSidebar} open={sidebarOpen} />
-        )}
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
-          {/* Este Outlet es clave - renderiza las rutas hijas */}
-          <Outlet />
-        </div>
-      </MainContent>
-    </Layout>
-  );
+  const { isAuthenticated } = useAuth();
 
   return (
     <>
       <GlobalStyle />
 
       <Routes>
-        {/* Rutas con layout limpio (sin header ni sidebar) */}
+        {/* Rutas públicas con layout limpio */}
         <Route element={<CleanLayout />}>
-          <Route
-            path={ROUTES.PUBLIC.LOGIN}
-            element={
-              isAuthenticated ? (
-                <Navigate to={navigateToHomeByRole} />
-              ) : (
-                <Login />
-              )
-            }
-          />
-          <Route
-            path={ROUTES.AUTH.REGISTER}
-            element={
-              isAuthenticated ? (
-                <Navigate to={navigateToHomeByRole} />
-              ) : (
-                <Register />
-              )
-            }
-          />
-          <Route
-            path={ROUTES.AUTH.FORGOT_PASSWORD}
-            element={
-              isAuthenticated ? (
-                <Navigate to={navigateToHomeByRole} />
-              ) : (
-                <ForgotPassword />
-              )
-            }
-          />
-          <Route path={ROUTES.PUBLIC.NOT_FOUND} element={<NotFound />} />
+          {publicRoutes.map((route, idx) => (
+            <Route
+              key={`public-${idx}`}
+              path={route.path}
+              element={
+                <ProtectedRoute element={route.element} isPublicRoute={true} />
+              }
+            />
+          ))}
         </Route>
 
-        {/* Layout principal con rutas autenticadas */}
-        {isAuthenticated ? (
-          <Route element={<AuthenticatedLayout />}>
-            {/* Rutas de E-commerce */}
-            {ecommerceRoutes.map((route, idx) => (
+        {/* Todas las rutas protegidas dentro del layout autenticado */}
+        <Route
+          element={
+            <ProtectedRoute
+              element={<AuthenticatedLayout />}
+              allowedRoles={[ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR]}
+            />
+          }
+        >
+          {/* Ruta principal */}
+          <Route
+            path="/"
+            element={<Home />}
+            index
+          />
+
+          {/* Rutas de e-commerce */}
+          {ecommerceRoutes
+            .filter((route) => route.path !== "/")
+            .map((route, idx) => (
               <Route
                 key={`ecommerce-${idx}`}
                 path={route.path}
                 element={
                   <ProtectedRoute
-                    allowedRoles={route.allowedRoles}
                     element={route.element}
-                  />
-                }
-                index={route.path === "/"}
-              />
-            ))}
-
-            {/* Rutas públicas adicionales */}
-            {publicRoutes.map((route, idx) => (
-              <Route
-                key={`public-${idx}`}
-                path={route.path}
-                element={route.element}
-              />
-            ))}
-
-            {/* Rutas de administrador */}
-            {adminRoutes.map((route, idx) => (
-              <Route
-                key={`admin-${idx}`}
-                path={route.path}
-                element={
-                  <ProtectedRoute
                     allowedRoles={route.allowedRoles}
-                    element={route.element}
                   />
                 }
               />
             ))}
 
-            {/* Rutas de coordinadora */}
-            {coordinadorRoutes.map((route, idx) => (
-              <Route
-                key={`coordinadora-${idx}`}
-                path={route.path}
-                element={
-                  <ProtectedRoute
-                    allowedRoles={route.allowedRoles}
-                    element={route.element}
-                  />
-                }
-              />
-            ))}
-
-            {/* Ruta para 404 dentro del layout autenticado */}
+          {/* Rutas de admin */}
+          {adminRoutes.map((route, idx) => (
             <Route
-              path="*"
-              element={<Navigate to={ROUTES.PUBLIC.NOT_FOUND} />}
+              key={`admin-${idx}`}
+              path={route.path}
+              element={
+                <ProtectedRoute
+                  element={route.element}
+                  allowedRoles={route.allowedRoles}
+                />
+              }
             />
-          </Route>
-        ) : (
-          <Route path="*" element={<Navigate to={ROUTES.PUBLIC.LOGIN} />} />
-        )}
+          ))}
+
+          {/* Rutas de coordinador */}
+          {coordinadorRoutes.map((route, idx) => (
+            <Route
+              key={`coord-${idx}`}
+              path={route.path}
+              element={
+                <ProtectedRoute
+                  element={route.element}
+                  allowedRoles={route.allowedRoles}
+                />
+              }
+            />
+          ))}
+        </Route>
+
+        {/* Rutas not found y redirecciones finales */}
+        <Route
+          path="*"
+          element={
+            isAuthenticated ? (
+              <Navigate to={ROUTES.PUBLIC.NOT_FOUND} />
+            ) : (
+              <Navigate to={ROUTES.PUBLIC.LOGIN} />
+            )
+          }
+        />
       </Routes>
 
       <ToastContainer />

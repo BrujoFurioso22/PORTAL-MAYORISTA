@@ -12,21 +12,12 @@ const ProtectedRoute = ({
   const { user, isAuthenticated } = useAuth();
   const location = useLocation(); // Añadir useLocation para obtener la ruta actual
 
-  // Si es una ruta pública (como login) y el usuario ya está autenticado
-  // redirigirlo al home correspondiente según su rol
+  // 1. Ruta pública y usuario autenticado → redirigir a su página principal
   if (isPublicRoute && isAuthenticated) {
-    // Determinar la página de inicio según el rol del usuario
-    if (user?.ROLE === ROLES.COORDINADOR) {
-      return <Navigate to={ROUTES.COORDINADOR.PEDIDOS} replace />;
-    } else if (user?.ROLE === ROLES.ADMIN) {
-      return <Navigate to={ROUTES.ADMIN.USER_ADMIN} replace />;
-    } else {
-      // Usuario normal (cliente)
-      return <Navigate to={ROUTES.ECOMMERCE.HOME} replace />;
-    }
+    return <Navigate to={getHomeForRole(user?.ROLE)} replace />;
   }
 
-  // Si NO está autenticado y la ruta requiere autenticación
+  // 2. Ruta protegida y usuario no autenticado → login
   if (!isAuthenticated && !isPublicRoute) {
     return (
       <Navigate
@@ -36,24 +27,36 @@ const ProtectedRoute = ({
       />
     );
   }
-  console.log("ProtectedRoute - isAuthenticated:", isAuthenticated);
-  console.log("ProtectedRoute - user:", user);
-  console.log("ProtectedRoute - allowedRoles:", allowedRoles);
-  
-  
 
-  // Si se especifican roles y el usuario no tiene los permisos necesarios
+  // 3. Usuario autenticado sin permisos para esta ruta → su página principal
   if (
     isAuthenticated &&
     allowedRoles.length > 0 &&
-    !allowedRoles.some((role) => user?.ROLE === role)
+    user?.ROLE &&
+    !allowedRoles.includes(user.ROLE)
   ) {
-    // Si no tiene los permisos, mandarlo a NOT_FOUND o a su página HOME según configuración
-    return <Navigate to={ROUTES.PUBLIC.NOT_FOUND} replace />;
+    const homePath = getHomeForRole(user.ROLE);
+
+    // Evitar bucle si ya estamos en la página principal del usuario
+    if (location.pathname !== homePath) {
+      return <Navigate to={homePath} replace />;
+    }
   }
 
-  // Si todas las condiciones se cumplen correctamente, mostrar el componente
+  // 4. Si todo está bien, mostrar el componente solicitado
   return element;
+};
+
+// Función auxiliar para determinar la ruta principal según el rol
+const getHomeForRole = (role) => {
+  switch (role) {
+    case ROLES.ADMIN:
+      return ROUTES.ADMIN.USER_ADMIN;
+    case ROLES.COORDINADOR:
+      return ROUTES.COORDINADOR.PEDIDOS;
+    default:
+      return ROUTES.ECOMMERCE.HOME;
+  }
 };
 
 export default ProtectedRoute;

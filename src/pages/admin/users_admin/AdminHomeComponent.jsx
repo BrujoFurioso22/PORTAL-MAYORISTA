@@ -258,7 +258,7 @@ const ButtonGroup = styled.div`
   margin-top: 24px;
 `;
 
-const UsersAdmin = () => {
+const AdminHomeComponent = () => {
   const { theme } = useAppTheme();
   const { user } = useAuth();
 
@@ -890,4 +890,4 @@ const UsersAdmin = () => {
   );
 };
 
-export default UsersAdmin;
+export default AdminHomeComponent;

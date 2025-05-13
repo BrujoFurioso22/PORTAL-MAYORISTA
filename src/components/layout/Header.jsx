@@ -212,7 +212,7 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
         style={{ gap: "1rem" }}
       >
         {/* Mostrar el botón de sidebar solo cuando sea necesario */}
-        {showSidebarToggle && (
+        {/* {showSidebarToggle && (
           <Button
             leftIconName={"Menu"}
             onClick={onToggleSidebar}
@@ -221,7 +221,7 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
             color={theme.colors.white}
             style={{ border: `solid 1px ${theme.colors.white}` }}
           />
-        )}
+        )} */}
         <Logo onClick={handleGoToHome}>PORTAL MAYORISTA</Logo>
       </FlexBoxComponent>
 

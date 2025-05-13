@@ -2,8 +2,6 @@
 import { ROUTES } from "../constants/routes";
 import { ROLES } from "../constants/roles";
 import NotFound from "../pages/NotFound";
-import Home from "../pages/Home";
-
 // Importaciones de páginas ecommerce
 import Catalogo from "../pages/catalogo/Catalogo";
 import DetalleProducto from "../pages/catalogo/DetalleProducto";
@@ -14,17 +12,18 @@ import Perfil from "../pages/usuario/Perfil";
 import SearchResults from "../pages/busqueda/SearchResults";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
-import ListaPedidos from "../pages/coordinadora/ListaPedidos";
 import DetallePedidoCoordinador from "../pages/coordinadora/DetallePedido";
 import EditarPedidoCoordinador from "../pages/coordinadora/EditarPedido";
-import UsersAdmin from "../pages/admin/users_admin/UsersAdmin";
-import RootRedirect from "../components/RootRedirect";
+import AdminHomeComponent from "../pages/admin/users_admin/AdminHomeComponent";
+import ClientHomeComponent from "../pages/client/ClientHomeComponent";
+import CoordinadorHomeComponent from "../pages/coordinadora/CoordinadorHomeComponent";
+import ForgotPassword from "../pages/auth/ForgotPassword";
 
 // Rutas de E-commerce (accesibles para todos los usuarios autenticados)
 export const ecommerceRoutes = [
   {
     path: ROUTES.ECOMMERCE.HOME,
-    element: <RootRedirect />,
+    element: <ClientHomeComponent />,
     exact: true,
     allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
   },
@@ -69,20 +68,18 @@ export const ecommerceRoutes = [
 export const adminRoutes = [
   {
     path: ROUTES.ADMIN.USER_ADMIN,
-    element: <UsersAdmin/>,
+    element: <AdminHomeComponent />, // Cambiar por el componente real
     allowedRoles: [ROLES.ADMIN],
-    exact: true,
   },
-  // Otras rutas de administradores...
+  // ... otras rutas
 ];
 
-// Rutas para coordinadora
+// Rutas para coordinadores
 export const coordinadorRoutes = [
   {
     path: ROUTES.COORDINADOR.PEDIDOS,
-    element: <ListaPedidos />, // Reemplazar con el componente adecuado
+    element: <CoordinadorHomeComponent />, // Cambiar por el componente real
     allowedRoles: [ROLES.COORDINADOR],
-    exact: true,
   },
   {
     path: ROUTES.COORDINADOR.DETALLE_PEDIDO,
@@ -107,6 +104,10 @@ export const publicRoutes = [
     path: ROUTES.PUBLIC.REGISTER,
     element: <Register />,
     exact: true,
+  },
+  {
+    path: ROUTES.AUTH.FORGOT_PASSWORD,
+    element: <ForgotPassword />,
   },
   {
     path: ROUTES.PUBLIC.NOT_FOUND,

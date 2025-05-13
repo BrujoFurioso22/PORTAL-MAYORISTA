@@ -16,7 +16,7 @@ const RootRedirect = () => {
         navigate(ROUTES.COORDINADOR.PEDIDOS);
       } else {
         // CLIENTE o cualquier otro rol por defecto
-        navigate(ROUTES.ECOMMERCE.CATALOGO);
+        navigate(ROUTES.ECOMMERCE.HOME);
       }
     }
   }, [user, navigate]);
