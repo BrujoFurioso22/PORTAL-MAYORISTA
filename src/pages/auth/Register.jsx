@@ -377,7 +377,6 @@ const Register = () => {
         <Button
           type="submit"
           text="Verificar"
-          loading={loading}
           disabled={identification.length < 10 || loading}
         />
 
@@ -422,7 +421,7 @@ const Register = () => {
               errorMessage={error}
             />
 
-            <Button type="submit" text="Verificar correo" loading={loading} />
+            <Button type="submit" text="Verificar correo" />
 
             <Button
               text="Volver"
@@ -528,7 +527,6 @@ const Register = () => {
             <Button
               type="submit"
               text="Solicitar acceso"
-              loading={loading}
               disabled={selectedCompanies.length === 0 || !email}
             />
 
@@ -597,7 +595,6 @@ const Register = () => {
         <Button
           type="submit"
           text="Solicitar acceso"
-          loading={loading}
           disabled={selectedCompanies.length === 0}
         />
 

@@ -96,12 +96,12 @@ export const coordinadorRoutes = [
 // Rutas para coordinadora
 export const publicRoutes = [
   {
-    path: ROUTES.PUBLIC.LOGIN,
+    path: ROUTES.AUTH.LOGIN,
     element: <Login />,
     exact: true,
   },
   {
-    path: ROUTES.PUBLIC.REGISTER,
+    path: ROUTES.AUTH.REGISTER,
     element: <Register />,
     exact: true,
   },

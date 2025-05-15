@@ -61,9 +61,7 @@ const App = () => {
             <Route
               key={`public-${idx}`}
               path={route.path}
-              element={
-                <ProtectedRoute element={route.element} isPublicRoute={true} />
-              }
+              element={route.element}
             />
           ))}
         </Route>
@@ -78,11 +76,7 @@ const App = () => {
           }
         >
           {/* Ruta principal */}
-          <Route
-            path="/"
-            element={<Home />}
-            index
-          />
+          <Route path="/" element={<Home />} index />
 
           {/* Rutas de e-commerce */}
           {ecommerceRoutes
@@ -136,7 +130,7 @@ const App = () => {
             isAuthenticated ? (
               <Navigate to={ROUTES.PUBLIC.NOT_FOUND} />
             ) : (
-              <Navigate to={ROUTES.PUBLIC.LOGIN} />
+              <Navigate to={ROUTES.AUTH.LOGIN} />
             )
           }
         />

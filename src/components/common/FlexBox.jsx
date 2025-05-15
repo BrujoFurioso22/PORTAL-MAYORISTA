@@ -10,6 +10,7 @@ const FlexBox = styled.div`
   height: ${({ $height }) => $height || "auto"};
   padding: ${({ $padding }) => $padding};
   max-width: ${({ $maxWidth }) => $maxWidth || "100%"};
+  min-height: ${({ $minHeight }) => $minHeight || "auto"};
 `;
 
 export default function FlexBoxComponent({
@@ -22,6 +23,7 @@ export default function FlexBoxComponent({
   children,
   padding,
   maxWidth,
+  minHeight,
   ...props
 }) {
   return (
@@ -34,6 +36,7 @@ export default function FlexBoxComponent({
       $height={height}
       $padding={padding}
       $maxWidth={maxWidth}
+      $minHeight={minHeight}
       {...props}
     >
       {children}

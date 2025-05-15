@@ -26,6 +26,5 @@ export const ROUTES = {
   },
   PUBLIC: {
     NOT_FOUND: "/404",
-    LOGIN: "/auth/login",
   },
 };

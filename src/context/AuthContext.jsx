@@ -155,7 +155,7 @@ export function AuthProvider({ children }) {
   // ========== FUNCIONES REDIRECCIONAMIENTO ==========
 
   const getHomeRouteByRole = (user) => {
-    if (!user) return ROUTES.PUBLIC.LOGIN;
+    if (!user) return ROUTES.AUTH.LOGIN;
 
     if (user.ROLE === ROLES.COORDINADOR) {
       return ROUTES.COORDINADOR.PEDIDOS;

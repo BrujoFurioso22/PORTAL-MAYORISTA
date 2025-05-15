@@ -11,7 +11,7 @@ const ProtectedRoute = ({
 }) => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation(); // Añadir useLocation para obtener la ruta actual
-
+  
   // 1. Ruta pública y usuario autenticado → redirigir a su página principal
   if (isPublicRoute && isAuthenticated) {
     return <Navigate to={getHomeForRole(user?.ROLE)} replace />;

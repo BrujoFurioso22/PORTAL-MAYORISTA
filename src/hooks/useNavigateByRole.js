@@ -16,7 +16,7 @@ export const useNavigateByRole = () => {
    */
   const navigateToHome = () => {
     if (!user) {
-      navigate(ROUTES.PUBLIC.LOGIN);
+      navigate(ROUTES.AUTH.LOGIN);
       return;
     }
 
