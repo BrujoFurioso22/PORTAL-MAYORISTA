@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import styled from "styled-components";
 import { useAuth } from "../../context/AuthContext";
 import { useAppTheme } from "../../context/AppThemeContext";
@@ -32,10 +32,10 @@ const TabButton = styled.button`
   background: none;
   border: none;
   border-bottom: 2px solid
-    ${({ theme, active }) => (active ? theme.colors.primary : "transparent")};
-  color: ${({ theme, active }) =>
-    active ? theme.colors.primary : theme.colors.textLight};
-  font-weight: ${({ theme, active }) => (active ? "600" : "400")};
+    ${({ theme, $active }) => ($active ? theme.colors.primary : "transparent")};
+  color: ${({ theme, $active }) =>
+    $active ? theme.colors.primary : theme.colors.textLight};
+  font-weight: ${({ theme, $active }) => ($active ? "600" : "400")};
   cursor: pointer;
   transition: all 0.2s;
 
@@ -45,7 +45,7 @@ const TabButton = styled.button`
 `;
 
 const TabContent = styled.div`
-  display: ${({ active }) => (active ? "block" : "none")};
+  display: ${({ $active }) => ($active ? "block" : "none")};
 `;
 
 const Card = styled.div`
@@ -255,6 +255,14 @@ const Slider = styled.span`
   }
 `;
 
+// Nuevo componente para mostrar empresas disponibles
+const EmpresasList = styled.ul`
+  margin: 0;
+  padding-left: 1.2rem;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.98rem;
+`;
+
 // Componente Principal
 const Perfil = () => {
   const { user, updateUserInfo, changePassword } = useAuth();
@@ -388,31 +396,34 @@ const Perfil = () => {
     }
   };
 
+  // Obtener empresas disponibles del usuario (ajusta el nombre según tu modelo)
+  const empresasDisponibles = user?.EMPRESAS || []; // O el campo correcto
+
   return (
     <PageContainer>
       <PageTitle>Mi Perfil</PageTitle>
 
       <TabsContainer>
         <TabButton
-          active={activeTab === "personal"}
+          $active={activeTab === "personal"}
           onClick={() => setActiveTab("personal")}
         >
           Información Personal
         </TabButton>
         <TabButton
-          active={activeTab === "security"}
+          $active={activeTab === "security"}
           onClick={() => setActiveTab("security")}
         >
           Seguridad
         </TabButton>
         <TabButton
-          active={activeTab === "addresses"}
+          $active={activeTab === "addresses"}
           onClick={() => setActiveTab("addresses")}
         >
           Direcciones
         </TabButton>
         <TabButton
-          active={activeTab === "preferences"}
+          $active={activeTab === "preferences"}
           onClick={() => setActiveTab("preferences")}
         >
           Preferencias
@@ -420,10 +431,9 @@ const Perfil = () => {
       </TabsContainer>
 
       {/* Tab: Información Personal */}
-      <TabContent active={activeTab === "personal"}>
+      <TabContent $active={activeTab === "personal"}>
         <Card>
           <CardTitle>Información Personal</CardTitle>
-
           <ProfileSection>
             <AvatarSection>
               <Avatar>
@@ -432,84 +442,49 @@ const Perfil = () => {
                   alt="Avatar"
                 />
               </Avatar>
-              <AvatarActions>
-                <Button text="Cambiar foto" variant="outlined" size="small" />
-              </AvatarActions>
             </AvatarSection>
-
             <FormSection>
-              <Form onSubmit={handlePersonalInfoSubmit}>
-                <FormGroup>
-                  <FormField>
-                    <Input
-                      label="Nombre completo"
-                      name="nombre"
-                      value={personalInfo.nombre}
-                      onChange={handlePersonalInfoChange}
-                      required
-                    />
-                  </FormField>
-                  <FormField>
-                    <Input
-                      label="Correo electrónico"
-                      name="email"
-                      type="email"
-                      value={personalInfo.email}
-                      onChange={handlePersonalInfoChange}
-                      leftIconName="Mail"
-                      required
-                    />
-                  </FormField>
-                </FormGroup>
-
-                <FormGroup>
-                  <FormField>
-                    <Input
-                      label="Teléfono"
-                      name="telefono"
-                      value={personalInfo.telefono}
-                      onChange={handlePersonalInfoChange}
-                      leftIconName="Phone"
-                    />
-                  </FormField>
-                  <FormField>
-                    <Input
-                      label="Empresa"
-                      name="empresa"
-                      value={personalInfo.empresa}
-                      onChange={handlePersonalInfoChange}
-                      leftIconName="Building"
-                    />
-                  </FormField>
-                </FormGroup>
-
-                <FormField>
-                  <Input
-                    label="RFC"
-                    name="rfc"
-                    value={personalInfo.rfc}
-                    onChange={handlePersonalInfoChange}
-                    placeholder="Ejemplo: XAXX010101000"
-                  />
-                </FormField>
-
-                <FormActions>
-                  <Button text="Cancelar" variant="outlined" />
-                  <Button
-                    text="Guardar cambios"
-                    variant="solid"
-                    type="submit"
-                    backgroundColor={theme.colors.primary}
-                  />
-                </FormActions>
-              </Form>
+              {/* Mostrar solo los datos, no formulario */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                <div>
+                  <strong>Nombre completo:</strong>
+                  <div>{personalInfo.nombre}</div>
+                </div>
+                <div>
+                  <strong>Correo electrónico:</strong>
+                  <div>{personalInfo.email}</div>
+                </div>
+                <div>
+                  <strong>Teléfono:</strong>
+                  <div>{personalInfo.telefono || <span style={{color:"#aaa"}}>No registrado</span>}</div>
+                </div>
+                <div>
+                  <strong>Empresas disponibles:</strong>
+                  {empresasDisponibles.length > 0 ? (
+                    <EmpresasList>
+                      {empresasDisponibles.map((empresa, idx) => (
+                        <li key={idx}>{empresa.NOMBRE || empresa.nombre || empresa}</li>
+                      ))}
+                    </EmpresasList>
+                  ) : (
+                    <div style={{color:"#aaa"}}>Sin empresas asignadas</div>
+                  )}
+                </div>
+              </div>
+              <FormActions>
+                <Button
+                  text="Solicitar cambio de información"
+                  variant="outlined"
+                  onClick={() => toast.info("Para modificar tus datos, contacta a soporte o solicita el cambio a tu administrador.")}
+                />
+              </FormActions>
             </FormSection>
           </ProfileSection>
         </Card>
       </TabContent>
 
       {/* Tab: Seguridad */}
-      <TabContent active={activeTab === "security"}>
+      <TabContent $active={activeTab === "security"}>
         <Card>
           <CardTitle>Cambiar Contraseña</CardTitle>
 
@@ -563,38 +538,10 @@ const Perfil = () => {
           </Form>
         </Card>
 
-        <Card>
-          <CardTitle>Sesiones activas</CardTitle>
-
-          <PreferenceItem>
-            <PreferenceText>
-              <PreferenceTitle>Chrome en Windows</PreferenceTitle>
-              <PreferenceDescription>
-                Ciudad de México, México · Activo ahora
-              </PreferenceDescription>
-            </PreferenceText>
-            <Button
-              text="Este dispositivo"
-              variant="outlined"
-              size="small"
-              disabled
-            />
-          </PreferenceItem>
-
-          <PreferenceItem>
-            <PreferenceText>
-              <PreferenceTitle>Safari en iPhone</PreferenceTitle>
-              <PreferenceDescription>
-                Ciudad de México, México · Hace 2 días
-              </PreferenceDescription>
-            </PreferenceText>
-            <Button text="Cerrar sesión" variant="outlined" size="small" />
-          </PreferenceItem>
-        </Card>
       </TabContent>
 
       {/* Tab: Direcciones */}
-      <TabContent active={activeTab === "addresses"}>
+      <TabContent $active={activeTab === "addresses"}>
         <Card>
           <CardTitle>Mis direcciones</CardTitle>
 
@@ -638,7 +585,7 @@ const Perfil = () => {
       </TabContent>
 
       {/* Tab: Preferencias */}
-      <TabContent active={activeTab === "preferences"}>
+      <TabContent $active={activeTab === "preferences"}>
         <Card>
           <CardTitle>Notificaciones</CardTitle>
 
@@ -658,21 +605,6 @@ const Perfil = () => {
             </Switch>
           </PreferenceItem>
 
-          <PreferenceItem>
-            <PreferenceText>
-              <PreferenceTitle>Notificaciones push</PreferenceTitle>
-              <PreferenceDescription>
-                Recibe alertas importantes en tu navegador
-              </PreferenceDescription>
-            </PreferenceText>
-            <Switch>
-              <SwitchInput
-                checked={settings.receiveNotifications}
-                onChange={() => handleSettingChange("receiveNotifications")}
-              />
-              <Slider />
-            </Switch>
-          </PreferenceItem>
         </Card>
 
         <Card>

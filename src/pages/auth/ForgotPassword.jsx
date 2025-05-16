@@ -8,6 +8,7 @@ import { ROUTES } from "../../constants/routes";
 import styled from "styled-components";
 import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { users_getByEmail } from "../../services/users/users";
 
 // Styled Components (reutilizando algunos del Login)
 const Container = styled(FlexBoxComponent)`
@@ -109,8 +110,7 @@ const ForgotPassword = () => {
   const [message, setMessage] = useState({ text: "", type: "" });
   const [showPassword, setShowPassword] = useState(false);
 
-  const { verifyEmailExists, sendVerificationCode, verifyCode, resetPassword } =
-    useAuth();
+  const { sendVerificationCode, verifyCode, resetPassword } = useAuth();
   const navigate = useNavigate();
 
   // Referencias para los inputs de código
@@ -163,15 +163,18 @@ const ForgotPassword = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const response = await verifyEmailExists(email);
-      if (response.success && response.exists) {
+      const response = await users_getByEmail(email);
+      if (response.success) {
         // Enviar código de verificación
         const codeResponse = await sendVerificationCode(email);
         if (codeResponse.success) {
           toast.success("Código de verificación enviado a su correo");
           setStep(2);
         } else {
-          setMessage({ text: codeResponse.message, type: "error" });
+          setMessage({
+            text: codeResponse.message || "Error al enviar el código",
+            type: "error",
+          });
         }
       } else {
         setMessage({
@@ -211,7 +214,10 @@ const ForgotPassword = () => {
         setMessage({ text: response.message, type: "error" });
       }
     } catch (error) {
-      setMessage({ text: "Error al verificar el código", type: "error" });
+      setMessage({
+        text: error.message || "Error al verificar el código",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -247,10 +253,16 @@ const ForgotPassword = () => {
           navigate(ROUTES.AUTH.LOGIN);
         }, 1500);
       } else {
-        setMessage({ text: response.message, type: "error" });
+        setMessage({
+          text: response.message || "Error al actualizar la contraseña",
+          type: "error",
+        });
       }
     } catch (error) {
-      setMessage({ text: "Error al actualizar la contraseña", type: "error" });
+      setMessage({
+        text: error.message || "Error al actualizar la contraseña",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -290,7 +302,7 @@ const ForgotPassword = () => {
         {step === 3 && <Subtitle>Establece tu nueva contraseña</Subtitle>}
 
         {step === 1 && (
-          <Form onSubmit={handleVerifyEmail}>
+          <Form>
             <Input
               label="Correo Electrónico"
               type="email"
@@ -309,14 +321,16 @@ const ForgotPassword = () => {
             <Button
               type="submit"
               text={isLoading ? "Verificando..." : "Continuar"}
-              loading={isLoading}
               fullWidth
+              onClick={async (e) => {
+                await handleVerifyEmail(e);
+              }}
             />
           </Form>
         )}
 
         {step === 2 && (
-          <Form onSubmit={handleVerifyCode}>
+          <Form>
             <p style={{ textAlign: "center", margin: "0 0 16px" }}>
               Hemos enviado un código de verificación de 6 dígitos a {email}
             </p>
@@ -344,8 +358,10 @@ const ForgotPassword = () => {
             <Button
               type="submit"
               text={isLoading ? "Verificando..." : "Verificar código"}
-              loading={isLoading}
               fullWidth
+              onClick={async (e) => {
+                await handleVerifyCode(e);
+              }}
             />
 
             <Button
@@ -359,7 +375,7 @@ const ForgotPassword = () => {
         )}
 
         {step === 3 && (
-          <Form onSubmit={handleResetPassword}>
+          <Form>
             <Input
               label="Nueva contraseña"
               type={showPassword ? "text" : "password"}
@@ -391,8 +407,10 @@ const ForgotPassword = () => {
             <Button
               type="submit"
               text={isLoading ? "Actualizando..." : "Actualizar contraseña"}
-              loading={isLoading}
               fullWidth
+              onClick={async (e) => {
+                await handleResetPassword(e);
+              }}
             />
           </Form>
         )}

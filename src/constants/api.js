@@ -6,7 +6,7 @@ const api = axios.create({
   timeout: 10000, // opcional: timeout de 10s
 });
 
-// Interceptor para agregar token si es necesario
+// Interceptor simple para agregar token si es necesario
 api.interceptors.request.use(
   (config) => {
     const token = obtenerToken(); // Desencriptarlo si está encriptado
@@ -18,10 +18,13 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor de respuestas (opcional para errores globales)
+// Interceptor básico para manejar errores comunes
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   (error) => {
+    // Manejar errores de autorización
     if (error.response?.status === 401) {
       console.warn("No autorizado");
     }

@@ -14,7 +14,7 @@ const ProtectedRoute = ({
   
   // 1. Ruta pública y usuario autenticado → redirigir a su página principal
   if (isPublicRoute && isAuthenticated) {
-    return <Navigate to={getHomeForRole(user?.ROLE)} replace />;
+    return <Navigate to={getHomeForRole(user?.ROLE_NAME)} replace />;
   }
 
   // 2. Ruta protegida y usuario no autenticado → login
@@ -32,10 +32,10 @@ const ProtectedRoute = ({
   if (
     isAuthenticated &&
     allowedRoles.length > 0 &&
-    user?.ROLE &&
-    !allowedRoles.includes(user.ROLE)
+    user?.ROLE_NAME &&
+    !allowedRoles.includes(user.ROLE_NAME)
   ) {
-    const homePath = getHomeForRole(user.ROLE);
+    const homePath = getHomeForRole(user.ROLE_NAME);
 
     // Evitar bucle si ya estamos en la página principal del usuario
     if (location.pathname !== homePath) {

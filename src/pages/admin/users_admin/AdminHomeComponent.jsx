@@ -7,12 +7,15 @@ import Input from "../../../components/ui/Input";
 import { useAppTheme } from "../../../context/AppThemeContext";
 import { useAuth } from "../../../context/AuthContext";
 import RenderIcon from "../../../components/ui/RenderIcon";
+import DataTable from "../../../components/ui/Table";
 import {
   users_create,
   users_getAll,
-  users_update,
+  users_updateRole,
+  users_updatePassword
 } from "../../../services/users/users";
 import { roles_getAll } from "../../../services/users/roles";
+import RenderLoader from "../../../components/ui/RenderLoader";
 
 // Estilos
 const PageContainer = styled.div`
@@ -85,69 +88,10 @@ const FilterSelect = styled.select`
   }
 `;
 
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 24px;
-`;
-
-const TableHead = styled.thead`
-  background-color: ${({ theme }) => theme.colors.surface};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.border};
-`;
-
-const TableHeaderCell = styled.th`
-  padding: 16px;
-  text-align: left;
-  color: ${({ theme }) => theme.colors.textLight};
-  font-weight: 500;
-`;
-
-const TableBody = styled.tbody`
-  background-color: ${({ theme }) => theme.colors.surface};
-`;
-
-const TableRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.background};
-  }
-`;
-
-const TableCell = styled.td`
-  padding: 16px;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const StatusBadge = styled.span`
-  display: inline-block;
-  padding: 6px 10px;
-  border-radius: 50px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  background-color: ${({ status, theme }) =>
-    status === "active"
-      ? theme.colors.success + "33"
-      : status === "pending"
-      ? theme.colors.warning + "33"
-      : status === "inactive"
-      ? theme.colors.error + "33"
-      : theme.colors.border};
-  color: ${({ status, theme }) =>
-    status === "active"
-      ? theme.colors.success
-      : status === "pending"
-      ? theme.colors.warning
-      : status === "inactive"
-      ? theme.colors.error
-      : theme.colors.textLight};
-`;
-
 const ActionsGroup = styled.div`
   display: flex;
   gap: 8px;
+  justify-content: center;
 `;
 
 const ActionButton = styled.button`
@@ -155,8 +99,11 @@ const ActionButton = styled.button`
   border: none;
   color: ${({ theme }) => theme.colors.primary};
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background-color: ${({ theme }) => theme.colors.primary + "22"};
@@ -168,29 +115,6 @@ const ActionButton = styled.button`
     &:hover {
       background-color: ${({ theme }) => theme.colors.error + "22"};
     }
-  }
-`;
-
-const Pagination = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-`;
-
-const PageButton = styled.button`
-  padding: 6px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme, $active }) =>
-    $active ? theme.colors.primary : theme.colors.surface};
-  color: ${({ theme, $active }) =>
-    $active ? theme.colors.white : theme.colors.text};
-  border-radius: 4px;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 `;
 
@@ -212,7 +136,7 @@ const ModalContent = styled.div`
   padding: 24px;
   border-radius: 8px;
   width: 100%;
-  max-width: 600px;
+  max-width: 800px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 `;
 
@@ -262,12 +186,20 @@ const ButtonGroup = styled.div`
   margin-top: 24px;
 `;
 
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 40px;
+  background-color: ${({ theme }) => theme.colors.surface};
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
 const AdminHomeComponent = () => {
   const { theme } = useAppTheme();
   const { user } = useAuth();
 
   // Estados
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState(null);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("todos");
@@ -275,8 +207,6 @@ const AdminHomeComponent = () => {
   const [usersPerPage] = useState(10);
   const [roles, setRoles] = useState([]);
 
-  // Estados para modales
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -295,6 +225,8 @@ const AdminHomeComponent = () => {
     // Aquí se cargarían los usuarios desde la API
     const fetchData = async () => {
       const response = await users_getAll();
+      console.log(response);
+      
 
       if (response.success) {
         setUsers(response.data);
@@ -316,14 +248,16 @@ const AdminHomeComponent = () => {
 
   // Filtrar usuarios
   useEffect(() => {
+    if (!users) return;
     let result = users;
 
     // Aplicar filtro de búsqueda
     if (searchTerm) {
       result = result.filter(
         (user) =>
-          user.NAME_USER.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.EMAIL.toLowerCase().includes(searchTerm.toLowerCase())
+          user.SOCIO_INFO.NOMBRE.toLowerCase().includes(
+            searchTerm.toLowerCase()
+          ) || user.EMAIL.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -344,22 +278,12 @@ const AdminHomeComponent = () => {
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
 
-  // Manejadores para modales
-  const handleOpenCreateModal = () => {
-    setFormData({
-      name: "",
-      email: "",
-      role: "",
-      password: "",
-      confirmPassword: "",
-    });
-    setIsCreateModalOpen(true);
-  };
+
 
   const handleOpenEditModal = (user) => {
     setCurrentUser(user);
     setFormData({
-      name: user.NAME_USER,
+      name: user.SOCIO_INFO.NOMBRE,
       email: user.EMAIL,
       role: user.ROLE_USER, // Guardar el ID del rol
       password: "",
@@ -373,7 +297,6 @@ const AdminHomeComponent = () => {
   };
 
   const handleCloseModals = () => {
-    setIsCreateModalOpen(false);
     setIsEditModalOpen(false);
     setIsDeleteModalOpen(false);
     setCurrentUser(null);
@@ -455,24 +378,46 @@ const AdminHomeComponent = () => {
       return;
     }
 
-    // Preparar datos para la API
-    const userData = {
-      id: currentUser.ID_USER,
-      name: formData.name,
-      email: formData.email,
-      role: parseInt(formData.role),
-    };
-
-    // Solo incluir contraseña si se ha ingresado una nueva
-    if (formData.password) {
-      userData.password = formData.password;
-    }
     try {
-      // Llamar al servicio de actualización
-      const response = await users_update(userData);
+      let roleUpdated = false;
+      let passwordUpdated = false;
 
-      if (!response.success) {
-        toast.error(response.message || "Error al actualizar usuario");
+      // Verificar si ha cambiado el rol
+      if (currentUser.ROLE_USER.toString() !== formData.role.toString()) {
+        // Actualizar el rol
+        const roleResponse = await users_updateRole(
+          currentUser.ID_USER, 
+          formData.role
+        );
+        
+        if (!roleResponse.success) {
+          toast.error(roleResponse.message || "Error al actualizar el rol");
+          return;
+        }
+        
+        roleUpdated = true;
+      }
+
+      // Verificar si hay nueva contraseña
+      if (formData.password) {
+        // Actualizar la contraseña
+        const passwordResponse = await users_updatePassword(
+          currentUser.ID_USER, 
+          formData.password
+        );
+        
+        if (!passwordResponse.success) {
+          toast.error(passwordResponse.message || "Error al actualizar la contraseña");
+          return;
+        }
+        
+        passwordUpdated = true;
+      }
+
+      // Si no se actualizó nada, mostrar mensaje
+      if (!roleUpdated && !passwordUpdated) {
+        toast.info("No se realizaron cambios");
+        handleCloseModals();
         return;
       }
 
@@ -504,6 +449,43 @@ const AdminHomeComponent = () => {
     toast.success("Usuario eliminado correctamente");
     handleCloseModals();
   };
+
+  // Definición de columnas para la tabla
+  const columns = [
+    {
+      field: "SOCIO_INFO.NOMBRE",
+      header: "Nombre",
+      render: (row) => row.SOCIO_INFO.NOMBRE
+    },
+    {
+      field: "EMAIL",
+      header: "Email"
+    },
+    {
+      field: "ROLE_NAME",
+      header: "Rol",
+      render: (row) => row.ROLE_NAME || row.ROLE
+    }
+  ];
+
+  // Renderizar acciones por fila
+  const renderRowActions = (user) => (
+    <ActionsGroup>
+      <ActionButton
+        title="Editar usuario"
+        onClick={() => handleOpenEditModal(user)}
+      >
+        <FaEdit size={16} />
+      </ActionButton>
+      <ActionButton
+        className="delete"
+        title="Eliminar usuario"
+        onClick={() => handleOpenDeleteModal(user)}
+      >
+        <FaTrash size={16} />
+      </ActionButton>
+    </ActionsGroup>
+  );
 
   return (
     <PageContainer>
@@ -537,227 +519,32 @@ const AdminHomeComponent = () => {
             </FilterSelect>
           </FiltersContainer>
         </div>
-
-        <Button
-          text="Nuevo Usuario"
-          leftIconName="UserPlus"
-          leftIconLibrary={4}
-          onClick={handleOpenCreateModal}
-          backgroundColor={theme.colors.primary}
-        />
       </ActionsContainer>
-
-      <Table>
-        <TableHead>
-          <tr>
-            <TableHeaderCell>Nombre</TableHeaderCell>
-            <TableHeaderCell>Email</TableHeaderCell>
-            <TableHeaderCell>Rol</TableHeaderCell>
-            <TableHeaderCell>Acciones</TableHeaderCell>
-          </tr>
-        </TableHead>
-        <TableBody>
-          {currentUsers.length > 0 ? (
-            currentUsers.map((user) => (
-              <TableRow key={user.ID_USER}>
-                <TableCell>{user.NAME_USER}</TableCell>
-                <TableCell>{user.EMAIL}</TableCell>
-                <TableCell>{user.ROLE_NAME || user.ROLE}</TableCell>
-                {/* <TableCell>
-                  <StatusBadge status={user.status}>
-                    {user.status === "active"
-                      ? "Activo"
-                      : user.status === "pending"
-                      ? "Pendiente"
-                      : "Inactivo"}
-                  </StatusBadge>
-                </TableCell> */}
-                <TableCell>
-                  <ActionsGroup>
-                    <ActionButton
-                      title="Editar usuario"
-                      onClick={() => handleOpenEditModal(user)}
-                    >
-                      <FaEdit />
-                    </ActionButton>
-                    <ActionButton
-                      className="delete"
-                      title="Eliminar usuario"
-                      onClick={() => handleOpenDeleteModal(user)}
-                    >
-                      <FaTrash />
-                    </ActionButton>
-                  </ActionsGroup>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={7} style={{ textAlign: "center" }}>
-                No se encontraron usuarios con los filtros seleccionados
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-
-      {filteredUsers.length > usersPerPage && (
-        <Pagination>
-          <PageButton
-            onClick={() => setCurrentPage(1)}
-            disabled={currentPage === 1}
-          >
-            Primera
-          </PageButton>
-          <PageButton
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-          >
-            Anterior
-          </PageButton>
-
-          {/* Botones de página */}
-          {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => {
-            // Lógica para mostrar páginas alrededor de la actual
-            let pageNum;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
-
-            return (
-              <PageButton
-                key={pageNum}
-                $active={currentPage === pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-              >
-                {pageNum}
-              </PageButton>
-            );
-          })}
-
-          <PageButton
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
-          >
-            Siguiente
-          </PageButton>
-          <PageButton
-            onClick={() => setCurrentPage(totalPages)}
-            disabled={currentPage === totalPages}
-          >
-            Última
-          </PageButton>
-        </Pagination>
-      )}
-
-      {/* Modal para crear usuario */}
-      {isCreateModalOpen && (
-        <Modal>
-          <ModalContent>
-            <ModalHeader>
-              <ModalTitle>Crear Nuevo Usuario</ModalTitle>
-              <CloseButton onClick={handleCloseModals}>&times;</CloseButton>
-            </ModalHeader>
-
-            <form onSubmit={handleCreateUser}>
-              <FormRow>
-                <FormGroup>
-                  <Input
-                    label="Nombre completo"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    fullWidth
-                  />
-                </FormGroup>
-                <FormGroup>
-                  <Input
-                    label="Correo electrónico"
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    fullWidth
-                  />
-                </FormGroup>
-              </FormRow>
-
-              <FormGroup>
-                <label>Rol</label>
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "4px",
-                    border: `1px solid ${theme.colors.border}`,
-                    backgroundColor: theme.colors.surface,
-                    color: theme.colors.text,
-                    marginTop: "8px",
-                  }}
-                  required
-                >
-                  <option value="">Seleccionar rol</option>
-                  {roles.map((role) => (
-                    <option key={role.ID_ROLE} value={role.ID_ROLE.toString()}>
-                      {role.NAME_ROLE}
-                    </option>
-                  ))}
-                </select>
-              </FormGroup>
-
-              <FormRow>
-                <FormGroup>
-                  <Input
-                    label="Contraseña"
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    required
-                    fullWidth
-                  />
-                </FormGroup>
-                <FormGroup>
-                  <Input
-                    label="Confirmar contraseña"
-                    type="password"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    required
-                    fullWidth
-                  />
-                </FormGroup>
-              </FormRow>
-
-              <ButtonGroup>
-                <Button
-                  text="Cancelar"
-                  variant="outlined"
-                  onClick={handleCloseModals}
-                />
-                <Button
-                  text="Crear Usuario"
-                  type="submit"
-                  backgroundColor={theme.colors.primary}
-                />
-              </ButtonGroup>
-            </form>
-          </ModalContent>
-        </Modal>
+      
+      {users === null ? (
+        <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+          <RenderLoader
+            color={theme.colors.primary}
+            showDots={true}
+            showSpinner={false}
+            text="Cargando usuarios"
+            size="20px"
+            card={true}
+          />
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={currentUsers}
+          emptyMessage="No hay usuarios que coincidan con los criterios de búsqueda."
+          rowActions={renderRowActions}
+          striped={true}
+          pagination={{
+            currentPage,
+            totalPages,
+            onPageChange: setCurrentPage
+          }}
+        />
       )}
 
       {/* Modal para editar usuario */}
@@ -777,7 +564,7 @@ const AdminHomeComponent = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    required
+                    disabled={true} // Campo de solo lectura
                     fullWidth
                   />
                 </FormGroup>
@@ -788,7 +575,7 @@ const AdminHomeComponent = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    required
+                    disabled={true} // Campo de solo lectura
                     fullWidth
                   />
                 </FormGroup>
@@ -843,6 +630,10 @@ const AdminHomeComponent = () => {
                 </FormGroup>
               </FormRow>
 
+              <div style={{marginTop: "8px", fontSize: "0.9rem", color: theme.colors.textLight}}>
+          Nota: Solo puedes modificar el rol y/o la contraseña del usuario.
+        </div>
+
               <ButtonGroup>
                 <Button
                   text="Cancelar"
@@ -871,7 +662,7 @@ const AdminHomeComponent = () => {
 
             <p>
               ¿Estás seguro de que deseas eliminar al usuario{" "}
-              <strong>{currentUser?.NAME_USER}</strong>?
+              <strong>{currentUser?.SOCIO_INFO.NOMBRE}</strong>?
             </p>
             <p>Esta acción no se puede deshacer.</p>
 

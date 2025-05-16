@@ -19,22 +19,22 @@ const styles = {
 };
 
 const FormCard = styled(FlexBoxComponent)`
-  border: solid 1px ${({theme}) => theme.colors.border};
+  border: solid 1px ${({ theme }) => theme.colors.border};
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  background-color: ${({theme}) => theme.colors.surface};
+  background-color: ${({ theme }) => theme.colors.surface};
 `;
 
 const Title = styled.h1`
   margin-bottom: 0.5rem;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const Subtitle = styled.h2`
   margin-bottom: 1.5rem;
   font-size: 1.2rem;
-  color: ${({theme}) => theme.colors.text};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const StepsIndicator = styled.div`
@@ -48,7 +48,7 @@ const StepDot = styled.div`
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: ${({theme, $active}) =>
+  background-color: ${({ theme, $active }) =>
     $active ? theme.colors.primary : theme.colors.border};
   margin: 0 6px;
   transition: background-color 0.3s;
@@ -59,13 +59,13 @@ const CompanyList = styled.div`
   max-height: 150px;
   overflow-y: auto;
   width: 100%;
-  border: 1px solid ${({theme}) => theme.colors.border};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
 `;
 
 const CompanyItem = styled.div`
   padding: 12px 16px;
-  border-bottom: 1px solid ${({theme}) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -76,7 +76,7 @@ const CompanyItem = styled.div`
   }
 
   &:hover {
-    background-color: ${({theme}) => theme.colors.background};
+    background-color: ${({ theme }) => theme.colors.background};
   }
 `;
 
@@ -90,7 +90,7 @@ const CompanyName = styled.span`
 
 const MaskedEmail = styled.div`
   padding: 12px;
-  background-color: ${({theme}) => theme.colors.background + "80"};
+  background-color: ${({ theme }) => theme.colors.background + "80"};
   border-radius: 4px;
   margin-bottom: 1rem;
   font-family: monospace;
@@ -101,39 +101,40 @@ const InfoMessage = styled.div`
   padding: 12px;
   margin: 12px 0;
   border-radius: 4px;
-  background-color: ${({theme}) => theme.colors.info + "20"};
-  border-left: 3px solid ${({theme}) => theme.colors.info};
+  background-color: ${({ theme }) => theme.colors.info + "20"};
+  border-left: 3px solid ${({ theme }) => theme.colors.info};
   font-size: 0.9rem;
 `;
 const PasswordRequirements = styled.ul`
   margin: 8px 0;
   padding-left: 20px;
   font-size: 0.85rem;
-  color: ${({theme}) => theme.colors.textLight};
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const RequirementItem = styled.li`
   margin-bottom: 4px;
-  color: ${({theme, $met}) =>
+  color: ${({ theme, $met }) =>
     $met ? theme.colors.success : theme.colors.textLight};
 `;
 
 const Register = () => {
   const { theme } = useAppTheme();
   const navigate = useNavigate();
-  const { verifyIdentification, requestAccess, verifyExistingEmail } =
-    useAuth();
+  const { verifyIdentification, requestAccess } = useAuth();
 
   // Estados
   const [step, setStep] = useState(1);
   const [identification, setIdentification] = useState("");
   const [email, setEmail] = useState("");
+  const [existinEmail, setExistingEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [userExists, setUserExists] = useState(false);
   const [maskedEmail, setMaskedEmail] = useState("");
   const [availableCompanies, setAvailableCompanies] = useState([]);
   const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const [userCompanies, setUserCompanies] = useState([]); // Nuevo estado para las empresas del usuario
 
   // Nuevos estados para las contraseñas
   const [password, setPassword] = useState("");
@@ -193,39 +194,26 @@ const Register = () => {
           // Usuario existente
           setUserExists(true);
           setMaskedEmail(response.maskedEmail);
-          // Mostrar empresas a las que ya tiene acceso y las que puede solicitar
+          setExistingEmail(response.email);
           setAvailableCompanies(response.availableCompanies || []);
+
+          // Opcionalmente, guardar y mostrar las empresas ya asignadas
+          if (response.userCompanies && response.userCompanies.length > 0) {
+            setUserCompanies(response.userCompanies);
+          }
         } else {
           // Usuario nuevo
           setUserExists(false);
-          // Mostrar todas las empresas disponibles para registro
-          setAvailableCompanies([
-            {
-              id: "maxximundo",
-              name: "Maxximundo",
-              logo: "https://via.placeholder.com/50",
-            },
-            {
-              id: "autollanta",
-              name: "Autollanta",
-              logo: "https://via.placeholder.com/50",
-            },
-            {
-              id: "stox",
-              name: "Stox",
-              logo: "https://via.placeholder.com/50",
-            },
-            {
-              id: "ikonix",
-              name: "Ikonix",
-              logo: "https://via.placeholder.com/50",
-            },
-            {
-              id: "automax",
-              name: "Automax",
-              logo: "https://via.placeholder.com/50",
-            },
-          ]);
+          // Usar directamente el array de strings
+          setAvailableCompanies(
+            response.availableCompanies || [
+              "MAXXIMUNDO",
+              "STOX",
+              "AUTOLLANTA",
+              "IKONIX",
+              "AUTOMAX",
+            ]
+          );
         }
 
         // Avanzar al siguiente paso
@@ -262,12 +250,12 @@ const Register = () => {
   };
 
   // Manejar selección de empresas
-  const handleCompanyToggle = (companyId) => {
+  const handleCompanyToggle = (companyName) => {
     setSelectedCompanies((prevSelected) => {
-      if (prevSelected.includes(companyId)) {
-        return prevSelected.filter((id) => id !== companyId);
+      if (prevSelected.includes(companyName)) {
+        return prevSelected.filter((name) => name !== companyName);
       } else {
-        return [...prevSelected, companyId];
+        return [...prevSelected, companyName];
       }
     });
   };
@@ -282,14 +270,10 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const response = await verifyExistingEmail(identification, email);
-
-      if (response.success) {
+      if (email === existinEmail) {
         setStep(3);
       } else {
-        setError(
-          response.message || "El correo electrónico ingresado no coincide"
-        );
+        setError("El correo electrónico ingresado no coincide");
       }
     } catch (err) {
       setError("Error de conexión. Inténtelo más tarde.");
@@ -323,7 +307,7 @@ const Register = () => {
       const requestData = {
         identification,
         email,
-        companies: selectedCompanies,
+        companies: selectedCompanies, // Aquí usamos directamente los nombres
         isNewUser: !userExists,
       };
 
@@ -356,13 +340,7 @@ const Register = () => {
       <Title>Registro de usuario</Title>
       <Subtitle>Ingresa tu cédula o RUC</Subtitle>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleVerify();
-        }}
-        style={styles.form}
-      >
+      <form style={styles.form}>
         <Input
           label="Cédula o RUC"
           value={identification}
@@ -378,6 +356,10 @@ const Register = () => {
           type="submit"
           text="Verificar"
           disabled={identification.length < 10 || loading}
+          onClick={async (e) => {
+            e.preventDefault();
+            await handleVerify();
+          }}
         />
 
         <Button
@@ -466,13 +448,19 @@ const Register = () => {
 
             <PasswordRequirements>
               <>
-                <RequirementItem $met={checkPasswordRequirements().hasMinLength}>
+                <RequirementItem
+                  $met={checkPasswordRequirements().hasMinLength}
+                >
                   Al menos 8 caracteres
                 </RequirementItem>
-                <RequirementItem $met={checkPasswordRequirements().hasUpperCase}>
+                <RequirementItem
+                  $met={checkPasswordRequirements().hasUpperCase}
+                >
                   Al menos una letra mayúscula
                 </RequirementItem>
-                <RequirementItem $met={checkPasswordRequirements().hasLowerCase}>
+                <RequirementItem
+                  $met={checkPasswordRequirements().hasLowerCase}
+                >
                   Al menos una letra minúscula
                 </RequirementItem>
                 <RequirementItem $met={checkPasswordRequirements().hasNumber}>
@@ -497,17 +485,17 @@ const Register = () => {
                 Selecciona empresas:
               </label>
               <CompanyList>
-                {availableCompanies.map((company) => (
+                {availableCompanies.map((companyName) => (
                   <CompanyItem
-                    key={company.id}
-                    onClick={() => handleCompanyToggle(company.id)}
+                    key={companyName}
+                    onClick={() => handleCompanyToggle(companyName)}
                   >
                     <Checkbox
                       type="checkbox"
-                      checked={selectedCompanies.includes(company.id)}
+                      checked={selectedCompanies.includes(companyName)}
                       onChange={() => {}}
                     />
-                    <CompanyName>{company.name}</CompanyName>
+                    <CompanyName>{companyName}</CompanyName>
                   </CompanyItem>
                 ))}
               </CompanyList>
@@ -551,33 +539,25 @@ const Register = () => {
         solicitud será revisada por nuestro equipo.
       </InfoMessage>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleRequestAccess();
-        }}
-        style={styles.form}
-      >
+      <form style={styles.form}>
         <div>
           <label style={{ marginBottom: "8px", display: "block" }}>
             Empresas disponibles:
           </label>
           <CompanyList>
-            {availableCompanies
-              .filter((company) => company.status !== "active") // No mostrar empresas a las que ya tiene acceso
-              .map((company) => (
-                <CompanyItem
-                  key={company.id}
-                  onClick={() => handleCompanyToggle(company.id)}
-                >
-                  <Checkbox
-                    type="checkbox"
-                    checked={selectedCompanies.includes(company.id)}
-                    onChange={() => {}}
-                  />
-                  <CompanyName>{company.name}</CompanyName>
-                </CompanyItem>
-              ))}
+            {availableCompanies.map((companyName) => (
+              <CompanyItem
+                key={companyName}
+                onClick={() => handleCompanyToggle(companyName)}
+              >
+                <Checkbox
+                  type="checkbox"
+                  checked={selectedCompanies.includes(companyName)}
+                  onChange={() => {}}
+                />
+                <CompanyName>{companyName}</CompanyName>
+              </CompanyItem>
+            ))}
           </CompanyList>
           {error && (
             <div
@@ -596,6 +576,10 @@ const Register = () => {
           type="submit"
           text="Solicitar acceso"
           disabled={selectedCompanies.length === 0}
+          onClick={async (e) => {
+            e.preventDefault();
+            await handleRequestAccess();
+          }}
         />
 
         <Button text="Volver" variant="outlined" onClick={() => setStep(2)} />

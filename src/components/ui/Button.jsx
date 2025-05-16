@@ -117,7 +117,7 @@ export default function Button({
       {...props}
     >
       {loading ? (
-        <RenderLoader color={color} />
+        <RenderLoader color={color} floatingSpinner={false} />
       ) : (
         <>
           {leftIconName && (

@@ -14,9 +14,9 @@ const Home = () => {
   useEffect(() => {
     // Redirección automática en el Home según el rol
     if (user) {
-      if (user.ROLE === ROLES.ADMIN) {
+      if (user.ROLE_NAME === ROLES.ADMIN) {
         navigate(ROUTES.ADMIN.USER_ADMIN, { replace: true });
-      } else if (user.ROLE === ROLES.COORDINADOR) {
+      } else if (user.ROLE_NAME === ROLES.COORDINADOR) {
         navigate(ROUTES.COORDINADOR.PEDIDOS, { replace: true });
       } else {
         navigate(ROUTES.ECOMMERCE.HOME, { replace: true });
@@ -27,7 +27,7 @@ const Home = () => {
   // Mientras se procesa la redirección, mostrar un componente según el rol
   if (!user) return <div>Cargando...</div>;
   
-  switch (user.ROLE) {
+  switch (user.ROLE_NAME) {
     case ROLES.ADMIN:
       return <AdminHomeComponent />;
     case ROLES.COORDINADOR:

@@ -12,6 +12,12 @@ import {
   obtenerToken,
   obtenerRefreshToken,
 } from "../utils/encryptToken";
+import { users_getByAccount } from "../services/users/users";
+import {
+  resetPassword_requestPasswordReset,
+  resetPassword_verifyResetCode,
+  resetPassword_setNewPassword,
+} from "../services/auth/password";
 
 // Constantes para simulación (idealmente estarían en un archivo separado)
 const MOCK_USERS = {
@@ -102,6 +108,20 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
+  // Función auxiliar para enmascarar el email
+  const maskEmail = (email) => {
+    if (!email) return "";
+
+    const [username, domain] = email.split("@");
+    const [domainName, extension] = domain.split(".");
+
+    const maskedUsername = username.charAt(0) + "*".repeat(username.length - 1);
+    const maskedDomain =
+      domainName.charAt(0) + "*".repeat(domainName.length - 1);
+
+    return `${maskedUsername}@${maskedDomain}.${extension}`;
+  };
+
   // ========== FUNCIONES PARA LOS TOKENS ==========
 
   const refreshToken = async () => {
@@ -157,9 +177,9 @@ export function AuthProvider({ children }) {
   const getHomeRouteByRole = (user) => {
     if (!user) return ROUTES.AUTH.LOGIN;
 
-    if (user.ROLE === ROLES.COORDINADOR) {
+    if (user.ROLE_NAME === ROLES.COORDINADOR) {
       return ROUTES.COORDINADOR.PEDIDOS;
-    } else if (user.ROLE === ROLES.ADMIN) {
+    } else if (user.ROLE_NAME === ROLES.ADMIN) {
       return ROUTES.ADMIN.USER_ADMIN;
     } else {
       return ROUTES.ECOMMERCE.HOME;
@@ -202,7 +222,6 @@ export function AuthProvider({ children }) {
 
         // Redireccionar según el rol del usuario
         let redirectPath = getHomeRouteByRole(userData);
-        console.log(redirectPath);
 
         // Pequeño retraso antes de navegar para permitir que el estado se actualice
         setTimeout(() => navigate(redirectPath), 100);
@@ -255,56 +274,62 @@ export function AuthProvider({ children }) {
 
   // ========== FUNCIONES DE REGISTRO ==========
 
+  // Lista completa de empresas disponibles en el sistema
+  const ALL_COMPANIES = [
+    "MAXXIMUNDO",
+    "STOX",
+    "AUTOLLANTA",
+    "IKONIX",
+    "AUTOMAX",
+  ];
+
   const verifyIdentification = async (identification) => {
     try {
-      await simulateNetworkDelay();
+      // Llamar al servicio que verifica la identificación (RUC/cédula)
+      const response = await users_getByAccount(identification);
+      console.log(response);
 
-      const identityData = MOCK_IDENTIFICATIONS[identification];
+      if (response.success) {
+        if (response.data) {
+          // Usuario existente - extraer el primer usuario asociado a la cuenta
+          const user = response.data;
 
-      if (identityData) {
-        return {
-          success: true,
-          userExists: true,
-          maskedEmail: identityData.maskedEmail,
-          availableCompanies: identityData.availableCompanies,
-        };
+          // Enmascarar el email para mostrarlo parcialmente por seguridad
+          const maskedEmail = maskEmail(user.EMAIL);
+
+          // Filtrar para obtener las empresas disponibles (no ocupadas)
+          const userCompanies = user.EMPRESAS || [];
+          const availableCompanies = ALL_COMPANIES.filter(
+            (company) => !userCompanies.includes(company)
+          );
+
+          return {
+            success: true,
+            userExists: true,
+            email: user.EMAIL || "",
+            maskedEmail: maskedEmail,
+            availableCompanies: availableCompanies, // Solo empresas NO ocupadas
+            userCompanies: userCompanies, // Opcionalmente, incluir las ya asignadas
+            userId: user.ID_USER,
+          };
+        } else {
+          // La identificación existe pero no tiene usuarios asociados
+          // Todas las empresas están disponibles
+          return {
+            success: true,
+            userExists: false,
+            availableCompanies: ALL_COMPANIES,
+          };
+        }
       } else {
-        return {
-          success: true,
-          userExists: false,
-        };
+        // Error al consultar la API
+        throw new Error(response.message);
       }
     } catch (error) {
       console.error("Error al verificar identificación:", error);
       return {
         success: false,
-        message: "Error al verificar la identificación",
-      };
-    }
-  };
-
-  const verifyExistingEmail = async (identification, email) => {
-    try {
-      await simulateNetworkDelay();
-
-      const identityData = MOCK_IDENTIFICATIONS[identification];
-
-      if (identityData && identityData.email === email) {
-        return {
-          success: true,
-          message: "Email verificado correctamente",
-        };
-      } else {
-        return {
-          success: false,
-          message: "El correo electrónico no coincide con nuestros registros",
-        };
-      }
-    } catch (error) {
-      console.error("Error al verificar email:", error);
-      return {
-        success: false,
-        message: "Error al verificar el email",
+        message: error.message || "Error al verificar la identificación",
       };
     }
   };
@@ -354,74 +379,105 @@ export function AuthProvider({ children }) {
 
   const sendVerificationCode = async (email) => {
     try {
-      await simulateNetworkDelay(1000);
+      const response = await resetPassword_requestPasswordReset(email);
 
-      // En un caso real, aquí se enviaría un email con el código
-      // Para simulación, siempre usamos el mismo código
-      const CODE = "123456";
-      console.log(`Código de verificación enviado a ${email}: ${CODE}`);
-
-      // Guardar en sessionStorage porque es temporal
-      sessionStorage.setItem("verificationCode", CODE);
-      sessionStorage.setItem("verificationEmail", email);
-
-      return {
-        success: true,
-        message: "Código de verificación enviado correctamente",
-      };
+      if (response.success) {
+        // El token viene en la respuesta y ya se guarda en localStorage
+        // en la implementación de requestPasswordReset
+        return {
+          success: true,
+          message:
+            response.message || "Código de verificación enviado correctamente",
+        };
+      } else {
+        return {
+          success: false,
+          message:
+            response.message || "Error al enviar el código de verificación",
+        };
+      }
     } catch (error) {
       console.error("Error al enviar código:", error);
       return {
         success: false,
-        message: "Error al enviar el código de verificación",
+        message: error.message || "Error al enviar el código de verificación",
       };
     }
   };
 
-  const verifyCode = async (code) => {
+  const verifyCode = async (otp) => {
     try {
-      await simulateNetworkDelay(600);
+      // Obtener el token de localStorage (guardado en requestPasswordReset)
+      const token = localStorage.getItem("resetToken");
 
-      const storedCode = sessionStorage.getItem("verificationCode");
-      const isValid = code === storedCode;
+      if (!token) {
+        return {
+          success: false,
+          isValid: false,
+          message: "No se encontró el token de restablecimiento",
+        };
+      }
 
-      return {
-        success: true,
-        isValid: isValid,
-        message: isValid
-          ? "Código verificado correctamente"
-          : "El código ingresado es incorrecto",
-      };
+      const response = await resetPassword_verifyResetCode(token, otp);
+
+      if (response.success) {
+        // El resetToken ya se guarda en localStorage en verifyResetCode si es necesario
+        return {
+          success: true,
+          isValid: true,
+          message: response.message || "Código verificado correctamente",
+        };
+      } else {
+        return {
+          success: false,
+          isValid: false,
+          message: response.message || "El código ingresado es incorrecto",
+        };
+      }
     } catch (error) {
       console.error("Error al verificar código:", error);
       return {
         success: false,
-        message: "Error al verificar el código",
+        isValid: false,
+        message: error.message || "Error al verificar el código",
       };
     }
   };
 
   const resetPassword = async (newPassword) => {
     try {
-      await simulateNetworkDelay(1000);
+      const resetToken = localStorage.getItem("resetToken");
 
-      const email = sessionStorage.getItem("verificationEmail");
+      if (!resetToken) {
+        return {
+          success: false,
+          message: "No se encontró el token de restablecimiento",
+        };
+      }
 
-      // Limpiar datos temporales
-      sessionStorage.removeItem("verificationCode");
-      sessionStorage.removeItem("verificationEmail");
+      const response = await resetPassword_setNewPassword(
+        resetToken,
+        newPassword
+      );
 
-      console.log(`Contraseña actualizada para ${email}: ${newPassword}`);
+      // setNewPassword ya elimina el resetToken de localStorage al completarse
 
-      return {
-        success: true,
-        message: "Contraseña actualizada correctamente",
-      };
+      if (response.success) {
+        return {
+          success: true,
+          message: response.message || "Contraseña actualizada correctamente",
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || "Error al actualizar la contraseña",
+        };
+      }
     } catch (error) {
       console.error("Error al resetear contraseña:", error);
       return {
         success: false,
-        message: "Error al actualizar la contraseña",
+        message: error.message || "Error al actualizar la contraseña",
       };
     }
   };
@@ -521,7 +577,6 @@ export function AuthProvider({ children }) {
         isAuthenticated,
         // Registro
         verifyIdentification,
-        verifyExistingEmail,
         requestAccess,
         // Recuperación de contraseña
         verifyEmailExists,
