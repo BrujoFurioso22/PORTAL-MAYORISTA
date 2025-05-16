@@ -77,7 +77,7 @@ export default function Sidebar({ onToggleSidebar }) {
   });
 
   // Obtener accesos del usuario
-  const userAccess = user?.BUSSINES_ACCESS || [];
+  const userAccess = user?.EMPRESAS || [];
 
   // Configuración del menú dividida en secciones
   const menuSections = [

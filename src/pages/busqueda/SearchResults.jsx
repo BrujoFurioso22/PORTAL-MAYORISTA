@@ -246,7 +246,7 @@ const SearchResults = () => {
   const [sortOption, setSortOption] = useState("relevance");
   const [priceRange, setPriceRange] = useState("all");
 
-  const userAccess = user?.BUSSINES_ACCESS || [];
+  const userAccess = user?.EMPRESAS || [];
 
   const handleNavigate = () => {
     navigateToHomeByRole();

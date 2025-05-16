@@ -1,8 +1,8 @@
 // Definir primero las empresas y sus marcas asociadas
 export const empresas = [
   {
-    id: "autollanta",
-    nombre: "Autollanta",
+    id: "AUTOLLANTA",
+    nombre: "AUTOLLANTA",
     descripcion: "Especialistas en neumáticos de alta calidad",
     logo: "/src/assets/enterprises/AutollantaLogo.png",
     color: "#0056b3",
@@ -10,8 +10,8 @@ export const empresas = [
     products: 210,
   },
   {
-    id: "maxximundo",
-    nombre: "Maxximundo",
+    id: "MAXXIMUNDO",
+    nombre: "MAXXIMUNDO",
     descripcion: "Neumáticos y lubricantes de calidad superior",
     logo: "/src/assets/enterprises/MaxximundoLogo.png",
     color: "#28a745",
@@ -19,8 +19,8 @@ export const empresas = [
     products: 312,
   },
   {
-    id: "stox",
-    nombre: "Stox",
+    id: "STOX",
+    nombre: "STOX",
     descripcion: "Soluciones automotrices integrales",
     logo: "/src/assets/enterprises/StoxLogo.png",
     color: "#dc3545",
@@ -28,8 +28,8 @@ export const empresas = [
     products: 240,
   },
   {
-    id: "automax",
-    nombre: "Automax",
+    id: "AUTOMAX",
+    nombre: "AUTOMAX",
     descripcion: "Accesorios y repuestos para vehículos",
     logo: "https://via.placeholder.com/300x200?text=Automax",
     color: "#fd7e14",
@@ -37,8 +37,8 @@ export const empresas = [
     products: 200,
   },
   {
-    id: "ikonix",
-    nombre: "Ikonix",
+    id: "IKONIX",
+    nombre: "IKONIX",
     descripcion: "Herramientas profesionales y sistemas de iluminación",
     logo: "/src/assets/enterprises/IkonixLogo.png",
     color: "#6610f2",
@@ -93,7 +93,7 @@ function generarProductosPorEmpresa() {
   let idCounter = 1;
 
   // Para Autollanta (Neumáticos)
-  productosPorEmpresa.autollanta = [
+  productosPorEmpresa.AUTOLLANTA = [
     // Fortune
     {
       id: idCounter++,
@@ -108,7 +108,7 @@ function generarProductosPorEmpresa() {
       rating: 4.5,
       stock: 45,
       destacado: true,
-      empresaId: "autollanta",
+      empresaId: "AUTOLLANTA",
       // Atributos específicos para neumáticos
       specs: {
         medida: "225/65R17",
@@ -131,7 +131,7 @@ function generarProductosPorEmpresa() {
       rating: 4.3,
       stock: 60,
       destacado: false,
-      empresaId: "autollanta",
+      empresaId: "AUTOLLANTA",
       specs: {
         medida: "195/55R15",
         indiceVelocidad: "V",
@@ -154,7 +154,7 @@ function generarProductosPorEmpresa() {
       rating: 4.7,
       stock: 35,
       destacado: true,
-      empresaId: "autollanta",
+      empresaId: "AUTOLLANTA",
       specs: {
         medida: "265/70R16",
         indiceVelocidad: "S",
@@ -176,7 +176,7 @@ function generarProductosPorEmpresa() {
       rating: 4.0,
       stock: 80,
       destacado: false,
-      empresaId: "autollanta",
+      empresaId: "AUTOLLANTA",
       specs: {
         medida: "185/65R14",
         indiceVelocidad: "T",
@@ -188,7 +188,7 @@ function generarProductosPorEmpresa() {
   ];
 
   // Para Maxximundo (Neumáticos y Lubricantes)
-  productosPorEmpresa.maxximundo = [
+  productosPorEmpresa.MAXXIMUNDO = [
     // Maxxis (Neumáticos)
     {
       id: idCounter++,
@@ -203,7 +203,7 @@ function generarProductosPorEmpresa() {
       rating: 4.8,
       stock: 25,
       destacado: true,
-      empresaId: "maxximundo",
+      empresaId: "MAXXIMUNDO",
       specs: {
         medida: "245/75R16",
         indiceVelocidad: "Q",
@@ -225,7 +225,7 @@ function generarProductosPorEmpresa() {
       rating: 4.6,
       stock: 30,
       destacado: false,
-      empresaId: "maxximundo",
+      empresaId: "MAXXIMUNDO",
       specs: {
         medida: "215/45ZR17",
         indiceVelocidad: "W",
@@ -248,7 +248,7 @@ function generarProductosPorEmpresa() {
       rating: 4.2,
       stock: 40,
       destacado: false,
-      empresaId: "maxximundo",
+      empresaId: "MAXXIMUNDO",
       specs: {
         medida: "235/75R15",
         indiceVelocidad: "S",
@@ -271,7 +271,7 @@ function generarProductosPorEmpresa() {
       rating: 4.9,
       stock: 100,
       destacado: true,
-      empresaId: "maxximundo",
+      empresaId: "MAXXIMUNDO",
       specs: {
         viscosidad: "5W-40",
         tipo: "Sintético",
@@ -292,7 +292,7 @@ function generarProductosPorEmpresa() {
       rating: 4.3,
       stock: 85,
       destacado: false,
-      empresaId: "maxximundo",
+      empresaId: "MAXXIMUNDO",
       specs: {
         tipo: "50/50 Mezcla",
         capacidad: "3.78L",
@@ -303,7 +303,7 @@ function generarProductosPorEmpresa() {
   ];
 
   // Para Stox
-  productosPorEmpresa.stox = [
+  productosPorEmpresa.STOX = [
     // Hahua
     {
       id: idCounter++,
@@ -317,7 +317,7 @@ function generarProductosPorEmpresa() {
       rating: 4.1,
       stock: 65,
       destacado: true,
-      empresaId: "stox",
+      empresaId: "STOX",
       specs: {
         medida: "205/60R16",
         indiceVelocidad: "H",
@@ -339,7 +339,7 @@ function generarProductosPorEmpresa() {
       rating: 3.8,
       stock: 110,
       destacado: false,
-      empresaId: "stox",
+      empresaId: "STOX",
       specs: {
         medida: "175/70R13",
         indiceVelocidad: "T",
@@ -362,7 +362,7 @@ function generarProductosPorEmpresa() {
       rating: 4.5,
       stock: 20,
       destacado: true,
-      empresaId: "stox",
+      empresaId: "STOX",
       specs: {
         diametro: '17"',
         anchura: "7.5J",
@@ -374,7 +374,7 @@ function generarProductosPorEmpresa() {
   ];
 
   // Para Automax
-  productosPorEmpresa.automax = [
+  productosPorEmpresa.AUTOMAX = [
     // Cost
     {
       id: idCounter++,
@@ -388,7 +388,7 @@ function generarProductosPorEmpresa() {
       rating: 4.4,
       stock: 28,
       destacado: true,
-      empresaId: "automax",
+      empresaId: "AUTOMAX",
       specs: {
         medida: "31x10.5R15",
         indiceVelocidad: "Q",
@@ -410,7 +410,7 @@ function generarProductosPorEmpresa() {
       rating: 4.0,
       stock: 95,
       destacado: false,
-      empresaId: "automax",
+      empresaId: "AUTOMAX",
       specs: {
         medida: "185/70R14",
         indiceVelocidad: "T",
@@ -422,7 +422,7 @@ function generarProductosPorEmpresa() {
   ];
 
   // Para Ikonix (Herramientas e Iluminación)
-  productosPorEmpresa.ikonix = [
+  productosPorEmpresa.IKONIX = [
     // Uyustools (Herramientas)
     {
       id: idCounter++,
@@ -436,7 +436,7 @@ function generarProductosPorEmpresa() {
       rating: 4.7,
       stock: 35,
       destacado: true,
-      empresaId: "ikonix",
+      empresaId: "IKONIX",
       specs: {
         potencia: "20V",
         velocidad: "0-450/0-1800 RPM",
@@ -458,7 +458,7 @@ function generarProductosPorEmpresa() {
       rating: 4.5,
       stock: 50,
       destacado: false,
-      empresaId: "ikonix",
+      empresaId: "IKONIX",
       specs: {
         piezas: 40,
         material: "Acero Cromo-Vanadio",
@@ -480,7 +480,7 @@ function generarProductosPorEmpresa() {
       rating: 4.3,
       stock: 200,
       destacado: true,
-      empresaId: "ikonix",
+      empresaId: "IKONIX",
       specs: {
         potencia: "12W",
         socket: "E27",
@@ -501,7 +501,7 @@ function generarProductosPorEmpresa() {
       rating: 4.6,
       stock: 45,
       destacado: false,
-      empresaId: "ikonix",
+      empresaId: "IKONIX",
       specs: {
         potencia: "50W",
         lumen: "5000lm",

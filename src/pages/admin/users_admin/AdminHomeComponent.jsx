@@ -255,7 +255,7 @@ const AdminHomeComponent = () => {
     if (searchTerm) {
       result = result.filter(
         (user) =>
-          user.SOCIO_INFO.NOMBRE.toLowerCase().includes(
+          user.NAME_USER.toLowerCase().includes(
             searchTerm.toLowerCase()
           ) || user.EMAIL.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -283,7 +283,7 @@ const AdminHomeComponent = () => {
   const handleOpenEditModal = (user) => {
     setCurrentUser(user);
     setFormData({
-      name: user.SOCIO_INFO.NOMBRE,
+      name: user.NAME_USER,
       email: user.EMAIL,
       role: user.ROLE_USER, // Guardar el ID del rol
       password: "",
@@ -453,9 +453,9 @@ const AdminHomeComponent = () => {
   // Definición de columnas para la tabla
   const columns = [
     {
-      field: "SOCIO_INFO.NOMBRE",
+      field: "NAME_USER",
       header: "Nombre",
-      render: (row) => row.SOCIO_INFO.NOMBRE
+      render: (row) => row.NAME_USER
     },
     {
       field: "EMAIL",
@@ -662,7 +662,7 @@ const AdminHomeComponent = () => {
 
             <p>
               ¿Estás seguro de que deseas eliminar al usuario{" "}
-              <strong>{currentUser?.SOCIO_INFO.NOMBRE}</strong>?
+              <strong>{currentUser?.NAME_USER}</strong>?
             </p>
             <p>Esta acción no se puede deshacer.</p>
 

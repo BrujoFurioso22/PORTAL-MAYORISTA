@@ -172,14 +172,14 @@ const SecondaryButton = styled.button`
 `;
 
 const Catalogo = () => {
-  const { empresaId } = useParams();
+  const { empresaName } = useParams();
   const { user, navigateToHomeByRole } = useAuth();
   const navigate = useNavigate();
 
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [sortOption, setSortOption] = useState("default");
   const [formData, setFormData] = useState({
-    nombre: user?.NOMBRE_USUARIO || "",
+    nombre: user?.NAME_USER || "",
     email: user?.EMAIL || "",
     mensaje: "",
   });
@@ -187,13 +187,18 @@ const Catalogo = () => {
   const [availableCategories, setAvailableCategories] = useState([]);
   const [availableBrands, setAvailableBrands] = useState([]);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 100 });
-
-  // Obtener información de la empresa - Mover esto aquí arriba para que sea lo primero que evaluamos
-  const empresaInfo = empresas.find((empresa) => empresa.id === empresaId);
+  console.log(empresaName);
 
   // Verificar si el usuario tiene acceso a esta empresa
-  const userAccess = user?.BUSSINES_ACCESS || [];
-  const hasAccess = userAccess.includes(empresaId);
+  const userAccess = user?.EMPRESAS || [];
+
+  // Convertir empresaName a mayúsculas para comparar con userAccess
+  const hasAccess = userAccess.includes(empresaName);
+
+  // Obtener información de la empresa - usar find insensible a mayúsculas/minúsculas
+  const empresaInfo = empresas.find(
+    (empresa) => empresa.nombre === empresaName
+  );
 
   const handleNavigate = () => {
     navigateToHomeByRole();
@@ -213,7 +218,7 @@ const Catalogo = () => {
   useEffect(() => {
     if (hasAccess) {
       // Si tiene acceso, cargar productos de esa empresa
-      const productos = productosPorEmpresa[empresaId] || [];
+      const productos = productosPorEmpresa[empresaName] || [];
       setFilteredProducts(productos);
 
       // Extraer categorías únicas de los productos de esta empresa
@@ -240,12 +245,12 @@ const Catalogo = () => {
         setPriceRange({ min: minPrice, max: maxPrice });
       }
     }
-  }, [empresaId, hasAccess]);
+  }, [empresaName, hasAccess]);
 
   const handleFilters = (filters) => {
     if (!hasAccess) return;
 
-    let result = [...productosPorEmpresa[empresaId]];
+    let result = [...productosPorEmpresa[empresaName]];
 
     // Filtrar por categorías
     if (filters.categories && filters.categories.length > 0) {

@@ -19,83 +19,6 @@ import {
   resetPassword_setNewPassword,
 } from "../services/auth/password";
 
-// Constantes para simulación (idealmente estarían en un archivo separado)
-const MOCK_USERS = {
-  "admin@mayoreo.com": {
-    password: "123456",
-    data: {
-      CODIGO_USUARIO: 1,
-      NOMBRE_USUARIO: "Administrador",
-      ROLES: ["ADMIN"],
-      EMAIL: "admin@mayoreo.com",
-      BUSSINES_ACCESS: ["maxximundo", "stox", "ikonix", "autollanta"],
-    },
-  },
-  "vendedor@mayoreo.com": {
-    password: "123456",
-    data: {
-      CODIGO_USUARIO: 2,
-      NOMBRE_USUARIO: "Vendedor",
-      ROLES: ["VENDEDOR"],
-      EMAIL: "vendedor@mayoreo.com",
-      BUSSINES_ACCESS: ["maxximundo", "stox"],
-    },
-  },
-  "coordinadora@mayoreo.com": {
-    password: "123456",
-    data: {
-      CODIGO_USUARIO: 3,
-      NOMBRE_USUARIO: "Coordinadora",
-      ROLES: ["COORDINATOR"],
-      EMAIL: "coordinadora@mayoreo.com",
-      BUSSINES_ACCESS: ["maxximundo", "autollanta"],
-    },
-  },
-  "juan@example.com": {
-    password: "123456",
-    data: {
-      CODIGO_USUARIO: 4,
-      NOMBRE_USUARIO: "Juan Cliente",
-      ROLES: ["CLIENT"],
-      EMAIL: "juan@example.com",
-      BUSSINES_ACCESS: ["maxximundo", "autollanta"],
-    },
-  },
-};
-
-const MOCK_IDENTIFICATIONS = {
-  "0987654321001": {
-    email: "juan@example.com",
-    maskedEmail: "j***@e***le.com",
-    availableCompanies: [
-      {
-        id: "maxximundo",
-        name: "Maxximundo",
-        status: "active",
-        logo: "https://via.placeholder.com/50",
-      },
-      {
-        id: "autollanta",
-        name: "Autollanta",
-        status: "pending",
-        logo: "https://via.placeholder.com/50",
-      },
-      {
-        id: "stox",
-        name: "Stox",
-        status: "inactive",
-        logo: "https://via.placeholder.com/50",
-      },
-      {
-        id: "ikonix",
-        name: "Ikonix",
-        status: "inactive",
-        logo: "https://via.placeholder.com/50",
-      },
-    ],
-  },
-};
-
 // Simulación de delay de red
 const simulateNetworkDelay = (ms = 800) =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -205,7 +128,7 @@ export function AuthProvider({ children }) {
         const refreshToken = response.data.refresh_token;
 
         // Guardar datos de usuario en localStorage
-        localStorage.setItem("user", JSON.stringify(userData));
+        // localStorage.setItem("user", JSON.stringify(userData));
         localStorage.setItem("auth", "true");
 
         // Usar funciones de encriptación para los tokens
@@ -355,28 +278,6 @@ export function AuthProvider({ children }) {
 
   // ========== FUNCIONES DE RECUPERACIÓN DE CONTRASEÑA ==========
 
-  const verifyEmailExists = async (email) => {
-    try {
-      await simulateNetworkDelay();
-
-      const exists = Object.keys(MOCK_USERS).includes(email);
-
-      return {
-        success: true,
-        exists: exists,
-        message: exists
-          ? "Email verificado"
-          : "El email no está registrado en el sistema",
-      };
-    } catch (error) {
-      console.error("Error al verificar email:", error);
-      return {
-        success: false,
-        message: "Error al verificar el email",
-      };
-    }
-  };
-
   const sendVerificationCode = async (email) => {
     try {
       const response = await resetPassword_requestPasswordReset(email);
@@ -505,7 +406,7 @@ export function AuthProvider({ children }) {
           // Token válido, establecer usuario
           setUser(response.user);
           setIsAuthenticated(true);
-          localStorage.setItem("user", JSON.stringify(response.user));
+          // localStorage.setItem("user", JSON.stringify(response.user));
           localStorage.setItem("auth", "true");
         }
       } catch (error) {
@@ -579,7 +480,6 @@ export function AuthProvider({ children }) {
         verifyIdentification,
         requestAccess,
         // Recuperación de contraseña
-        verifyEmailExists,
         sendVerificationCode,
         verifyCode,
         resetPassword,

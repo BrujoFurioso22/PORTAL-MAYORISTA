@@ -231,7 +231,7 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
       </SearchBar>
 
       <FlexBoxComponent width="auto" alignItems="center">
-        <UserGreeting>Hola, {user?.SOCIO_INFO?.NOMBRE}</UserGreeting>
+        <UserGreeting>Hola, {user?.NAME_USER}</UserGreeting>
 
         {!isAdminOrCoord && (
           <IconButton onClick={handleGoToCart}>

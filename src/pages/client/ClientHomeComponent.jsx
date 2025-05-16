@@ -138,15 +138,11 @@ const ClientHomeComponent = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Obtener accesos del usuario
-  const userAccess = user?.BUSSINES_ACCESS || [];
+  // Obtener accesos del usuario y convertir a mayúsculas para comparación
+  const userAccess = user?.EMPRESAS || [];
 
-  const handleCardClick = (empresaId) => {
-    navigate(`/catalogo/${empresaId}`);
-    // if (userAccess.includes(empresaId)) {
-    // } else {
-    //   navigate(`/solicitar-acceso/${empresaId}`);
-    // }
+  const handleCardClick = (empresa) => {
+    navigate(`/catalogo/${empresa.nombre}`);
   };
 
   return (
@@ -156,20 +152,14 @@ const ClientHomeComponent = () => {
       <h2>Todas las Empresas</h2>
       <CompaniesGrid>
         {empresas.map((empresa) => {
-          // Verificar si el usuario tiene acceso a esta empresa
-          const hasAccess = userAccess.includes(empresa.id);
+          // Verificar si el usuario tiene acceso (comparando en mayúsculas)
+          const hasAccess = userAccess.includes(empresa.nombre.toUpperCase());
 
           return (
             <CompanyCard
               key={empresa.id}
-              onClick={() => handleCardClick(empresa.id)}
+              onClick={() => handleCardClick(empresa)}
             >
-              {/* Opción 1: Badge simple */}
-              {/* <AccessBadge hasAccess={hasAccess}>
-                {hasAccess ? "Acceso" : "Sin acceso"}
-              </AccessBadge> */}
-
-              {/* Opción 2: Cinta decorativa (descomentar para usar) */}
               <AccessRibbon>
                 <RibbonContent $hasAccess={hasAccess}>
                   {hasAccess ? "ACCESO" : "SIN ACCESO"}

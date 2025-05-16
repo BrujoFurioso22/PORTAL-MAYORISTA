@@ -329,15 +329,15 @@ const CoordinadorHomeComponent = () => {
   const [newAddressesCount, setNewAddressesCount] = useState(0);
 
   // Empresas a las que tiene acceso la coordinadora
-  const empresasAcceso = user?.BUSSINES_ACCESS || [];
+  const empresasAcceso = user?.EMPRESAS || [];
 
   // Mapa de nombres de empresas
   const empresasMap = {
-    autollanta: "Autollanta",
-    maxximundo: "Maxximundo",
-    stox: "Stox",
-    ikonix: "Ikonix",
-    automax: "Automax",
+    AUTOLLANTA: "Autollanta",
+    MAXXIMUNDO: "Maxximundo",
+    STOX: "Stox",
+    IKONIX: "Ikonix",
+    AUTOMAX: "Automax",
   };
 
   // Mapa de estados
