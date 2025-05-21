@@ -12,7 +12,7 @@ import {
   obtenerToken,
   obtenerRefreshToken,
 } from "../utils/encryptToken";
-import { users_getByAccount } from "../services/users/users";
+import { users_create, users_getByAccount } from "../services/users/users";
 import {
   resetPassword_requestPasswordReset,
   resetPassword_verifyResetCode,
@@ -34,15 +34,49 @@ export function AuthProvider({ children }) {
   // Función auxiliar para enmascarar el email
   const maskEmail = (email) => {
     if (!email) return "";
+    let maskedEmail = "";
 
-    const [username, domain] = email.split("@");
-    const [domainName, extension] = domain.split(".");
+    if (Array.isArray(email)) {
+      maskedEmail = email.map((e) => {
+        // Dividir en usuario y dominio
+        const [username, domain] = e.split("@");
 
-    const maskedUsername = username.charAt(0) + "*".repeat(username.length - 1);
-    const maskedDomain =
-      domainName.charAt(0) + "*".repeat(domainName.length - 1);
+        // Para el usuario, mostrar primera letra y asteriscos
+        const maskedUsername =
+          username.charAt(0) + "*".repeat(Math.max(2, username.length - 2));
 
-    return `${maskedUsername}@${maskedDomain}.${extension}`;
+        // Para el dominio, extraer la primera parte y la extensión de manera más robusta
+        const domainParts = domain.split(".");
+        const domainName = domainParts[0];
+        // Unir todas las partes de la extensión (.com, .co.uk, .com.ec, etc.)
+        const extension = domainParts.slice(1).join(".");
+
+        const maskedDomain =
+          domainName.charAt(0) + "*".repeat(Math.max(2, domainName.length - 2));
+
+        return `${maskedUsername}@${maskedDomain}.${extension}`;
+      });
+    } else {
+      // Dividir en usuario y dominio
+      const [username, domain] = email.split("@");
+
+      // Para el usuario, mostrar primera letra y asteriscos
+      const maskedUsername =
+        username.charAt(0) + "*".repeat(Math.max(2, username.length - 2));
+
+      // Para el dominio, extraer la primera parte y la extensión de manera más robusta
+      const domainParts = domain.split(".");
+      const domainName = domainParts[0];
+      // Unir todas las partes de la extensión (.com, .co.uk, .com.ec, etc.)
+      const extension = domainParts.slice(1).join(".");
+
+      const maskedDomain =
+        domainName.charAt(0) + "*".repeat(Math.max(2, domainName.length - 2));
+
+      maskedEmail = [`${maskedUsername}@${maskedDomain}.${extension}`];
+    }
+
+    return maskedEmail;
   };
 
   // ========== FUNCIONES PARA LOS TOKENS ==========
@@ -212,13 +246,13 @@ export function AuthProvider({ children }) {
       const response = await users_getByAccount(identification);
       console.log(response);
 
-      if (response.success) {
+      if (response.success && response.data.length > 0) {
         if (response.data) {
           // Usuario existente - extraer el primer usuario asociado a la cuenta
-          const user = response.data;
+          const user = response.data[0];
 
           // Enmascarar el email para mostrarlo parcialmente por seguridad
-          const maskedEmail = maskEmail(user.EMAIL);
+          const maskedEmail = maskEmail(user.CORREOS);
 
           // Filtrar para obtener las empresas disponibles (no ocupadas)
           const userCompanies = user.EMPRESAS || [];
@@ -229,11 +263,12 @@ export function AuthProvider({ children }) {
           return {
             success: true,
             userExists: true,
-            email: user.EMAIL || "",
-            maskedEmail: maskedEmail,
+            emails: user.CORREOS || [],
+            maskedEmails: maskedEmail,
             availableCompanies: availableCompanies, // Solo empresas NO ocupadas
             userCompanies: userCompanies, // Opcionalmente, incluir las ya asignadas
             userId: user.ID_USER,
+            userName: user.NOMBRE_SOCIO || "USUARIO SIN NOMBRE",
           };
         } else {
           // La identificación existe pero no tiene usuarios asociados
@@ -257,21 +292,26 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const requestAccess = async (requestData) => {
+  const registerUser = async (userData) => {
     try {
-      await simulateNetworkDelay(1000);
+      const response = await users_create(userData);
 
-      console.log("Datos de solicitud:", requestData);
-
-      return {
-        success: true,
-        message: "Solicitud enviada correctamente",
-      };
+      if (response.success) {
+        return {
+          success: true,
+          message: response.message || "Usuario registrado correctamente",
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || "Error al registrar el usuario",
+        };
+      }
     } catch (error) {
-      console.error("Error al solicitar acceso:", error);
+      console.error("Error al registrar usuario: ", error);
       return {
         success: false,
-        message: "Error al procesar la solicitud",
+        message: "Error al registrar el usuario",
       };
     }
   };
@@ -320,9 +360,12 @@ export function AuthProvider({ children }) {
       }
 
       const response = await resetPassword_verifyResetCode(token, otp);
+      console.log(response);
+      localStorage.removeItem("resetToken");
 
       if (response.success) {
         // El resetToken ya se guarda en localStorage en verifyResetCode si es necesario
+        localStorage.setItem("resetToken", response.resetToken);
         return {
           success: true,
           isValid: true,
@@ -360,6 +403,8 @@ export function AuthProvider({ children }) {
         resetToken,
         newPassword
       );
+      console.log(response);
+      
 
       // setNewPassword ya elimina el resetToken de localStorage al completarse
 
@@ -478,7 +523,7 @@ export function AuthProvider({ children }) {
         isAuthenticated,
         // Registro
         verifyIdentification,
-        requestAccess,
+        registerUser,
         // Recuperación de contraseña
         sendVerificationCode,
         verifyCode,

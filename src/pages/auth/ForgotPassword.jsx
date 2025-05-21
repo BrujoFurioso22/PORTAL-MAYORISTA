@@ -248,10 +248,15 @@ const ForgotPassword = () => {
       const response = await resetPassword(password);
       if (response.success) {
         toast.success("Contraseña actualizada correctamente");
+        // Agregar mensaje en el componente
+        setMessage({
+          text: "¡Tu contraseña ha sido actualizada con éxito! Serás redirigido al inicio de sesión.",
+          type: "success",
+        });
         // Redirigir al login después de un breve momento
         setTimeout(() => {
           navigate(ROUTES.AUTH.LOGIN);
-        }, 1500);
+        }, 3000); // Aumenté el tiempo para que el usuario pueda ver el mensaje
       } else {
         setMessage({
           text: response.message || "Error al actualizar la contraseña",

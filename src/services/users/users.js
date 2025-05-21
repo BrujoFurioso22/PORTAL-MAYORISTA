@@ -115,12 +115,12 @@ export const users_updatePassword = async (userId, password) => {
 
 /**
  * Obtiene usuarios asociados a una cuenta específica
- * @param {string|number} accountId - ID de la cuenta a consultar
+ * @param {string|number} codigoSocio - ID de la cuenta a consultar
  * @returns {Promise<Object>} Objeto con información de éxito/error y datos
  */
-export const users_getByAccount = async (accountId) => {
+export const users_getByAccount = async (codigoSocio) => {
   try {
-    const response = await api.get(`/usuarios/getUser/account/${accountId}`);
+    const response = await api.get(`/usuarios/getInfoAccount/${codigoSocio}`);
 
     return {
       success: true,

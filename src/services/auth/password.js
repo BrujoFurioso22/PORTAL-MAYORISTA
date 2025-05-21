@@ -72,12 +72,12 @@ export const resetPassword_setNewPassword = async (resetToken, newPassword) => {
     console.log(resetToken, newPassword);
     
     const response = await api.post("/reset-password/resPss", {
-      resetToken,
+      token: resetToken,
       newPassword,
     });
     console.log(response);
     
-    localStorage.remove("resetToken");
+    localStorage.removeItem("resetToken");
 
     return {
       success: true,

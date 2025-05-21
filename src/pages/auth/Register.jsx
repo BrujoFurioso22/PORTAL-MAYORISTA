@@ -93,13 +93,14 @@ const MaskedEmail = styled.div`
   background-color: ${({ theme }) => theme.colors.background + "80"};
   border-radius: 4px;
   margin-bottom: 1rem;
+  width: fit-content;
   font-family: monospace;
   letter-spacing: 1px;
 `;
 
 const InfoMessage = styled.div`
   padding: 12px;
-  margin: 12px 0;
+  margin: 5px 0;
   border-radius: 4px;
   background-color: ${({ theme }) => theme.colors.info + "20"};
   border-left: 3px solid ${({ theme }) => theme.colors.info};
@@ -118,22 +119,38 @@ const RequirementItem = styled.li`
     $met ? theme.colors.success : theme.colors.textLight};
 `;
 
+// Componente estilizado para mensajes de contacto y errores críticos
+const ContactMessage = styled.div`
+  padding: 16px;
+  margin: 16px 0;
+  border-radius: 4px;
+  background-color: ${({ theme }) => theme.colors.surface || "#ffecec"};
+  border-left: 4px solid ${({ theme }) => theme.colors.error};
+  font-size: 0.95rem;
+  line-height: 1.5;
+`;
+
+// Información de contacto reutilizable
+const contactInfo = {
+  phone: "02-222-3333",
+  emailSoporte: "soporte@maxximundo.com",
+  emailVentas: "ventas@maxximundo.com",
+};
+
 const Register = () => {
   const { theme } = useAppTheme();
   const navigate = useNavigate();
-  const { verifyIdentification, requestAccess } = useAuth();
+  const { verifyIdentification, registerUser } = useAuth();
 
   // Estados
   const [step, setStep] = useState(1);
   const [identification, setIdentification] = useState("");
   const [email, setEmail] = useState("");
-  const [existinEmail, setExistingEmail] = useState("");
+  const [userName, setUserName] = useState("");
+  const [existinEmails, setExistingEmails] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [userExists, setUserExists] = useState(false);
-  const [maskedEmail, setMaskedEmail] = useState("");
-  const [availableCompanies, setAvailableCompanies] = useState([]);
-  const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const [maskedEmails, setMaskedEmails] = useState("");
   const [userCompanies, setUserCompanies] = useState([]); // Nuevo estado para las empresas del usuario
 
   // Nuevos estados para las contraseñas
@@ -176,7 +193,7 @@ const Register = () => {
     setIdentification(formattedValue);
   };
 
-  // Verificar identificación
+  // Verificar identificación - con manejo mejorado de casos especiales
   const handleVerify = async () => {
     if (identification.length < 10) {
       setError("La cédula o RUC debe tener al menos 10 dígitos");
@@ -184,45 +201,56 @@ const Register = () => {
     }
 
     setLoading(true);
+    setError("");
 
     try {
       // Llamar a la función de verificación del AuthContext
       const response = await verifyIdentification(identification);
 
       if (response.success) {
-        if (response.userExists) {
-          // Usuario existente
-          setUserExists(true);
-          setMaskedEmail(response.maskedEmail);
-          setExistingEmail(response.email);
-          setAvailableCompanies(response.availableCompanies || []);
-
-          // Opcionalmente, guardar y mostrar las empresas ya asignadas
-          if (response.userCompanies && response.userCompanies.length > 0) {
-            setUserCompanies(response.userCompanies);
-          }
-        } else {
-          // Usuario nuevo
-          setUserExists(false);
-          // Usar directamente el array de strings
-          setAvailableCompanies(
-            response.availableCompanies || [
-              "MAXXIMUNDO",
-              "STOX",
-              "AUTOLLANTA",
-              "IKONIX",
-              "AUTOMAX",
-            ]
+        // Verificar si hay emails asociados
+        if (!response.emails || response.emails.length === 0) {
+          // Caso 1: No hay correos asociados a esta identificación
+          setError(
+            "No hay correos electrónicos asociados a esta identificación. "
           );
+          setLoading(false);
+          return;
+        }
+
+        // Usuario existente con emails
+        setMaskedEmails(response.maskedEmails);
+        setExistingEmails(response.emails);
+        setUserName(response.userName);
+
+        // Guardar y mostrar las empresas ya asignadas
+        if (response.userCompanies && response.userCompanies.length > 0) {
+          setUserCompanies(response.userCompanies);
         }
 
         // Avanzar al siguiente paso
         setStep(2);
       } else {
-        setError(response.message || "Error al verificar la identificación");
+        // Manejar diferentes tipos de errores según el mensaje o código
+        if (
+          response.status === 404 ||
+          response.message?.includes("no encontr") ||
+          response.message?.includes("no exist")
+        ) {
+          // Caso 2: Identificación no existe en el sistema
+          setError("Esta identificación no existe en nuestro sistema. ");
+        } else {
+          // Otros errores
+          setError(response.message || "Error al verificar la identificación");
+        }
       }
     } catch (err) {
-      setError("Error de conexión. Inténtelo más tarde.");
+      // Verificar si es un error 404
+      if (err.response?.status === 404) {
+        setError("Esta identificación no existe en nuestro sistema. ");
+      } else {
+        setError("Error de conexión. Inténtelo más tarde.");
+      }
     } finally {
       setLoading(false);
     }
@@ -246,18 +274,9 @@ const Register = () => {
       return false;
     }
 
+    // Si todo está bien, limpiar errores
+    setPasswordError("");
     return true;
-  };
-
-  // Manejar selección de empresas
-  const handleCompanyToggle = (companyName) => {
-    setSelectedCompanies((prevSelected) => {
-      if (prevSelected.includes(companyName)) {
-        return prevSelected.filter((name) => name !== companyName);
-      } else {
-        return [...prevSelected, companyName];
-      }
-    });
   };
 
   // Verificar email existente
@@ -270,8 +289,12 @@ const Register = () => {
     setLoading(true);
 
     try {
-      if (email === existinEmail) {
-        setStep(3);
+      if (existinEmails.includes(email)) {
+        // Si el email es correcto, ahora vamos al paso de contraseña
+        toast.success("Correo verificado correctamente");
+
+        // Ahora iremos al paso de contraseña (2.5) en lugar del paso 3
+        setStep(2.5);
       } else {
         setError("El correo electrónico ingresado no coincide");
       }
@@ -282,55 +305,35 @@ const Register = () => {
     }
   };
 
-  // Solicitar acceso
-  const handleRequestAccess = async () => {
-    if (selectedCompanies.length === 0) {
-      setError("Por favor seleccione al menos una empresa");
+  // Enviar contraseña y avanzar
+  const handlePasswordSubmit = async () => {
+    // Validar contraseñas
+    if (!validatePasswords()) {
       return;
     }
 
-    if (!userExists) {
-      if (!email) {
-        setError("Por favor ingrese un correo electrónico");
-        return;
-      }
+    // Crear el objeto JSON con los datos del usuario
+    const userData = {
+      email: email,
+      password: password,
+      role: 3,
+      account: identification,
+      name: userName,
+      enterprises: userCompanies.join(","),
+    };
 
-      // Validación de contraseñas para usuarios nuevos
-      if (!validatePasswords()) {
-        return;
-      }
-    }
+    // Solo imprimir por ahora, como pedido
+    console.log("Datos de usuario:", userData);
 
-    setLoading(true);
+    const response = await registerUser(userData);
 
-    try {
-      const requestData = {
-        identification,
-        email,
-        companies: selectedCompanies, // Aquí usamos directamente los nombres
-        isNewUser: !userExists,
-      };
-
-      // Añadir contraseña solo para usuarios nuevos
-      if (!userExists) {
-        requestData.password = password;
-      }
-
-      const response = await requestAccess(requestData);
-
-      if (response.success) {
-        toast.success(
-          "Solicitud enviada correctamente. Recibirás un correo con instrucciones adicionales."
-        );
-        // Avanzar al paso de confirmación
-        setStep(4);
-      } else {
-        setError(response.message || "Error al procesar la solicitud");
-      }
-    } catch (err) {
-      setError("Error de conexión. Inténtelo más tarde.");
-    } finally {
-      setLoading(false);
+    if (response.success) {
+      toast.success("Usuario registrado exitosamente");
+      // Avanzar al paso 3
+      setStep(3);
+    } else {
+      // Manejar errores de registro
+      setError(response.message || "Error al registrar el usuario");
     }
   };
 
@@ -351,6 +354,32 @@ const Register = () => {
           leftIconLibrary={4}
           errorMessage={error}
         />
+
+        {error ? (
+          <ContactMessage>
+            <p>{error}Por favor comuníquese con soporte para poder ayudarlo.</p>
+            <p style={{ marginTop: "8px", fontWeight: "500" }}>Contacto:</p>
+            <ul style={{ margin: "4px 0 0 16px" }}>
+              <li>Teléfono: {contactInfo.phone}</li>
+              <li>
+                Email:{" "}
+                {error.includes("actualizar sus datos")
+                  ? contactInfo.emailSoporte
+                  : contactInfo.emailVentas}
+              </li>
+            </ul>
+          </ContactMessage>
+        ) : (
+          <div
+            style={{
+              color: theme.colors.error,
+              fontSize: "0.85rem",
+              marginTop: "8px",
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         <Button
           type="submit"
@@ -375,210 +404,141 @@ const Register = () => {
   const renderStep2 = () => (
     <>
       <Title>Registro de usuario</Title>
-      {userExists ? (
-        <>
-          <Subtitle>Verificar correo electrónico</Subtitle>
-          <InfoMessage>
-            Ya existe una cuenta asociada a esta identificación. Para continuar,
-            ingresa el correo electrónico asociado a tu cuenta.
-          </InfoMessage>
 
-          <MaskedEmail>Correo registrado: {maskedEmail}</MaskedEmail>
+      <>
+        <Subtitle>Verificar correo electrónico</Subtitle>
+        <InfoMessage>
+          Ya existe la identificación en nuestro sistema. Para continuar,
+          ingresa uno de los correos electrónicos asociado a tu cuenta.
+          <br />
+          <strong>
+            Si no tienes acceso a ninguno de estos correos, por favor contacta a
+            soporte.
+            <ul style={{ margin: "4px 0 0 16px" }}>
+              <li>Teléfono: {contactInfo.phone}</li>
+              <li>
+                Email:{" "}
+                {error.includes("actualizar sus datos")
+                  ? contactInfo.emailSoporte
+                  : contactInfo.emailVentas}
+              </li>
+            </ul>
+          </strong>
+        </InfoMessage>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleEmailVerify();
-            }}
-            style={styles.form}
-          >
-            <Input
-              label="Correo electrónico"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Ingresa tu correo"
-              required
-              leftIconName="Mail"
-              errorMessage={error}
-            />
+        <MaskedEmail>
+          Correo/s registrado/s:{" "}
+          <div>
+            {maskedEmails.map((maskedEmail, index) => (
+              <li key={index}>{maskedEmail}</li>
+            ))}
+          </div>
+        </MaskedEmail>
 
-            <Button type="submit" text="Verificar correo" />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleEmailVerify();
+          }}
+          style={styles.form}
+        >
+          <Input
+            label="Correo electrónico"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Ingresa tu correo"
+            required
+            leftIconName="Mail"
+            errorMessage={error}
+          />
 
-            <Button
-              text="Volver"
-              variant="outlined"
-              onClick={() => setStep(1)}
-            />
-          </form>
-        </>
-      ) : (
-        // Versión modificada para usuarios nuevos, con campos de contraseña
-        <>
-          <Subtitle>Crea tu cuenta y solicita acceso</Subtitle>
+          <Button type="submit" text="Verificar correo" />
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleRequestAccess();
-            }}
-            style={styles.form}
-          >
-            <Input
-              label="Correo electrónico"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Ingresa tu correo"
-              required
-              leftIconName="Mail"
-            />
-
-            <Input
-              label="Contraseña"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Crea una contraseña"
-              required
-              leftIconName="Lock"
-              rightIconName={showPassword ? "EyeOff" : "Eye"}
-              onRightIconClick={() => setShowPassword(!showPassword)}
-            />
-
-            <PasswordRequirements>
-              <>
-                <RequirementItem
-                  $met={checkPasswordRequirements().hasMinLength}
-                >
-                  Al menos 8 caracteres
-                </RequirementItem>
-                <RequirementItem
-                  $met={checkPasswordRequirements().hasUpperCase}
-                >
-                  Al menos una letra mayúscula
-                </RequirementItem>
-                <RequirementItem
-                  $met={checkPasswordRequirements().hasLowerCase}
-                >
-                  Al menos una letra minúscula
-                </RequirementItem>
-                <RequirementItem $met={checkPasswordRequirements().hasNumber}>
-                  Al menos un número
-                </RequirementItem>
-              </>
-            </PasswordRequirements>
-
-            <Input
-              label="Confirmar contraseña"
-              type={showPassword ? "text" : "password"}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirma tu contraseña"
-              required
-              leftIconName="Lock"
-              errorMessage={passwordError}
-            />
-
-            <div>
-              <label style={{ marginBottom: "8px", display: "block" }}>
-                Selecciona empresas:
-              </label>
-              <CompanyList>
-                {availableCompanies.map((companyName) => (
-                  <CompanyItem
-                    key={companyName}
-                    onClick={() => handleCompanyToggle(companyName)}
-                  >
-                    <Checkbox
-                      type="checkbox"
-                      checked={selectedCompanies.includes(companyName)}
-                      onChange={() => {}}
-                    />
-                    <CompanyName>{companyName}</CompanyName>
-                  </CompanyItem>
-                ))}
-              </CompanyList>
-              {error && (
-                <div
-                  style={{
-                    color: theme.colors.error,
-                    fontSize: "0.85rem",
-                    marginTop: "8px",
-                  }}
-                >
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              text="Solicitar acceso"
-              disabled={selectedCompanies.length === 0 || !email}
-            />
-
-            <Button
-              text="Volver"
-              variant="outlined"
-              onClick={() => setStep(1)}
-            />
-          </form>
-        </>
-      )}
+          <Button text="Volver" variant="outlined" onClick={() => setStep(1)} />
+        </form>
+      </>
     </>
   );
 
-  // Renderizar paso 3: Selección de empresas para usuario existente
-  const renderStep3 = () => (
+  // Renderizar paso 2.5: Configuración de contraseña
+  const renderPasswordStep = () => (
     <>
-      <Title>Registro de usuario</Title>
-      <Subtitle>Solicitar acceso a nuevas empresas</Subtitle>
+      <Title>Configurar contraseña</Title>
+      <Subtitle>Establece una contraseña segura</Subtitle>
+
       <InfoMessage>
-        Selecciona las empresas adicionales a las que deseas tener acceso. Tu
-        solicitud será revisada por nuestro equipo.
+        Para completar la verificación de tu cuenta, por favor establece una
+        contraseña segura.
       </InfoMessage>
 
       <form style={styles.form}>
-        <div>
-          <label style={{ marginBottom: "8px", display: "block" }}>
-            Empresas disponibles:
-          </label>
-          <CompanyList>
-            {availableCompanies.map((companyName) => (
-              <CompanyItem
-                key={companyName}
-                onClick={() => handleCompanyToggle(companyName)}
-              >
-                <Checkbox
-                  type="checkbox"
-                  checked={selectedCompanies.includes(companyName)}
-                  onChange={() => {}}
-                />
-                <CompanyName>{companyName}</CompanyName>
-              </CompanyItem>
-            ))}
-          </CompanyList>
-          {error && (
-            <div
-              style={{
-                color: theme.colors.error,
-                fontSize: "0.85rem",
-                marginTop: "8px",
-              }}
-            >
-              {error}
-            </div>
-          )}
-        </div>
+        <Input
+          label="Contraseña"
+          type={showPassword ? "text" : "password"}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Ingresa tu contraseña"
+          required
+          leftIconName="Lock"
+          rightIcon={{
+            name: showPassword ? "Eye" : "EyeOff",
+            library: 4,
+            onClick: () => setShowPassword(!showPassword),
+            style: { cursor: "pointer" },
+          }}
+          errorMessage={passwordError}
+        />
+
+        <PasswordRequirements>
+          {Object.entries(checkPasswordRequirements()).map(([req, met]) => {
+            if (req === "allMet") return null;
+
+            let label = "";
+            switch (req) {
+              case "hasMinLength":
+                label = "Al menos 8 caracteres";
+                break;
+              case "hasUpperCase":
+                label = "Al menos una mayúscula (A-Z)";
+                break;
+              case "hasLowerCase":
+                label = "Al menos una minúscula (a-z)";
+                break;
+              case "hasNumber":
+                label = "Al menos un número (0-9)";
+                break;
+              case "hasSpecialChar":
+                label = "Al menos un carácter especial (!@#$...)";
+                break;
+              default:
+                break;
+            }
+
+            return (
+              <RequirementItem key={req} $met={met}>
+                {label}
+              </RequirementItem>
+            );
+          })}
+        </PasswordRequirements>
+
+        <Input
+          label="Confirmar contraseña"
+          type={showPassword ? "text" : "password"}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Confirma tu contraseña"
+          required
+          leftIconName="Lock"
+        />
 
         <Button
-          type="submit"
-          text="Solicitar acceso"
-          disabled={selectedCompanies.length === 0}
+          text="Continuar"
+          disabled={loading}
           onClick={async (e) => {
             e.preventDefault();
-            await handleRequestAccess();
+            await handlePasswordSubmit();
           }}
         />
 
@@ -587,20 +547,23 @@ const Register = () => {
     </>
   );
 
-  // Renderizar paso 4: Confirmación
-  const renderStep4 = () => (
+  // Renderizar paso 3: Selección de empresas para usuario existente
+  const renderStep3 = () => (
     <>
-      <Title>¡Solicitud enviada!</Title>
-      <div style={{ textAlign: "center", margin: "2rem 0" }}>
+      <Title>Cuenta verificada</Title>
+      <Subtitle>Información de acceso</Subtitle>
+
+      <div style={{ margin: "1rem 0" }}>
         <svg
           width="64"
           height="64"
           viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
+          style={{ margin: "0 auto", display: "block" }}
         >
           <path
-            d="M22 11.0857V12.0057C21.9988 14.1621 21.3005 16.2604 20.0093 17.9875C18.7182 19.7147 16.9033 20.9782 14.8354 21.5896C12.7674 22.201 10.5573 22.1276 8.53447 21.3803C6.51168 20.633 4.78465 19.2518 3.61096 17.4428C2.43727 15.6338 1.87979 13.4938 2.02168 11.342C2.16356 9.19029 2.99721 7.14205 4.39828 5.5028C5.79935 3.86354 7.69279 2.72111 9.79619 2.24587C11.8996 1.77063 14.1003 1.98806 16.07 2.86572"
+            d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9819C18.7182 19.709 16.9033 20.9726 14.8354 21.584C12.7674 22.1954 10.5573 22.122 8.53447 21.3747C6.51168 20.6274 4.78465 19.2462 3.61096 17.4371C2.43727 15.628 1.87979 13.488 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98234 16.07 2.86"
             stroke={theme.colors.success}
             strokeWidth="2"
             strokeLinecap="round"
@@ -615,10 +578,42 @@ const Register = () => {
           />
         </svg>
       </div>
-      <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-        <p>Hemos recibido tu solicitud de acceso correctamente.</p>
-        <p>Te hemos enviado un correo electrónico con más información.</p>
-        <p>Nuestro equipo revisará tu solicitud y te contactará pronto.</p>
+
+      <InfoMessage style={{ marginBottom: "1.5rem", textAlign: "center" }}>
+        Hemos verificado tu cuenta exitosamente
+      </InfoMessage>
+
+      {userCompanies && userCompanies.length > 0 && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <h3 style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>
+            Actualmente tienes acceso a las siguientes empresas:
+          </h3>
+          <CompanyList style={{ maxHeight: "120px" }}>
+            {userCompanies.map((companyName, index) => (
+              <CompanyItem key={index} style={{ cursor: "default" }}>
+                <CompanyName>{companyName}</CompanyName>
+              </CompanyItem>
+            ))}
+          </CompanyList>
+        </div>
+      )}
+
+      <div
+        style={{
+          padding: "1rem",
+          border: `1px solid ${theme.colors.info}`,
+          borderRadius: "4px",
+          marginBottom: "1.5rem",
+          backgroundColor: `${theme.colors.info}20`,
+        }}
+      >
+        <p style={{ margin: "0 0 0.5rem 0", fontWeight: "500" }}>
+          ¿Necesitas acceso a más empresas?
+        </p>
+        <p style={{ margin: "0", fontSize: "0.9rem" }}>
+          Para solicitar acceso a empresas adicionales, inicia sesión con tu
+          cuenta y podrás hacerlo desde el panel principal.
+        </p>
       </div>
 
       <Button
@@ -628,17 +623,17 @@ const Register = () => {
     </>
   );
 
-  // Renderizar el paso actual
+  // Modificar renderCurrentStep para incluir el nuevo paso
   const renderCurrentStep = () => {
     switch (step) {
       case 1:
         return renderStep1();
       case 2:
         return renderStep2();
+      case 2.5: // Nuevo paso para contraseña
+        return renderPasswordStep();
       case 3:
         return renderStep3();
-      case 4:
-        return renderStep4();
       default:
         return renderStep1();
     }
@@ -662,8 +657,8 @@ const Register = () => {
         <StepsIndicator>
           <StepDot $active={step >= 1} />
           <StepDot $active={step >= 2} />
+          <StepDot $active={step >= 2.5} />
           <StepDot $active={step >= 3} />
-          <StepDot $active={step >= 4} />
         </StepsIndicator>
 
         {renderCurrentStep()}
