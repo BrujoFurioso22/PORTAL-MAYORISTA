@@ -5,7 +5,10 @@ export const ROUTES = {
     FORGOT_PASSWORD: "/auth/forgot-password",
   },
   ADMIN: {
-    USER_ADMIN: "/",
+    DASHBOARD_ADMIN: "/admin/dashboard",
+    USER_ADMIN: "/admin/usuarios",
+    COORDINADOR_ADMIN: "/admin/coordinadores",
+    // Otras rutas de admin...
   },
   COORDINADOR: {
     PEDIDOS: "/",

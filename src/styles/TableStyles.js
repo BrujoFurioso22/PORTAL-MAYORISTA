@@ -19,7 +19,7 @@ export const TableHeader = styled.thead`
 
 export const TableHeaderCell = styled.th`
   padding: 16px;
-  text-align: ${({ align }) => align || "left"};
+  text-align: ${({ $align }) => $align || "left"};
   color: ${({ theme }) => theme.colors.textLight};
   font-weight: 600;
   font-size: 0.95rem;
@@ -54,7 +54,7 @@ export const TableCell = styled.td`
   padding: 14px 16px;
   color: ${({ theme }) => theme.colors.text};
   vertical-align: middle;
-  text-align: ${({ align }) => align || "left"};
+  text-align: ${({ $align }) => $align || "left"};
 `;
 
 export const EmptyState = styled.div`

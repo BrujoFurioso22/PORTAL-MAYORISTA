@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ROLES } from "../constants/roles";
 import { ROUTES } from "../constants/routes";
-import AdminHomeComponent from "./admin/users_admin/AdminHomeComponent";
+import UsersAdministration from "./admin/UsersAdministration";
 import CoordinadorHomeComponent from "./coordinadora/CoordinadorHomeComponent";
 import ClientHomeComponent from "./client/ClientHomeComponent";
 
@@ -15,7 +15,7 @@ const Home = () => {
     // Redirección automática en el Home según el rol
     if (user) {
       if (user.ROLE_NAME === ROLES.ADMIN) {
-        navigate(ROUTES.ADMIN.USER_ADMIN, { replace: true });
+        navigate(ROUTES.ADMIN.DASHBOARD_ADMIN, { replace: true });
       } else if (user.ROLE_NAME === ROLES.COORDINADOR) {
         navigate(ROUTES.COORDINADOR.PEDIDOS, { replace: true });
       } else {
@@ -29,7 +29,7 @@ const Home = () => {
   
   switch (user.ROLE_NAME) {
     case ROLES.ADMIN:
-      return <AdminHomeComponent />;
+      return <UsersAdministration />;
     case ROLES.COORDINADOR:
       return <CoordinadorHomeComponent />;
     default:

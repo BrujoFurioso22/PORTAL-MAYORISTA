@@ -2,20 +2,21 @@ import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
-import Button from "../../../components/ui/Button";
-import Input from "../../../components/ui/Input";
-import { useAppTheme } from "../../../context/AppThemeContext";
-import { useAuth } from "../../../context/AuthContext";
-import RenderIcon from "../../../components/ui/RenderIcon";
-import DataTable from "../../../components/ui/Table";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
+import { useAppTheme } from "../../context/AppThemeContext";
+import { useAuth } from "../../context/AuthContext";
+import RenderIcon from "../../components/ui/RenderIcon";
+import DataTable from "../../components/ui/Table";
 import {
   users_create,
   users_getAll,
   users_updateRole,
-  users_updatePassword
-} from "../../../services/users/users";
-import { roles_getAll } from "../../../services/users/roles";
-import RenderLoader from "../../../components/ui/RenderLoader";
+  users_updatePassword,
+} from "../../services/users/users";
+import { roles_getAll } from "../../services/users/roles";
+import RenderLoader from "../../components/ui/RenderLoader";
+import { ROLES } from "../../constants/roles";
 
 // Estilos
 const PageContainer = styled.div`
@@ -94,7 +95,7 @@ const ActionsGroup = styled.div`
   justify-content: center;
 `;
 
-const ActionButton = styled.button`
+const ActionButton = styled(Button)`
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.primary};
@@ -194,7 +195,7 @@ const EmptyState = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
-const AdminHomeComponent = () => {
+const UsersAdministration = () => {
   const { theme } = useAppTheme();
   const { user } = useAuth();
 
@@ -224,23 +225,45 @@ const AdminHomeComponent = () => {
   useEffect(() => {
     // Aquí se cargarían los usuarios desde la API
     const fetchData = async () => {
-      const response = await users_getAll();
-      console.log(response);
-      
+      try {
+        // Cargar roles primero para obtener los IDs de los roles necesarios
+        const rolesResponse = await roles_getAll();
+        if (rolesResponse.success) {
+          setRoles(rolesResponse.data);
 
-      if (response.success) {
-        setUsers(response.data);
-        setFilteredUsers(response.data);
-      } else {
-        toast.error(response.message || "Error al cargar usuarios");
-      }
+          // Encontrar los IDs de los roles cliente y admin
+          const clienteRole = rolesResponse.data.find(
+            (role) => role.NAME_ROLE === ROLES.CLIENTE
+          );
 
-      // Cargar roles
-      const rolesResponse = await roles_getAll();
-      if (rolesResponse.success) {
-        setRoles(rolesResponse.data);
-      } else {
-        toast.error(rolesResponse.message || "Error al cargar roles");
+          const adminRole = rolesResponse.data.find(
+            (role) => role.NAME_ROLE === ROLES.ADMIN
+          );
+
+          if (clienteRole || adminRole) {
+            // Ahora cargar los usuarios con rol cliente o admin
+            const usersResponse = await users_getAll();
+            if (usersResponse.success) {
+              const userList = usersResponse.data.filter(
+                (user) =>
+                  (clienteRole && user.ROLE_USER === clienteRole.ID_ROLE) ||
+                  (adminRole && user.ROLE_USER === adminRole.ID_ROLE)
+              );
+
+              setUsers(userList);
+              setFilteredUsers(userList);
+            } else {
+              toast.error(usersResponse.message || "Error al cargar usuarios");
+            }
+          } else {
+            toast.error("No se encontraron los roles necesarios en el sistema");
+          }
+        } else {
+          toast.error(rolesResponse.message || "Error al cargar roles");
+        }
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+        toast.error("Ocurrió un error al cargar los datos");
       }
     };
     fetchData();
@@ -255,9 +278,8 @@ const AdminHomeComponent = () => {
     if (searchTerm) {
       result = result.filter(
         (user) =>
-          user.NAME_USER.toLowerCase().includes(
-            searchTerm.toLowerCase()
-          ) || user.EMAIL.toLowerCase().includes(searchTerm.toLowerCase())
+          user.NAME_USER.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.EMAIL.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -277,8 +299,6 @@ const AdminHomeComponent = () => {
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-
-
 
   const handleOpenEditModal = (user) => {
     setCurrentUser(user);
@@ -386,15 +406,15 @@ const AdminHomeComponent = () => {
       if (currentUser.ROLE_USER.toString() !== formData.role.toString()) {
         // Actualizar el rol
         const roleResponse = await users_updateRole(
-          currentUser.ID_USER, 
+          currentUser.ID_USER,
           formData.role
         );
-        
+
         if (!roleResponse.success) {
           toast.error(roleResponse.message || "Error al actualizar el rol");
           return;
         }
-        
+
         roleUpdated = true;
       }
 
@@ -402,15 +422,17 @@ const AdminHomeComponent = () => {
       if (formData.password) {
         // Actualizar la contraseña
         const passwordResponse = await users_updatePassword(
-          currentUser.ID_USER, 
+          currentUser.ID_USER,
           formData.password
         );
-        
+
         if (!passwordResponse.success) {
-          toast.error(passwordResponse.message || "Error al actualizar la contraseña");
+          toast.error(
+            passwordResponse.message || "Error al actualizar la contraseña"
+          );
           return;
         }
-        
+
         passwordUpdated = true;
       }
 
@@ -455,35 +477,70 @@ const AdminHomeComponent = () => {
     {
       field: "NAME_USER",
       header: "Nombre",
-      render: (row) => row.NAME_USER
+      render: (row) => row.NAME_USER,
     },
     {
       field: "EMAIL",
-      header: "Email"
+      header: "Email",
     },
     {
       field: "ROLE_NAME",
       header: "Rol",
-      render: (row) => row.ROLE_NAME || row.ROLE
-    }
+      render: (row) => row.ROLE_NAME || row.ROLE,
+    },
+    {
+      field: "EMPRESAS",
+      header: "Empresas asignadas",
+      width: "250px",
+      render: (row) => {
+        let empresas = [];
+
+        if (row.EMPRESAS) {
+          if (typeof row.EMPRESAS === "string") {
+            empresas = row.EMPRESAS.split(",").map((e) => e.trim());
+          } else if (Array.isArray(row.EMPRESAS)) {
+            empresas = row.EMPRESAS;
+          }
+        }
+
+        return empresas.length > 0
+          ? empresas.join(", ")
+          : "Sin empresas asignadas";
+      },
+    },
+    {
+      field: "STATUS_USER",
+      header: "Estado",
+      render: (row) => (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            color: row.STATUS_USER ? theme.colors.success : theme.colors.error,
+          }}
+        >
+          <RenderIcon
+            name={row.STATUS_USER ? "CheckCircle" : "MinusCircle"}
+            size={18}
+          />
+        </div>
+      ),
+    },
   ];
 
   // Renderizar acciones por fila
-  const renderRowActions = (user) => (
+  const renderRowActions = (coordinador) => (
     <ActionsGroup>
       <ActionButton
-        title="Editar usuario"
-        onClick={() => handleOpenEditModal(user)}
-      >
-        <FaEdit size={16} />
-      </ActionButton>
+        title="Editar coordinador"
+        onClick={() => handleOpenEditModal(coordinador)}
+        leftIconName={"Edit"}
+      />
       <ActionButton
-        className="delete"
-        title="Eliminar usuario"
-        onClick={() => handleOpenDeleteModal(user)}
-      >
-        <FaTrash size={16} />
-      </ActionButton>
+        title="Eliminar coordinador"
+        onClick={() => handleOpenDeleteModal(coordinador)}
+        leftIconName={"Trash"}
+      />
     </ActionsGroup>
   );
 
@@ -520,9 +577,11 @@ const AdminHomeComponent = () => {
           </FiltersContainer>
         </div>
       </ActionsContainer>
-      
+
       {users === null ? (
-        <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+        <div
+          style={{ display: "flex", justifyContent: "center", width: "100%" }}
+        >
           <RenderLoader
             color={theme.colors.primary}
             showDots={true}
@@ -542,7 +601,7 @@ const AdminHomeComponent = () => {
           pagination={{
             currentPage,
             totalPages,
-            onPageChange: setCurrentPage
+            onPageChange: setCurrentPage,
           }}
         />
       )}
@@ -630,9 +689,16 @@ const AdminHomeComponent = () => {
                 </FormGroup>
               </FormRow>
 
-              <div style={{marginTop: "8px", fontSize: "0.9rem", color: theme.colors.textLight}}>
-          Nota: Solo puedes modificar el rol y/o la contraseña del usuario.
-        </div>
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontSize: "0.9rem",
+                  color: theme.colors.textLight,
+                }}
+              >
+                Nota: Solo puedes modificar el rol y/o la contraseña del
+                usuario.
+              </div>
 
               <ButtonGroup>
                 <Button
@@ -685,4 +751,4 @@ const AdminHomeComponent = () => {
   );
 };
 
-export default AdminHomeComponent;
+export default UsersAdministration;

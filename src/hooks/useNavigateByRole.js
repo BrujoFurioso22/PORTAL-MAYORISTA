@@ -23,7 +23,7 @@ export const useNavigateByRole = () => {
     if (user.ROLES.includes(ROLES.COORDINADOR)) {
       navigate(ROUTES.COORDINADOR.PEDIDOS);
     } else if (user.ROLES.includes(ROLES.ADMIN)) {
-      navigate(ROUTES.ADMIN.USER_ADMIN);
+      navigate(ROUTES.ADMIN.DASHBOARD_ADMIN);
     } else if (user.ROLES.includes(ROLES.CLIENTE)) {
       // Si hay una ruta específica para vendedores, agregar aquí
       navigate(ROUTES.ECOMMERCE.HOME);

@@ -50,7 +50,7 @@ const DataTable = ({
               <TableHeaderCell
                 key={index}
                 width={column.width}
-                align={column.align}
+                $align={column.align}
               >
                 {column.header}
               </TableHeaderCell>
@@ -69,12 +69,12 @@ const DataTable = ({
               onClick={() => onRowClick && onRowClick(row)}
             >
               {columns.map((column, colIndex) => (
-                <TableCell key={colIndex} align={column.align}>
+                <TableCell key={colIndex} $align={column.align}>
                   {column.render ? column.render(row) : row[column.field]}
                 </TableCell>
               ))}
               {rowActions && (
-                <TableCell align="center">{rowActions(row)}</TableCell>
+                <TableCell $align="center">{rowActions(row)}</TableCell>
               )}
             </TableRow>
           ))}

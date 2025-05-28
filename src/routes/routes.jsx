@@ -14,10 +14,12 @@ import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import DetallePedidoCoordinador from "../pages/coordinadora/DetallePedido";
 import EditarPedidoCoordinador from "../pages/coordinadora/EditarPedido";
-import AdminHomeComponent from "../pages/admin/users_admin/AdminHomeComponent";
+import UsersAdministration from "../pages/admin/UsersAdministration";
 import ClientHomeComponent from "../pages/client/ClientHomeComponent";
 import CoordinadorHomeComponent from "../pages/coordinadora/CoordinadorHomeComponent";
 import ForgotPassword from "../pages/auth/ForgotPassword";
+import CoordinadorAdminComponent from "../pages/admin/CoordinadorAdminComponent";
+import AdminDashboardComponent from "../pages/admin/AdminDashboardComponent";
 
 // Rutas de E-commerce (accesibles para todos los usuarios autenticados)
 export const ecommerceRoutes = [
@@ -67,8 +69,18 @@ export const ecommerceRoutes = [
 // Rutas para administradores
 export const adminRoutes = [
   {
+    path: ROUTES.ADMIN.DASHBOARD_ADMIN,
+    element: <AdminDashboardComponent />,
+    allowedRoles: [ROLES.ADMIN],
+  },
+  {
     path: ROUTES.ADMIN.USER_ADMIN,
-    element: <AdminHomeComponent />, // Cambiar por el componente real
+    element: <UsersAdministration />,
+    allowedRoles: [ROLES.ADMIN],
+  },
+  {
+    path: ROUTES.ADMIN.COORDINADOR_ADMIN,
+    element: <CoordinadorAdminComponent />,
     allowedRoles: [ROLES.ADMIN],
   },
   // ... otras rutas

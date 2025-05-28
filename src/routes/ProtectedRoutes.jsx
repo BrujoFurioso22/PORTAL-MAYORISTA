@@ -51,7 +51,7 @@ const ProtectedRoute = ({
 const getHomeForRole = (role) => {
   switch (role) {
     case ROLES.ADMIN:
-      return ROUTES.ADMIN.USER_ADMIN;
+      return ROUTES.ADMIN.DASHBOARD_ADMIN;
     case ROLES.COORDINADOR:
       return ROUTES.COORDINADOR.PEDIDOS;
     default:

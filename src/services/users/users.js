@@ -46,7 +46,7 @@ export const users_create = async (userData) => {
 // ACTUALIZAR USUARIO
 export const users_update = async (userData) => {
   try {
-    const response = await api.put(
+    const response = await api.patch(
       `/usuarios/updateUser/${userData.id}`,
       userData
     );
@@ -71,8 +71,8 @@ export const users_update = async (userData) => {
 // Actualizar SOLO el rol del usuario
 export const users_updateRole = async (userId, roleId) => {
   try {
-    const response = await api.put(`/user/${userId}/role`, {
-      roleId: parseInt(roleId),
+    const response = await api.patch(`/usuarios/updateRole/${userId}`, {
+      role: parseInt(roleId),
     });
 
     return {
@@ -94,7 +94,9 @@ export const users_updateRole = async (userId, roleId) => {
 // Actualizar SOLO la contraseña del usuario
 export const users_updatePassword = async (userId, password) => {
   try {
-    const response = await api.put(`/user/${userId}/password`, { password });
+    const response = await api.patch(`/usuarios/updatePass/${userId}`, {
+      password,
+    });
 
     return {
       success: true,
@@ -105,6 +107,35 @@ export const users_updatePassword = async (userId, password) => {
     const message =
       error.response?.data?.message ||
       "Ocurrió un error al actualizar la contraseña";
+    return {
+      success: false,
+      message,
+      error: error.response?.data || null,
+    };
+  }
+};
+
+/**
+ * Acualizar el estado del usuario
+ * @param {string|number} userId - ID del usuario a actualizar
+ * @param {boolean} status - Nuevo estado del usuario (true/false)
+ */
+export const users_updateStatus = async (userId, status) => {
+  try {
+    const response = await api.patch(`/usuarios/updateStatus/${userId}`, {
+      status,
+    });
+
+    return {
+      success: true,
+      message: "Estado del usuario actualizado exitosamente",
+      data: response.data.data,
+    };
+  } catch (error) {
+    // Extraer mensaje si existe en la respuesta
+    const message =
+      error.response?.data?.message ||
+      "Ocurrió un error al actualizar el estado del usuario";
     return {
       success: false,
       message,

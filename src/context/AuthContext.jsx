@@ -18,6 +18,7 @@ import {
   resetPassword_verifyResetCode,
   resetPassword_setNewPassword,
 } from "../services/auth/password";
+import { setLogoutFunction } from "../utils/authUtils";
 
 // Simulación de delay de red
 const simulateNetworkDelay = (ms = 800) =>
@@ -137,7 +138,7 @@ export function AuthProvider({ children }) {
     if (user.ROLE_NAME === ROLES.COORDINADOR) {
       return ROUTES.COORDINADOR.PEDIDOS;
     } else if (user.ROLE_NAME === ROLES.ADMIN) {
-      return ROUTES.ADMIN.USER_ADMIN;
+      return ROUTES.ADMIN.DASHBOARD_ADMIN;
     } else {
       return ROUTES.ECOMMERCE.HOME;
     }
@@ -205,22 +206,23 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const limpiarDatosUsuario = () => {
+    // Limpiar localStorage
+    localStorage.removeItem("user");
+    localStorage.removeItem("auth");
+    localStorage.removeItem("cart");
+    // Limpiar tokens encriptados
+    eliminarTokens();
+    // Limpiar estado
+    setUser(null);
+    setIsAuthenticated(false);
+    // Redireccionar a login
+    navigate(ROUTES.AUTH.LOGIN);
+  };
+
   const logout = () => {
     try {
-      // Limpiar localStorage
-      localStorage.removeItem("user");
-      localStorage.removeItem("auth");
-      localStorage.removeItem("cart");
-
-      // Función para eliminar tokens encriptados
-      eliminarTokens();
-
-      // Actualizar estado
-      setUser(null);
-      setIsAuthenticated(false);
-
-      // Navegar a login
-      navigate(ROUTES.AUTH.LOGIN);
+      limpiarDatosUsuario();
 
       return { success: true, message: "Sesión cerrada correctamente" };
     } catch (error) {
@@ -228,6 +230,11 @@ export function AuthProvider({ children }) {
       return { success: false, message: "Error al cerrar sesión" };
     }
   };
+
+  // Registrar la función de logout para uso global
+  useEffect(() => {
+    setLogoutFunction(logout);
+  }, []);
 
   // ========== FUNCIONES DE REGISTRO ==========
 
@@ -404,7 +411,6 @@ export function AuthProvider({ children }) {
         newPassword
       );
       console.log(response);
-      
 
       // setNewPassword ya elimina el resetToken de localStorage al completarse
 
@@ -445,7 +451,6 @@ export function AuthProvider({ children }) {
       try {
         // Intentar verificar el token actual
         const response = await auth_me();
-        console.log(response);
 
         if (response && response.user) {
           // Token válido, establecer usuario
