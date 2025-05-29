@@ -5,24 +5,15 @@ import { ROUTES } from "../constants/routes";
 import { ROLES } from "../constants/roles";
 import { auth_login } from "../services/auth/login";
 import { auth_me, auth_refresh } from "../services/auth/auth";
-import {
-  eliminarTokens,
-  guardarRefreshToken,
-  guardarToken,
-  obtenerToken,
-  obtenerRefreshToken,
-} from "../utils/encryptToken";
+
 import { users_create, users_getByAccount } from "../services/users/users";
 import {
   resetPassword_requestPasswordReset,
   resetPassword_verifyResetCode,
   resetPassword_setNewPassword,
 } from "../services/auth/password";
-import { setLogoutFunction } from "../utils/authUtils";
-
-// Simulación de delay de red
-const simulateNetworkDelay = (ms = 800) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+import { performLogout } from "../utils/authUtils";
+import { guardarRefreshToken, guardarToken } from "../utils/encryptToken";
 
 const AuthContext = createContext(null);
 
@@ -80,56 +71,6 @@ export function AuthProvider({ children }) {
     return maskedEmail;
   };
 
-  // ========== FUNCIONES PARA LOS TOKENS ==========
-
-  const refreshToken = async () => {
-    try {
-      const refreshToken = obtenerRefreshToken();
-      if (!refreshToken) {
-        throw new Error("No hay refresh token");
-      }
-
-      const response = await auth_refresh(refreshToken);
-
-      if (response && response.token) {
-        guardarToken(response.token);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error al refrescar token:", error);
-      return false;
-    }
-  };
-
-  const verifyToken = async () => {
-    try {
-      const token = obtenerToken();
-      if (!token) return false;
-
-      const response = await auth_me();
-
-      if (response && response.user) {
-        // Actualizar la información del usuario
-        setUser(response.user);
-        setIsAuthenticated(true);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error al verificar token:", error);
-
-      // Si el error es por token expirado, intentar refrescar
-      if (error.response && error.response.status === 401) {
-        const refreshSuccess = await refreshToken();
-        if (refreshSuccess) {
-          return await verifyToken(); // Reintentar verificación con nuevo token
-        }
-      }
-      return false;
-    }
-  };
-
   // ========== FUNCIONES REDIRECCIONAMIENTO ==========
 
   const getHomeRouteByRole = (user) => {
@@ -155,22 +96,22 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     try {
       const response = await auth_login({ email, password });
-      console.log(response);
 
       if (response.success) {
         const userData = response.data.user;
-        const token = response.data.token;
-        const refreshToken = response.data.refresh_token;
+
+        // Guardar tokens si están en la respuesta
+        if (response.data.accessToken) {
+          guardarToken(response.data.accessToken);
+        }
+
+        if (response.data.refreshToken) {
+          guardarRefreshToken(response.data.refreshToken);
+        }
 
         // Guardar datos de usuario en localStorage
         // localStorage.setItem("user", JSON.stringify(userData));
         localStorage.setItem("auth", "true");
-
-        // Usar funciones de encriptación para los tokens
-        guardarToken(token);
-        if (refreshToken) {
-          guardarRefreshToken(refreshToken);
-        }
 
         // Actualizar el estado
         setUser(userData);
@@ -207,12 +148,7 @@ export function AuthProvider({ children }) {
   };
 
   const limpiarDatosUsuario = () => {
-    // Limpiar localStorage
-    localStorage.removeItem("user");
-    localStorage.removeItem("auth");
-    localStorage.removeItem("cart");
-    // Limpiar tokens encriptados
-    eliminarTokens();
+    performLogout();
     // Limpiar estado
     setUser(null);
     setIsAuthenticated(false);
@@ -220,7 +156,7 @@ export function AuthProvider({ children }) {
     navigate(ROUTES.AUTH.LOGIN);
   };
 
-  const logout = () => {
+  const logout = async () => {
     try {
       limpiarDatosUsuario();
 
@@ -230,11 +166,6 @@ export function AuthProvider({ children }) {
       return { success: false, message: "Error al cerrar sesión" };
     }
   };
-
-  // Registrar la función de logout para uso global
-  useEffect(() => {
-    setLogoutFunction(logout);
-  }, []);
 
   // ========== FUNCIONES DE REGISTRO ==========
 
@@ -439,75 +370,71 @@ export function AuthProvider({ children }) {
   // Verificar estado de autenticación al cargar
   useEffect(() => {
     const validateToken = async () => {
-      const token = obtenerToken();
-
-      if (!token) {
-        setIsAuthenticated(false);
-        setUser(null);
+      // Si no hay token almacenado, no hacer nada
+      if (!localStorage.getItem("accessToken")) {
+        console.log("No hay token disponible");
         setLoading(false);
         return;
       }
 
       try {
-        // Intentar verificar el token actual
+        // Primer intento: verificar el token actual
+        console.log("Verificando token actual...");
         const response = await auth_me();
 
         if (response && response.user) {
           // Token válido, establecer usuario
+          console.log("Token válido, usuario autenticado");
           setUser(response.user);
           setIsAuthenticated(true);
-          // localStorage.setItem("user", JSON.stringify(response.user));
+          localStorage.setItem("user", JSON.stringify(response.user));
           localStorage.setItem("auth", "true");
         }
       } catch (error) {
-        // Si el error es de autorización (token expirado/inválido)
-        if (error.response?.status === 401) {
-          try {
-            // Intentar refrescar el token
-            const refreshToken = obtenerRefreshToken();
-            if (!refreshToken) {
-              throw new Error("No hay refresh token disponible");
-            }
+        console.error("Error con token actual:", error);
 
-            const refreshResponse = await auth_refresh(refreshToken);
+        // Si el token actual falló, intentar refrescarlo
+        try {
+          console.log("Intentando refrescar token...");
+          const refreshResponse = await auth_refresh();
 
-            if (refreshResponse && refreshResponse.token) {
-              // Guardar el nuevo token
-              guardarToken(refreshResponse.token);
+          if (refreshResponse && refreshResponse.token) {
+            console.log(
+              "Token refrescado exitosamente, verificando nuevamente..."
+            );
 
-              try {
-                // Verificar nuevamente con el token refrescado
-                const newResponse = await auth_me();
+            // Segundo intento: verificar con el token refrescado
+            try {
+              const newResponse = await auth_me();
 
-                if (newResponse && newResponse.user) {
-                  // Token refrescado válido
-                  setUser(newResponse.user);
-                  setIsAuthenticated(true);
-                  localStorage.setItem(
-                    "user",
-                    JSON.stringify(newResponse.user)
-                  );
-                  localStorage.setItem("auth", "true");
-                  console.log("Usuario verificado con token refrescado");
-                  navigateToHomeByRole(newResponse.user);
-                } else {
-                  throw new Error(
-                    "Verificación fallida después de refrescar token"
-                  );
-                }
-              } catch (secondError) {
-                logout();
+              if (newResponse && newResponse.user) {
+                // Token refrescado válido, establecer usuario
+                console.log("Nuevo token válido, usuario autenticado");
+                setUser(newResponse.user);
+                setIsAuthenticated(true);
+                localStorage.setItem("user", JSON.stringify(newResponse.user));
+                localStorage.setItem("auth", "true");
+              } else {
+                throw new Error("Verificación fallida con token refrescado");
               }
-            } else {
-              throw new Error("Refresco de token fallido");
+            } catch (secondError) {
+              console.error("Error con token refrescado:", secondError);
+              // Limpiar estado si incluso el token refrescado falla
+              setUser(null);
+              setIsAuthenticated(false);
+              localStorage.removeItem("auth");
+              localStorage.removeItem("user");
             }
-          } catch (refreshError) {
-            logout();
+          } else {
+            throw new Error("No se pudo obtener un nuevo token");
           }
-        } else {
-          // Cualquier otro tipo de error, cerrar sesión
-          console.error("Error no relacionado con autorización:", error);
-          logout();
+        } catch (refreshError) {
+          console.error("Error al refrescar token:", refreshError);
+          // Limpiar estado de autenticación si el refresco falla
+          setUser(null);
+          setIsAuthenticated(false);
+          localStorage.removeItem("auth");
+          localStorage.removeItem("user");
         }
       } finally {
         setLoading(false);
@@ -515,7 +442,7 @@ export function AuthProvider({ children }) {
     };
 
     validateToken();
-  }, []);
+  }, []); // Dependencias vacías
 
   // Proveedor de contexto
   return (

@@ -1,11 +1,20 @@
 import axios from "axios";
-import { obtenerToken, guardarToken } from "../utils/encryptToken";
 import { toast } from "react-toastify";
 import { performLogout } from "../utils/authUtils";
+import {
+  obtenerToken,
+  guardarToken,
+  obtenerRefreshToken,
+  guardarRefreshToken,
+} from "../utils/encryptToken";
+import { auth_refresh } from "../services/auth/auth";
+
+const baseURL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: baseURL,
   timeout: 10000, // opcional: timeout de 10s
+  withCredentials: false, // Cambiamos a false ya que no usaremos cookies
 });
 
 // Variable para controlar si hay un refresco de token en curso
@@ -26,32 +35,10 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Función para refrescar el token
-const refreshToken = async () => {
-  try {
-    const currentToken = obtenerToken();
-    const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}auth/refresh-token`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${currentToken}`,
-        },
-      }
-    );
-
-    const newToken = response.data.token;
-    guardarToken(newToken);
-    return newToken;
-  } catch (error) {
-    return Promise.reject(error);
-  }
-};
-
-// Interceptor simple para agregar token si es necesario
+// Interceptor para agregar token a las cabeceras
 api.interceptors.request.use(
   (config) => {
-    const token = obtenerToken(); // Desencriptarlo si está encriptado
+    const token = obtenerToken();
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
@@ -73,7 +60,7 @@ api.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("refresh-token")
+      !originalRequest.url.includes("refreshToken")
     ) {
       // Marcamos que esta petición ya se ha intentado reenviar
       originalRequest._retry = true;
@@ -92,40 +79,68 @@ api.interceptors.response.use(
           });
       }
 
-      // Comenzar proceso de refresco
       isRefreshing = true;
 
       try {
-        // Intentar refrescar el token
-        const newToken = await refreshToken();
+        // Obtener el refresh token
+        const refreshToken = obtenerRefreshToken();
 
-        // Actualizar el token en la petición original
+        if (!refreshToken) {
+          throw new Error("No hay refresh token disponible");
+        }
+
+        // Intentar refrescar el token - ASEGÚRATE DE PASAR EL REFRESH TOKEN
+        const response = await auth_refresh();
+
+        // Verificar estructura de la respuesta y extraer tokens
+        // Verifica los nombres exactos de las propiedades que usa tu API
+        const newToken = response.accessToken;
+
+        if (!newToken) {
+          console.error(
+            "Respuesta de refreshToken no contiene token:",
+            response.data
+          );
+          throw new Error("La respuesta no contiene un token válido");
+        }
+
+        // Guardar el nuevo accessToken
+        guardarToken(newToken);
+
+        // Si también hay un nuevo refresh token, guardarlo
+        if (response.refreshToken) {
+          guardarRefreshToken(response.refreshToken);
+        }
+
+        // Actualizar el header de la petición original
         originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
 
         // Procesar la cola de peticiones pendientes
         processQueue(null, newToken);
 
-        // Reintentar la petición original con el nuevo token
+        // Reintentar la petición original
         return api(originalRequest);
       } catch (refreshError) {
-        // Si falla el refresco del token, procesar la cola con error
+        // Agregar log para depurar el error
+        console.error("Error detallado al refrescar token:", refreshError);
+
+        // Si falla el refresco del accessToken, procesar la cola con error
         processQueue(refreshError, null);
 
-        // Aquí podríamos implementar el logout automático
         console.error(
-          "No se pudo refrescar el token. Se requiere nuevo inicio de sesión."
+          "No se pudo refrescar el accessToken. Se requiere nuevo inicio de sesión."
         );
 
         toast.error(
-          "No se pudo refrescar el token. Por favor, inicia sesión nuevamente."
+          "Tu sesión ha expirado. Por favor, inicia sesión nuevamente."
         );
 
-        await performLogout()
+        performLogout();
+        // Opcional: Redireccionar al login
+        window.location.href = "/auth/login";
 
-        // Aquí podrías implementar una redirección al login o mostrar un mensaje al usuario
         return Promise.reject(refreshError);
       } finally {
-        // Indicar que ya no estamos refrescando el token
         isRefreshing = false;
       }
     }
