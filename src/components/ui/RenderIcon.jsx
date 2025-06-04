@@ -28,7 +28,6 @@ export default function RenderIcon({
   ...props
 }) {
   const { colors } = useAppTheme();
-  // console.log("Color:", color,"Nombre:", name);
 
   const selectedLibrary = iconLibraries[library];
 

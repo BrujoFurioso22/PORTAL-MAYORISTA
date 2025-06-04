@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { useCart } from "../../context/CartContext";
 import Button from "../ui/Button";
 import { toast } from "react-toastify";
+import { useAppTheme } from "../../context/AppThemeContext";
 
 const StyledCard = styled.div`
   background-color: ${({ theme }) =>
@@ -27,7 +28,7 @@ const StyledCard = styled.div`
 
 const ImageContainer = styled.div`
   position: relative;
-  padding-top: 75%; /* 4:3 Aspect Ratio */
+  padding-top: 100%; /* 1:1 Aspect Ratio */
   overflow: hidden;
 `;
 
@@ -72,6 +73,11 @@ const Brand = styled.span`
   font-size: 0.8rem;
   color: ${({ theme }) => theme.colors.textLight};
   margin-bottom: 8px;
+  /* padding: 4px 8px;
+  border-radius: 20px;
+  border: 1px solid ${({ theme }) => theme.colors.primary};
+  width: fit-content;
+  background-color: ${({ theme }) => `${theme.colors.primary}20`}; */
 `;
 
 const Price = styled.div`
@@ -114,115 +120,85 @@ const SpecItem = styled.li`
   text-overflow: ellipsis;
 `;
 
-// En el componente ProductCard, agregar esta parte para mostrar especificaciones
-const renderSpecs = (product) => {
-  if (!product.specs) return null;
+const SpecLabel = styled.span`
+  font-weight: bold;
+`;
 
-  // Determinar qué tipo de producto es y mostrar las specs relevantes
-  if (
-    product.categories.some((cat) =>
-      ["sedan", "suv", "camion", "moto", "todoterreno"].includes(cat)
-    )
-  ) {
-    // Es un neumático
-    return (
-      <SpecsList>
-        {product.specs.medida && (
-          <SpecItem>Medida: {product.specs.medida}</SpecItem>
-        )}
-        {product.specs.indiceVelocidad && (
-          <SpecItem>Índice vel.: {product.specs.indiceVelocidad}</SpecItem>
-        )}
-        {product.specs.perfil && (
-          <SpecItem>Perfil: {product.specs.perfil}</SpecItem>
-        )}
-      </SpecsList>
-    );
-  } else if (
-    product.categories.some((cat) =>
-      [
-        "aceite_motor",
-        "aceite_transmision",
-        "liquido_frenos",
-        "refrigerante",
-        "aditivos",
-      ].includes(cat)
-    )
-  ) {
-    // Es un lubricante
-    return (
-      <SpecsList>
-        {product.specs.viscosidad && (
-          <SpecItem>Viscosidad: {product.specs.viscosidad}</SpecItem>
-        )}
-        {product.specs.tipo && <SpecItem>Tipo: {product.specs.tipo}</SpecItem>}
-        {product.specs.capacidad && (
-          <SpecItem>Capacidad: {product.specs.capacidad}</SpecItem>
-        )}
-      </SpecsList>
-    );
-  } else if (
-    product.categories.some((cat) =>
-      ["manuales", "electricas", "neumaticas", "especialidad"].includes(cat)
-    )
-  ) {
-    // Es una herramienta
-    return (
-      <SpecsList>
-        {product.specs.potencia && (
-          <SpecItem>Potencia: {product.specs.potencia}</SpecItem>
-        )}
-        {product.specs.material && (
-          <SpecItem>Material: {product.specs.material}</SpecItem>
-        )}
-        {product.specs.piezas && (
-          <SpecItem>Piezas: {product.specs.piezas}</SpecItem>
-        )}
-      </SpecsList>
-    );
-  } else if (
-    product.categories.some((cat) =>
-      ["interior", "exterior", "led", "accesorios"].includes(cat)
-    )
-  ) {
-    // Es iluminación
-    return (
-      <SpecsList>
-        {product.specs.potencia && (
-          <SpecItem>Potencia: {product.specs.potencia}</SpecItem>
-        )}
-        {product.specs.lumen && (
-          <SpecItem>Lumen: {product.specs.lumen}</SpecItem>
-        )}
-        {product.specs.colorTemp && (
-          <SpecItem>Temp. color: {product.specs.colorTemp}</SpecItem>
-        )}
-      </SpecsList>
-    );
-  }
+const SpecValue = styled.span`
+  margin-left: 4px;
+`;
 
-  // Caso genérico para otros tipos de productos
-  return (
-    <SpecsList>
-      {Object.entries(product.specs)
-        .slice(0, 3)
-        .map(([key, value]) => (
-          <SpecItem key={key}>
-            {key}: {value}
-          </SpecItem>
-        ))}
-    </SpecsList>
-  );
+const StockIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+`;
+
+const StockDot = styled.span`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: ${({ $inStock, theme }) =>
+    $inStock ? theme.colors.success : theme.colors.error};
+`;
+
+const StockText = styled.span`
+  color: ${({ theme }) => theme.colors.textLight};
+  font-size: 0.75rem;
+`;
+
+// Configuración de líneas de negocio para especificaciones de productos
+const PRODUCT_LINE_CONFIG = {
+  neumáticos: {
+    specs: [
+      { label: "Medida", field: "medida" },
+      { label: "Índice de Velocidad", field: "indiceVelocidad" },
+      { label: "Perfil", field: "perfil" },
+    ],
+  },
+  lubricantes: {
+    specs: [
+      { label: "Viscosidad", field: "viscosidad" },
+      { label: "Tipo", field: "tipo" },
+      { label: "Capacidad", field: "capacidad" },
+    ],
+  },
+  herramientas: {
+    specs: [
+      { label: "Potencia", field: "potencia" },
+      { label: "Material", field: "material" },
+      { label: "Piezas", field: "piezas" },
+    ],
+  },
+  iluminación: {
+    specs: [
+      { label: "Potencia", field: "potencia" },
+      { label: "Lumen", field: "lumen" },
+      { label: "Temp. de Color", field: "colorTemp" },
+    ],
+  },
+  DEFAULT: {
+    specs: [
+      { label: "Especificación 1", field: "especificacion1" },
+      { label: "Especificación 2", field: "especificacion2" },
+      { label: "Especificación 3", field: "especificacion3" },
+    ],
+  },
 };
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, lineConfig }) => {
   const navigate = useNavigate();
   const { addToCart, isAdminOrCoord } = useCart();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
-  const discountedPrice = product.discount
-    ? product.price * (1 - product.discount / 100)
-    : product.price;
+  const discountedPrice =
+    product.discount && product.price !== null
+      ? product.price * (1 - product.discount / 100)
+      : product.price || 0;
 
   // Añade verificación para asegurar que product.id exista
   const handleViewDetails = () => {
@@ -234,7 +210,7 @@ const ProductCard = ({ product }) => {
     }
 
     console.log("Navegando al detalle del producto:", product.id);
-    navigate(`/productos/${product.id}`);
+    navigate(`/productos/${product.id}`, { state: { product } });
   };
 
   const handleAddToCart = (e) => {
@@ -250,6 +226,28 @@ const ProductCard = ({ product }) => {
     }, 500);
   };
 
+  // Lógica para renderizar especificaciones basadas en lineaNegocio
+  const renderSpecs = (config) => {
+    if (!product.specs) return null;
+
+    return (
+      <SpecsList>
+        {config.specs.slice(0, 3).map((spec, index) => (
+          <SpecItem key={index}>
+            <SpecLabel>{spec.label}:</SpecLabel>
+            <SpecValue>{product.specs[spec.field]}</SpecValue>
+          </SpecItem>
+        ))}
+      </SpecsList>
+    );
+  };
+
+  // Obtener la configuración correspondiente si no se proporciona
+  const config =
+    lineConfig ||
+    PRODUCT_LINE_CONFIG[product.lineaNegocio] ||
+    PRODUCT_LINE_CONFIG.DEFAULT;
+
   return (
     <StyledCard onClick={handleViewDetails}>
       <ImageContainer>
@@ -260,11 +258,24 @@ const ProductCard = ({ product }) => {
       </ImageContainer>
       <ContentContainer>
         <Brand>{product.brand}</Brand>
+        {/* Indicador de stock */}
+        <StockIndicator>
+          <StockDot $inStock={product.stock > 0} />
+          <StockText>
+            {product.stock > 0
+              ? `${
+                  product.stock > 100
+                    ? "En stock"
+                    : `${product.stock} disponibles`
+                }`
+              : "Agotado"}
+          </StockText>
+        </StockIndicator>
         <ProductName>{product.name}</ProductName>
-        {renderSpecs(product)}
+        {renderSpecs(config)}
         <Price>
-          <CurrentPrice>${discountedPrice.toFixed(2)}</CurrentPrice>
-          {product.discount > 0 && (
+          <CurrentPrice>${(discountedPrice || 0).toFixed(2)}</CurrentPrice>
+          {product.discount > 0 && product.price != null && (
             <OriginalPrice>${product.price.toFixed(2)}</OriginalPrice>
           )}
         </Price>

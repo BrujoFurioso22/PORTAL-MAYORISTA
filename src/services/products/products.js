@@ -1,0 +1,30 @@
+import api from "../../constants/api";
+
+/**
+ * Obtiene un producto por su campo personalizado
+ * @param {string} field - campo personalizado del producto
+ * @param {string} value - valor del campo personalizado
+ * @returns {Promise<Object>} - Respuesta de la API
+ */
+export const products_getProductByField = async ({ field, value }) => {
+  try {
+    const response = await api.get(`/productos/getProductos/${field}/${value}`);
+    // console.log(response);
+
+    return {
+      success: true,
+      message: response.data.message || "Producto obtenido correctamente",
+      data: response.data.data || {},
+    };
+  } catch (error) {
+    const message =
+      error.response?.data?.message ||
+      "Ocurrió un error al obtener el producto";
+
+    return {
+      success: false,
+      message,
+      error: error.response?.data || null,
+    };
+  }
+};

@@ -24,6 +24,7 @@ let failedQueue = [];
 
 // Función para procesar la cola de peticiones pendientes
 const processQueue = (error, token = null) => {
+  
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -49,7 +50,7 @@ api.interceptors.request.use(
 
 // Interceptor mejorado para manejar errores y refresco de token
 api.interceptors.response.use(
-  (response) => {
+  (response) => {    
     return response;
   },
   async (error) => {

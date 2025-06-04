@@ -6,17 +6,20 @@ import { BrowserRouter } from "react-router-dom";
 import { AppThemeProvider, useAppTheme } from "./context/AppThemeContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
+import { ProductCacheProvider } from "./context/ProductCacheContext.jsx";
 
 function Root() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <AppThemeProvider>
-            <ThemeWrapper>
-              <App />
-            </ThemeWrapper>
-          </AppThemeProvider>
+          <ProductCacheProvider>
+            <AppThemeProvider>
+              <ThemeWrapper>
+                <App />
+              </ThemeWrapper>
+            </AppThemeProvider>
+          </ProductCacheProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

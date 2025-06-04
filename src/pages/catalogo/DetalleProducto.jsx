@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
-import { products } from "../../mock/products";
 import { useCart } from "../../context/CartContext";
 import Button from "../../components/ui/Button";
 import { productosPorEmpresa } from "../../mock/products";
-import { useAppTheme } from "../../context/AppThemeContext";
 import { useAuth } from "../../context/AuthContext";
+import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
 
 const PageContainer = styled.div`
-  padding: 24px;
+  /* padding: 24px; */
   max-width: 1200px;
   margin: 0 auto;
   background-color: ${({ theme }) =>
@@ -62,13 +61,13 @@ const ProductTitle = styled.h1`
 `;
 
 const Brand = styled.div`
-  margin-bottom: 20px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const PriceContainer = styled.div`
-  margin: 24px 0;
+  margin-top: 16px;
+  margin-bottom: 10px;
   display: flex;
   align-items: baseline;
   gap: 10px;
@@ -98,33 +97,45 @@ const Discount = styled.span`
 const Description = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text};
-  margin-bottom: 24px;
+  /* margin-bottom: 24px; */
 `;
-
-const Stock = styled.div`
+const StockIndicator = styled.div`
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background-color: ${
+    ({ theme, $inStock }) =>
+      $inStock
+        ? `${theme.colors.success}10` // Color verde con 10% de opacidad
+        : `${theme.colors.error}10` // Color rojo con 10% de opacidad
+  };
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 24px;
+  gap: 10px;
 `;
 
-const StockDot = styled.span`
-  height: 12px;
-  width: 12px;
-  border-radius: 50%;
+const StockBadge = styled.span`
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
   background-color: ${({ theme, $inStock }) =>
     $inStock ? theme.colors.success : theme.colors.error};
+  color: ${({ theme }) => theme.colors.white};
 `;
 
-const StockText = styled.span`
+const StockMessage = styled.span`
+  font-size: 0.9rem;
   color: ${({ theme, $inStock }) =>
     $inStock ? theme.colors.success : theme.colors.error};
+  font-weight: 500;
 `;
 
 const QuantitySelector = styled.div`
   display: flex;
   align-items: center;
-  margin: 20px 0;
+  /* margin: 20px 0; */
 `;
 
 const QuantityButton = styled.button`
@@ -154,7 +165,7 @@ const QuantityButton = styled.button`
 `;
 
 const QuantityInput = styled.input`
-  width: 50px;
+  width: 60px;
   height: 36px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-left: none;
@@ -232,20 +243,28 @@ const renderSpecifications = (product) => {
     return null;
   }
 
+  // Obtener la configuración correspondiente a la línea de negocio
+  const lineConfig =
+    PRODUCT_LINE_CONFIG[product.lineaNegocio] || PRODUCT_LINE_CONFIG.DEFAULT;
+
   return (
     <SpecificationsSection>
       <SpecificationsTitle>Especificaciones técnicas</SpecificationsTitle>
       <SpecificationsTable>
         <tbody>
-          {Object.entries(product.specs).map(([key, value]) => (
-            <SpecRow key={key}>
-              <SpecLabel>
-                {key.charAt(0).toUpperCase() +
-                  key.slice(1).replace(/([A-Z])/g, " $1")}
-              </SpecLabel>
-              <SpecValue>{value.toString()}</SpecValue>
-            </SpecRow>
-          ))}
+          {lineConfig.specs.map((specConfig) => {
+            const value = product.specs[specConfig.field];
+
+            // Solo mostrar si hay un valor
+            if (value === null) return null;
+
+            return (
+              <SpecRow key={specConfig.field}>
+                <SpecLabel>{specConfig.label}</SpecLabel>
+                <SpecValue>{value}</SpecValue>
+              </SpecRow>
+            );
+          })}
         </tbody>
       </SpecificationsTable>
     </SpecificationsSection>
@@ -254,28 +273,37 @@ const renderSpecifications = (product) => {
 
 const DetalleProducto = () => {
   const { id } = useParams();
-  const { theme } = useAppTheme();
+  const location = useLocation();
   const navigate = useNavigate();
   const { navigateToHomeByRole } = useAuth();
   const { addToCart, isAdminOrCoord } = useCart();
   const [quantity, setQuantity] = useState(1);
-  const [product, setProduct] = useState(null);
-  const [empresaId, setEmpresaId] = useState(null);
+  // Intentar obtener el producto del estado de navegación primero
+  const [product, setProduct] = useState(location.state?.product || null);
+  const [empresaId, setEmpresaId] = useState(
+    location.state?.product?.empresaId || null
+  );
 
   const handleNavigate = () => {
     navigateToHomeByRole();
   };
 
   useEffect(() => {
-    // Buscar el producto en todas las empresas
-    let foundProduct = null;
-    let foundEmpresaId = null;
+    // Si ya tenemos el producto del state, no necesitamos buscarlo
+    if (product) {
+      console.log("Producto obtenido del state de navegación:", product);
+
+      return;
+    }
 
     console.log("Buscando producto con ID:", id); // Para depuración
 
-    // Recorrer todas las empresas y buscar el producto - probar diferentes comparaciones
+    // Implementación de búsqueda existente como fallback
+    let foundProduct = null;
+    let foundEmpresaId = null;
+
+    // Recorrer todas las empresas y buscar el producto
     Object.entries(productosPorEmpresa).forEach(([empresaId, productos]) => {
-      // Intentar encontrar con ID como string y como número
       const found = productos.find(
         (p) => p.id.toString() === id.toString() || p.id === parseInt(id)
       );
@@ -294,7 +322,7 @@ const DetalleProducto = () => {
       console.log("Producto no encontrado, redirigiendo al home");
       handleNavigate();
     }
-  }, [id, navigate]);
+  }, [id, navigate, product]);
 
   if (!product) {
     return <div>Cargando...</div>;
@@ -322,6 +350,7 @@ const DetalleProducto = () => {
   };
 
   const increaseQuantity = () => {
+    if (quantity >= 999) return;
     setQuantity(quantity + 1);
   };
 
@@ -329,9 +358,18 @@ const DetalleProducto = () => {
     addToCart(product, quantity);
   };
 
-  const discountedPrice = product.discount
-    ? product.price * (1 - product.discount / 100)
-    : product.price;
+  // Agregar esta sección para recuperar la configuración de línea
+  const getLineConfig = (product) => {
+    if (!product) return PRODUCT_LINE_CONFIG.DEFAULT;
+    return (
+      PRODUCT_LINE_CONFIG[product.lineaNegocio] || PRODUCT_LINE_CONFIG.DEFAULT
+    );
+  };
+
+  const discountedPrice =
+    product.discount && product.price !== null
+      ? product.price * (1 - product.discount / 100)
+      : product.price || 0;
 
   return (
     <PageContainer>
@@ -343,44 +381,69 @@ const DetalleProducto = () => {
         </ImageSection>
 
         <InfoSection>
-          <Category>{product.categories.map((cat) => cat).join(", ")}</Category>
+          {/* Mostrar categoría formateada más amigable */}
+          <Category>
+            {product.categories
+              .map((cat) =>
+                cat.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+              )
+              .join(", ")}
+          </Category>
           <ProductTitle>{product.name}</ProductTitle>
           <Brand>Marca: {product.brand}</Brand>
+          {/* Nuevo indicador de stock posicionado debajo del nombre y marca */}
+          <StockIndicator $inStock={product.stock > 0}>
+            <StockBadge $inStock={product.stock > 0}>
+              {product.stock > 0 ? "DISPONIBLE" : "AGOTADO"}
+            </StockBadge>
+            <StockMessage $inStock={product.stock > 0}>
+              {product.stock > 0
+                ? `${product.stock} unidades disponibles`
+                : "Producto temporalmente sin stock"}
+            </StockMessage>
+          </StockIndicator>
 
           <Description>{product.description}</Description>
 
           {renderSpecifications(product)}
 
           <PriceContainer>
-            <CurrentPrice>${discountedPrice.toFixed(2)}</CurrentPrice>
+            <CurrentPrice>${(discountedPrice || 0).toFixed(2)}</CurrentPrice>
             {product.discount > 0 && (
               <>
-                <OriginalPrice>${product.price.toFixed(2)}</OriginalPrice>
+                {product.discount > 0 && product.price != null && (
+                  <OriginalPrice>${product.price.toFixed(2)}</OriginalPrice>
+                )}
                 <Discount>-{product.discount}%</Discount>
               </>
             )}
           </PriceContainer>
 
-          <Stock>
-            <StockDot $inStock={product.stock > 0} />
-            <StockText $inStock={product.stock > 0}>
-              {product.stock > 0
-                ? `En stock (${product.stock} unidades disponibles)`
-                : "Agotado"}
-            </StockText>
-          </Stock>
-
           {!isAdminOrCoord && (
-            <QuantitySelector>
-              <QuantityButton onClick={decreaseQuantity}>-</QuantityButton>
-              <QuantityInput
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={handleQuantityChange}
-              />
-              <QuantityButton onClick={increaseQuantity}>+</QuantityButton>
-            </QuantitySelector>
+            <div
+              style={{
+                marginTop: "16px",
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
+              <div style={{ marginBottom: "0px", fontWeight: "500" }}>
+                Cantidad:
+              </div>
+              <QuantitySelector>
+                <QuantityButton onClick={decreaseQuantity}>-</QuantityButton>
+                <QuantityInput
+                  type="number"
+                  min="1"
+                  max={"999"}
+                  value={quantity}
+                  onChange={handleQuantityChange}
+                />
+                <QuantityButton onClick={increaseQuantity}>+</QuantityButton>
+              </QuantitySelector>
+            </div>
           )}
 
           {!isAdminOrCoord && (
@@ -390,7 +453,7 @@ const DetalleProducto = () => {
                 variant="solid"
                 onClick={handleAddToCart}
                 disabled={product.stock <= 0}
-                backgroundColor={theme.colors.primary} // O cualquier otro color del tema que prefieras
+                backgroundColor={({ theme }) => theme.colors.primary}
                 size="large"
                 style={{ flex: 1 }}
               />
