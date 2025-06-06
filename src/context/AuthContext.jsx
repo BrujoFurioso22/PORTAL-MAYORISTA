@@ -381,6 +381,8 @@ export function AuthProvider({ children }) {
         // Primer intento: verificar el token actual
         console.log("Verificando token actual...");
         const response = await auth_me();
+        // console.log(response);
+        
 
         if (response && response.user) {
           // Token válido, establecer usuario
@@ -397,6 +399,8 @@ export function AuthProvider({ children }) {
         try {
           console.log("Intentando refrescar token...");
           const refreshResponse = await auth_refresh();
+          console.log(refreshResponse);
+          
 
           if (refreshResponse && refreshResponse.token) {
             console.log(

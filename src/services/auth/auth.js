@@ -25,6 +25,7 @@ export const auth_refresh = async () => {
 
   return response.data;
 };
+
 /**
  * Verifica el token actual y obtiene información del usuario
  * @returns {Promise<Object>} Respuesta con los datos del usuario

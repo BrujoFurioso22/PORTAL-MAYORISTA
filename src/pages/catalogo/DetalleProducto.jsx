@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useCart } from "../../context/CartContext";
@@ -6,6 +6,7 @@ import Button from "../../components/ui/Button";
 import { productosPorEmpresa } from "../../mock/products";
 import { useAuth } from "../../context/AuthContext";
 import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
+import { toast } from "react-toastify";
 
 const PageContainer = styled.div`
   /* padding: 24px; */
@@ -142,14 +143,16 @@ const QuantityButton = styled.button`
   width: 36px;
   height: 36px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme }) =>
-    theme.colors.surface}; // Usar surface en lugar de "white"
-  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto explícito
+  background-color: ${({ theme, disabled }) =>
+    disabled ? `${theme.colors.border}` : theme.colors.surface};
+  color: ${({ theme, disabled }) =>
+    disabled ? theme.colors.textLight : theme.colors.text};
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  cursor: pointer;
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
+  opacity: ${({ disabled }) => (disabled ? 0.7 : 1)};
 
   &:first-child {
     border-radius: 4px 0 0 4px;
@@ -159,7 +162,7 @@ const QuantityButton = styled.button`
     border-radius: 0 4px 4px 0;
   }
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: ${({ theme }) => theme.colors.background};
   }
 `;
@@ -172,9 +175,11 @@ const QuantityInput = styled.input`
   border-right: none;
   text-align: center;
   font-size: 1rem;
-  background-color: ${({ theme }) =>
-    theme.colors.surface}; // Añadir color de fondo
-  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
+  background-color: ${({ theme, disabled }) =>
+    disabled ? `${theme.colors.border}30` : theme.colors.surface};
+  color: ${({ theme, disabled }) =>
+    disabled ? theme.colors.textLight : theme.colors.text};
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "text")};
 `;
 
 const ButtonsContainer = styled.div`
@@ -276,7 +281,7 @@ const DetalleProducto = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { navigateToHomeByRole } = useAuth();
-  const { addToCart, isAdminOrCoord } = useCart();
+  const { addToCart, isAdminOrCoord, cart } = useCart();
   const [quantity, setQuantity] = useState(1);
   // Intentar obtener el producto del estado de navegación primero
   const [product, setProduct] = useState(location.state?.product || null);
@@ -287,6 +292,35 @@ const DetalleProducto = () => {
   const handleNavigate = () => {
     navigateToHomeByRole();
   };
+
+  // Calcular cantidad actual en el carrito
+  const currentInCart = React.useMemo(() => {
+    if (!cart || !product) return 0;
+
+    console.log(cart);
+    
+
+    const cartItem = cart.find((item) => item?.id === product.id);
+    console.log(cartItem);
+    
+    console.log("Cantidad actual en el carrito:", cartItem ? cartItem.quantity : 0);
+    
+
+    return cartItem ? cartItem.quantity : 0;
+  }, [cart, product]);
+
+  // Calcular stock disponible restante
+  const availableStock = React.useMemo(() => {
+    if (!product) return 0;
+    return Math.max(0, product.stock - currentInCart);
+  }, [product, currentInCart]);
+
+  // Ajustar la cantidad si excede el stock disponible
+  useEffect(() => {
+    if (quantity > availableStock) {
+      setQuantity(Math.max(1, availableStock));
+    }
+  }, [availableStock]);
 
   useEffect(() => {
     // Si ya tenemos el producto del state, no necesitamos buscarlo
@@ -338,7 +372,7 @@ const DetalleProducto = () => {
 
   const handleQuantityChange = (e) => {
     const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0) {
+    if (!isNaN(value) && value > 0 && value <= availableStock) {
       setQuantity(value);
     }
   };
@@ -350,20 +384,19 @@ const DetalleProducto = () => {
   };
 
   const increaseQuantity = () => {
-    if (quantity >= 999) return;
-    setQuantity(quantity + 1);
+    if (quantity < availableStock) {
+      setQuantity(quantity + 1);
+    }
   };
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
-  };
-
-  // Agregar esta sección para recuperar la configuración de línea
-  const getLineConfig = (product) => {
-    if (!product) return PRODUCT_LINE_CONFIG.DEFAULT;
-    return (
-      PRODUCT_LINE_CONFIG[product.lineaNegocio] || PRODUCT_LINE_CONFIG.DEFAULT
-    );
+    if (quantity <= availableStock) {
+      addToCart(product, quantity);
+      // Opcionalmente, mostrar confirmación
+      toast.success(`${quantity} ${product.name} agregado al carrito`);
+    } else {
+      toast.error(`Solo hay ${availableStock} unidades disponibles`);
+    }
   };
 
   const discountedPrice =
@@ -392,14 +425,34 @@ const DetalleProducto = () => {
           <ProductTitle>{product.name}</ProductTitle>
           <Brand>Marca: {product.brand}</Brand>
           {/* Nuevo indicador de stock posicionado debajo del nombre y marca */}
-          <StockIndicator $inStock={product.stock > 0}>
-            <StockBadge $inStock={product.stock > 0}>
-              {product.stock > 0 ? "DISPONIBLE" : "AGOTADO"}
+          <StockIndicator $inStock={availableStock > 0}>
+            <StockBadge $inStock={availableStock > 0}>
+              {availableStock > 0 ? "DISPONIBLE" : "AGOTADO"}
             </StockBadge>
-            <StockMessage $inStock={product.stock > 0}>
-              {product.stock > 0
-                ? `${product.stock} unidades disponibles`
-                : "Producto temporalmente sin stock"}
+            <StockMessage $inStock={availableStock > 0}>
+              {availableStock > 0 ? (
+                <>
+                  {availableStock}{" "}
+                  {availableStock === 1
+                    ? "unidad disponible"
+                    : "unidades disponibles"}
+                  {currentInCart > 0 && (
+                    <span
+                      style={{
+                        marginLeft: "5px",
+                        fontSize: "0.85em",
+                        opacity: 0.9,
+                      }}
+                    >
+                      (Ya tienes {currentInCart} en el carrito)
+                    </span>
+                  )}
+                </>
+              ) : currentInCart > 0 ? (
+                "Producto ya en tu carrito (sin stock adicional)"
+              ) : (
+                "Producto temporalmente sin stock"
+              )}
             </StockMessage>
           </StockIndicator>
 
@@ -433,26 +486,54 @@ const DetalleProducto = () => {
                 Cantidad:
               </div>
               <QuantitySelector>
-                <QuantityButton onClick={decreaseQuantity}>-</QuantityButton>
+                <QuantityButton
+                  onClick={decreaseQuantity}
+                  disabled={quantity <= 1}
+                >
+                  -
+                </QuantityButton>
                 <QuantityInput
                   type="number"
                   min="1"
-                  max={"999"}
+                  max={availableStock}
                   value={quantity}
                   onChange={handleQuantityChange}
+                  disabled={availableStock <= 0}
                 />
-                <QuantityButton onClick={increaseQuantity}>+</QuantityButton>
+                <QuantityButton
+                  onClick={increaseQuantity}
+                  disabled={quantity >= availableStock}
+                >
+                  +
+                </QuantityButton>
               </QuantitySelector>
+              {currentInCart > 0 && (
+                <span
+                  style={{
+                    fontSize: "0.85em",
+                    color: "#666",
+                    marginLeft: "8px",
+                  }}
+                >
+                  {currentInCart} en carrito
+                </span>
+              )}
             </div>
           )}
 
           {!isAdminOrCoord && (
             <ButtonsContainer>
               <Button
-                text="Agregar al carrito"
+                text={
+                  availableStock > 0
+                    ? `Agregar ${quantity} al carrito`
+                    : currentInCart > 0
+                    ? "Producto ya en carrito"
+                    : "Sin stock disponible"
+                }
                 variant="solid"
                 onClick={handleAddToCart}
-                disabled={product.stock <= 0}
+                disabled={availableStock <= 0}
                 backgroundColor={({ theme }) => theme.colors.primary}
                 size="large"
                 style={{ flex: 1 }}

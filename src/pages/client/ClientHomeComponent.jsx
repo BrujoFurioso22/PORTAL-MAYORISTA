@@ -12,7 +12,6 @@ const PageContainer = styled.div`
 `;
 
 const PageTitle = styled.h1`
-  margin-bottom: 2rem;
   text-align: center;
   color: ${({ theme }) => theme.colors.text};
 `;

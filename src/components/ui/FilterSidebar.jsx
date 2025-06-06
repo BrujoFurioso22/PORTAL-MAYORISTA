@@ -1,6 +1,16 @@
 import React, { useEffect, useState, useRef } from "react";
 import styled from "styled-components";
-import { FaTimes, FaFilter, FaTag, FaTrademark } from "react-icons/fa"; // Importar iconos
+import {
+  FaTimes,
+  FaFilter,
+  FaTag,
+  FaTrademark,
+  FaIndustry,
+} from "react-icons/fa"; // Añadir FaIndustry
+import {
+  PRODUCT_LINE_CONFIG,
+  CATEGORY_TYPE_LABELS,
+} from "../../constants/productLineConfig";
 
 const SidebarWrapper = styled.div`
   display: flex;
@@ -61,23 +71,42 @@ const ChipsContainer = styled.div`
 const Chip = styled.div`
   display: inline-flex;
   align-items: center;
-  background-color: ${({ selected, theme }) =>
-    selected ? theme.colors.primary : theme.colors.background};
-  color: ${({ selected, theme }) =>
-    selected ? theme.colors.white : theme.colors.text};
+  background-color: ${({ selected, disabled, theme }) =>
+    selected
+      ? theme.colors.primary
+      : disabled
+      ? theme.colors.backgroundDisabled
+      : theme.colors.background};
+  color: ${({ selected, disabled, theme }) =>
+    selected
+      ? theme.colors.white
+      : disabled
+      ? theme.colors.textDisabled
+      : theme.colors.text};
   padding: 6px 12px;
   border-radius: 16px;
   font-size: 0.85rem;
-  cursor: pointer;
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
   transition: all 0.2s ease;
-  border: 1px solid ${({ selected, theme }) =>
-    selected ? theme.colors.primary : theme.colors.border};
+  border: 1px solid
+    ${({ selected, disabled, theme }) =>
+      selected
+        ? theme.colors.primary
+        : disabled
+        ? theme.colors.backgroundDisabled
+        : theme.colors.border};
+  opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
 
   &:hover {
-    background-color: ${({ selected, theme }) =>
-      selected ? theme.colors.accent : theme.colors.backgroundHover};
-    transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: ${({ selected, disabled, theme }) =>
+      disabled
+        ? theme.colors.backgroundDisabled
+        : selected
+        ? theme.colors.accent
+        : theme.colors.backgroundHover};
+    transform: ${({ disabled }) => (disabled ? "none" : "translateY(-2px)")};
+    box-shadow: ${({ disabled }) =>
+      disabled ? "none" : "0 2px 4px rgba(0, 0, 0, 0.1)"};
   }
 `;
 
@@ -136,8 +165,8 @@ const ClearFiltersButton = styled.button`
   font-size: 0.85rem;
   border-radius: 4px;
   cursor: pointer;
-  margin-top: 12px;
   transition: all 0.2s ease;
+  margin: 20px 0;
 
   &:hover {
     background: ${({ theme }) => theme.colors.background};
@@ -145,70 +174,201 @@ const ClearFiltersButton = styled.button`
   }
 `;
 
-// Añadir estas constantes para agrupar las categorías
-const CATEGORY_GROUPS = {
-  llantas: [
-    { key: 'categoria', label: 'Categoría' },
-    { key: 'segmento', label: 'Segmento' },
-    { key: 'aplicacion', label: 'Aplicación' }
-  ],
-  lubricantes: [
-    { key: 'categoria', label: 'Categoría' },
-    { key: 'tipo', label: 'Tipo' }
-  ],
-  luces: [
-    { key: 'categoria', label: 'Categoría' },
-    { key: 'tipo', label: 'Tipo' }
-  ],
-  DEFAULT: [
-    { key: 'categoria', label: 'Categoría' }
-  ]
-};
+const ProductsCount = styled.div`
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.textLight};
+  text-align: left;
+  font-weight: 500;
+  margin-bottom: 10px;
+  /* padding: 8px; */
+`;
 
 const FilterSidebar = ({
   availableCategories = [],
   availableBrands = [],
   priceRange: defaultPriceRange = { min: 0, max: 100 },
   onApplyFilters,
-  // Nuevo prop para conocer la línea de negocio
-  lineaNegocio = "DEFAULT"
+  lineaNegocio = "DEFAULT",
+  allProducts = [],
+  // Nuevas props para recibir los filtros seleccionados desde el padre
+  selectedCategories: initialSelectedCategories = [],
+  selectedBrands: initialSelectedBrands = [],
+  currentPriceRange: initialCurrentPriceRange = null,
+  // Nueva prop para recibir las líneas disponibles en el catálogo
+  availableBusinessLines = [],
+  countFilteredProducts,
 }) => {
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [currentPriceRange, setCurrentPriceRange] = useState({
-    min: defaultPriceRange.min,
-    max: defaultPriceRange.max,
-  });
+  // console.log(availableCategories, availableBrands, defaultPriceRange);
+  // Estado para la línea de negocio activa (si hay más de una disponible)
+  const [activeBusinessLine, setActiveBusinessLine] = useState(lineaNegocio);
+
+  // Estados para filtros, inicializados con los valores del padre
+  const [selectedCategoriesLocal, setSelectedCategoriesLocal] = useState(
+    initialSelectedCategories
+  );
+  const [selectedBrandsLocal, setSelectedBrandsLocal] = useState(
+    initialSelectedBrands
+  );
+  const [currentPriceRangeLocal, setCurrentPriceRangeLocal] = useState(
+    initialCurrentPriceRange || {
+      min: 0,
+      max: defaultPriceRange.max,
+    }
+  );
+
+  // Estados para filtros disponibles
+  const [availableCategoryFilters, setAvailableCategoryFilters] = useState([]);
+  const [availableBrandFilters, setAvailableBrandFilters] = useState([]);
 
   // Refs para mantener referencias a los inputs
   const minInputRef = useRef(null);
   const maxInputRef = useRef(null);
 
-  // Almacenar la función onApplyFilters en una referencia para mantener estabilidad
+  // AÑADIR: Ref para la función onApplyFilters
   const onApplyFiltersRef = useRef(onApplyFilters);
 
-  // Actualizar la referencia cuando cambie la función
+  // AÑADIR: Actualizar la ref cuando cambia la función
   useEffect(() => {
     onApplyFiltersRef.current = onApplyFilters;
   }, [onApplyFilters]);
 
-  // Resetear los filtros cuando cambian las opciones disponibles (cambio de empresa)
+  // Actualizar estado local cuando cambien los props
   useEffect(() => {
-    setSelectedCategories([]);
-    setSelectedBrands([]);
-    setCurrentPriceRange({
-      min: Math.max(0, defaultPriceRange.min),
-      max: defaultPriceRange.max,
-    });
-  }, [availableCategories, availableBrands, defaultPriceRange]);
+    setSelectedCategoriesLocal(initialSelectedCategories);
+  }, [initialSelectedCategories]);
+
+  useEffect(() => {
+    setSelectedBrandsLocal(initialSelectedBrands);
+  }, [initialSelectedBrands]);
+
+  useEffect(() => {
+    if (initialCurrentPriceRange) {
+      setCurrentPriceRangeLocal(initialCurrentPriceRange);
+    }
+  }, [initialCurrentPriceRange]);
+
+  // Este efecto calcula qué filtros estarían disponibles con los filtros actuales
+  useEffect(() => {
+    // Si no hay productos, no hay nada que hacer
+    if (!allProducts || allProducts.length === 0) {
+      return;
+    }
+
+    // Crear conjuntos para cada tipo de filtro disponible
+    const availableCats = new Set();
+    const availableBrands = new Set();
+
+    // Para cada producto, verificar si cumple con los filtros actuales y la línea de negocio
+    allProducts
+      // Primero filtrar por línea de negocio si está activa
+      .filter(
+        (product) =>
+          activeBusinessLine === "DEFAULT" ||
+          (product && product.lineaNegocio === activeBusinessLine)
+      )
+      .forEach((product) => {
+        if (!product) return;
+
+        // Extraer información del producto
+        const productCategories = product.categories || [];
+        const productBrand = product.brand;
+        const productPrice = product.price;
+
+        // Verificar si el producto pasa el filtro de precio
+        const passesPriceFilter =
+          productPrice === 0 ||
+          (productPrice >= currentPriceRangeLocal.min &&
+            productPrice <= currentPriceRangeLocal.max);
+
+        if (!passesPriceFilter) return; // Si no pasa el filtro de precio, ignorar el producto
+
+        // 1. Si no hay categorías ni marcas seleccionadas, todos los filtros están disponibles
+        if (
+          selectedCategoriesLocal.length === 0 &&
+          selectedBrandsLocal.length === 0
+        ) {
+          // Añadir todas las categorías y marcas del producto
+          productCategories.forEach((cat) => availableCats.add(cat));
+          if (productBrand) availableBrands.add(String(productBrand));
+          return;
+        }
+
+        // 2. Si hay categorías seleccionadas pero no marcas
+        if (
+          selectedCategoriesLocal.length > 0 &&
+          selectedBrandsLocal.length === 0
+        ) {
+          // Verificar si el producto cumple con las categorías seleccionadas
+          const matchesAllSelectedCategories = selectedCategoriesLocal.every(
+            (cat) => productCategories.includes(cat)
+          );
+
+          if (matchesAllSelectedCategories) {
+            // Este producto pasa el filtro de categorías, añadir todas sus categorías y su marca
+            productCategories.forEach((cat) => availableCats.add(cat));
+            if (productBrand) availableBrands.add(String(productBrand));
+          }
+          return;
+        }
+
+        // 3. Si hay marcas seleccionadas pero no categorías
+        if (
+          selectedCategoriesLocal.length === 0 &&
+          selectedBrandsLocal.length > 0
+        ) {
+          // Verificar si la marca del producto está entre las seleccionadas
+          const brandMatches =
+            productBrand && selectedBrandsLocal.includes(String(productBrand));
+
+          if (brandMatches) {
+            // Este producto pasa el filtro de marcas, añadir todas sus categorías y su marca
+            productCategories.forEach((cat) => availableCats.add(cat));
+            if (productBrand) availableBrands.add(String(productBrand));
+          }
+          return;
+        }
+
+        // 4. Si hay tanto categorías como marcas seleccionadas
+        if (
+          selectedCategoriesLocal.length > 0 &&
+          selectedBrandsLocal.length > 0
+        ) {
+          // El producto debe cumplir con ambos filtros
+          const matchesAllSelectedCategories = selectedCategoriesLocal.every(
+            (cat) => productCategories.includes(cat)
+          );
+          const brandMatches =
+            productBrand && selectedBrandsLocal.includes(String(productBrand));
+
+          if (matchesAllSelectedCategories && brandMatches) {
+            // Este producto pasa ambos filtros, añadir todas sus categorías y su marca
+            productCategories.forEach((cat) => availableCats.add(cat));
+            if (productBrand) availableBrands.add(String(productBrand));
+          }
+          return;
+        }
+      });
+
+    // Actualizar estados con los filtros disponibles
+    setAvailableCategoryFilters(Array.from(availableCats));
+    setAvailableBrandFilters(Array.from(availableBrands));
+
+  }, [
+    allProducts,
+    selectedCategoriesLocal,
+    selectedBrandsLocal,
+    currentPriceRangeLocal,
+    activeBusinessLine,
+  ]);
 
   // Aplicar filtros con debounce
   useEffect(() => {
     const handler = setTimeout(() => {
       const filters = {
-        categories: selectedCategories,
-        brands: selectedBrands,
-        price: currentPriceRange,
+        categories: selectedCategoriesLocal,
+        brands: selectedBrandsLocal,
+        price: currentPriceRangeLocal,
+        businessLine: activeBusinessLine,
       };
 
       // Usar la referencia estable
@@ -216,10 +376,15 @@ const FilterSidebar = ({
     }, 300); // 300ms de debounce
 
     return () => clearTimeout(handler);
-  }, [selectedCategories, selectedBrands, currentPriceRange]);
+  }, [
+    selectedCategoriesLocal,
+    selectedBrandsLocal,
+    currentPriceRangeLocal,
+    activeBusinessLine,
+  ]);
 
   const handleCategoryChange = (category) => {
-    setSelectedCategories((prev) =>
+    setSelectedCategoriesLocal((prev) =>
       prev.includes(category)
         ? prev.filter((c) => c !== category)
         : [...prev, category]
@@ -227,7 +392,7 @@ const FilterSidebar = ({
   };
 
   const handleBrandChange = (brand) => {
-    setSelectedBrands((prev) =>
+    setSelectedBrandsLocal((prev) =>
       prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
     );
   };
@@ -247,101 +412,296 @@ const FilterSidebar = ({
       // El mínimo no puede ser negativo
       value = Math.max(0, value);
       // El mínimo no puede ser mayor que el máximo
-      value = Math.min(value, currentPriceRange.max);
+      value = Math.min(value, currentPriceRangeLocal.max);
     } else {
       // El máximo no puede exceder el máximo permitido
       value = Math.min(value, defaultPriceRange.max);
       // El máximo no puede ser menor que el mínimo
-      value = Math.max(value, currentPriceRange.min);
+      value = Math.max(value, currentPriceRangeLocal.min);
     }
 
     // Actualizar el estado inmediatamente para mejor respuesta del UI
-    setCurrentPriceRange((prev) => ({
+    setCurrentPriceRangeLocal((prev) => ({
       ...prev,
       [type]: value,
     }));
   };
 
   const clearFilters = () => {
-    setSelectedCategories([]);
-    setSelectedBrands([]);
-    setCurrentPriceRange({
+    setSelectedCategoriesLocal([]);
+    setSelectedBrandsLocal([]);
+    setCurrentPriceRangeLocal({
       min: Math.max(0, defaultPriceRange.min),
       max: defaultPriceRange.max,
     });
   };
 
-  // Función para agrupar las categorías
+  // Reemplazar la función groupCategories por esta versión corregida
   const groupCategories = () => {
-    // Obtener los grupos para esta línea de negocio
-    const groups = CATEGORY_GROUPS[lineaNegocio.toLowerCase()] || CATEGORY_GROUPS.DEFAULT;
-    
-    // Inicializar el objeto de grupos
-    const result = {};
-    groups.forEach(group => {
-      result[group.key] = {
-        label: group.label,
-        items: []
-      };
-    });
-    
-    // Distribuir las categorías en sus grupos correspondientes
-    availableCategories.forEach(category => {
-      // Intentar identificar el grupo basado en el nombre o propiedad
-      let groupKey = 'categoria'; // default
-      
-      // Extraer el grupo del nombre (p.ej. si el nombre es "categoria_valor")
-      const nameParts = category.name.split('_');
-      if (nameParts.length > 1) {
-        // Verificar si el prefijo coincide con alguno de nuestros grupos
-        const possibleGroup = nameParts[0].toLowerCase();
-        if (groups.some(g => g.key === possibleGroup)) {
-          groupKey = possibleGroup;
+    // Si no hay categorías disponibles, regresamos un array vacío
+    if (!availableCategories || availableCategories.length === 0) {
+      return [];
+    }
+
+    // Obtener la configuración para la línea de negocio actual
+    const lineConfig =
+      PRODUCT_LINE_CONFIG[activeBusinessLine] || PRODUCT_LINE_CONFIG.DEFAULT;
+
+    // Agrupar las categorías por su tipo
+    const groupedCategories = {};
+
+    availableCategories
+      // Filtrar primero para mostrar solo las categorías relacionadas con la línea de negocio activa
+      .filter((category) => {
+        if (activeBusinessLine === "DEFAULT") return true;
+
+        // Si la categoría tiene línea asignada, verificar que coincida
+        if (category.businessLine) {
+          return category.businessLine === activeBusinessLine;
         }
-      }
-      
-      // Si esta categoría tiene un grupo identificado, agregarla
-      if (result[groupKey]) {
-        result[groupKey].items.push(category);
-      } else {
-        // Si no encontramos un grupo específico, usar el primero
-        const firstGroupKey = Object.keys(result)[0];
-        if (firstGroupKey) {
-          result[firstGroupKey].items.push(category);
+
+        // Comprobar si hay productos antes de usar .some()
+        if (!allProducts || !Array.isArray(allProducts)) {
+          return false; // Si no hay productos, no podemos verificar
         }
-      }
-    });
-    
-    // Filtrar los grupos que no tienen elementos
-    return Object.entries(result)
-      .filter(([_, group]) => group.items.length > 0);
+
+        // Si no tiene línea asignada, comprobar si pertenece a algún producto de esta línea
+        return allProducts.some(
+          (product) =>
+            product && // Asegurar que product existe
+            product.lineaNegocio === activeBusinessLine &&
+            product.categories && // Asegurar que product.categories existe
+            Array.isArray(product.categories) && // Asegurar que product.categories es un array
+            product.categories.includes(category.name)
+        );
+      })
+      .forEach((category) => {
+        const type = category.type || "categoria";
+
+        if (!groupedCategories[type]) {
+          // Usar las etiquetas de la configuración o capitalizar la primera letra
+          const label =
+            lineConfig.categoryLabels[type] ||
+            CATEGORY_TYPE_LABELS[type] ||
+            type.charAt(0).toUpperCase() + type.slice(1);
+
+          groupedCategories[type] = {
+            label: label,
+            items: [],
+          };
+        }
+
+        // Verificar si la categoría está disponible según los filtros actuales
+        const isAvailable =
+          !availableCategoryFilters.length ||
+          availableCategoryFilters.includes(category.name);
+
+        // SIEMPRE agregar la categoría, pero marcarla como disponible o no
+        groupedCategories[type].items.push({
+          ...category,
+          isAvailable: isAvailable,
+        });
+      });
+
+    // Convertir objeto a array para el renderizado y usar el orden específico
+    return Object.entries(groupedCategories)
+      .filter(([_, group]) => group.items.length > 0)
+      .sort(([typeA], [typeB]) => {
+        // Usar el orden definido en la configuración
+        const orderArray = lineConfig.categoryOrder || ["categoria"];
+        const indexA = orderArray.indexOf(typeA);
+        const indexB = orderArray.indexOf(typeB);
+
+        // Si un tipo no está en la lista, ponerlo al final
+        const orderA = indexA >= 0 ? indexA : 99;
+        const orderB = indexB >= 0 ? indexB : 99;
+
+        return orderA - orderB;
+      });
   };
-  
+
   // Grupos de categorías calculados
   const categoryGroups = groupCategories();
-  
+
+  // Efecto para actualizar la línea activa cuando cambia lineaNegocio prop
+  useEffect(() => {
+    setActiveBusinessLine(lineaNegocio);
+  }, [lineaNegocio]);
+
+  // Determinar automáticamente la línea de negocio según las marcas seleccionadas
+  useEffect(() => {
+    if (selectedBrandsLocal.length > 0 && allProducts) {
+      // Buscar productos que tengan las marcas seleccionadas
+      const matchingProducts = allProducts.filter(
+        (product) => product && selectedBrandsLocal.includes(product.brand)
+      );
+
+      if (matchingProducts.length > 0) {
+        // Contar las líneas de negocio de los productos con las marcas seleccionadas
+        const lineCount = {};
+        matchingProducts.forEach((product) => {
+          if (product.lineaNegocio) {
+            lineCount[product.lineaNegocio] =
+              (lineCount[product.lineaNegocio] || 0) + 1;
+          }
+        });
+
+        // Encontrar la línea predominante
+        let maxCount = 0;
+        let dominantLine = activeBusinessLine;
+
+        Object.entries(lineCount).forEach(([line, count]) => {
+          if (count > maxCount) {
+            maxCount = count;
+            dominantLine = line;
+          }
+        });
+
+        // Actualizar la línea activa si cambia
+        if (dominantLine !== activeBusinessLine) {
+          setActiveBusinessLine(dominantLine);
+        }
+      }
+    }
+  }, [selectedBrandsLocal, allProducts, activeBusinessLine]);
+
+  // Efecto para limpiar filtros cuando cambia la línea de negocio
+  useEffect(() => {
+    // Limpiar categorías seleccionadas al cambiar de línea
+    if (activeBusinessLine !== lineaNegocio) {
+      setSelectedCategoriesLocal([]);
+
+      // Si hay marcas seleccionadas, mantener solo las que pertenecen a la nueva línea
+      if (
+        selectedBrandsLocal.length > 0 &&
+        allProducts &&
+        Array.isArray(allProducts) &&
+        allProducts.length > 0
+      ) {
+        const brandsInNewLine = availableBrands
+          .filter(
+            (brand) =>
+              // Si tiene línea específica
+              (brand.businessLines &&
+                brand.businessLines.includes(activeBusinessLine)) ||
+              // O si hay productos de esta marca en esta línea
+              allProducts.some(
+                (product) =>
+                  product.brand === brand.name &&
+                  product.lineaNegocio === activeBusinessLine
+              )
+          )
+          .map((brand) => brand.name);
+
+        // Mantener solo marcas que pertenecen a la nueva línea
+        const newSelectedBrands = selectedBrandsLocal.filter((brand) =>
+          brandsInNewLine.includes(brand)
+        );
+
+        setSelectedBrandsLocal(newSelectedBrands);
+      }
+
+      // Aplicar los nuevos filtros
+      setTimeout(() => {
+        onApplyFiltersRef.current({
+          categories: [],
+          brands: selectedBrandsLocal,
+          price: currentPriceRangeLocal,
+          businessLine: activeBusinessLine,
+        });
+      }, 0);
+    }
+  }, [activeBusinessLine]);
+
   return (
     <SidebarWrapper>
       <SidebarContainer>
-        {/* Mostrar categorías agrupadas */}
-        {categoryGroups.length > 0 && categoryGroups.map(([groupKey, group]) => (
-          <FilterGroup key={groupKey}>
+        {/* Mostrar el conteo de productos filtrados (nuevo) */}
+        {allProducts && (
+          <ProductsCount>
+            {countFilteredProducts} productos disponibles
+          </ProductsCount>
+        )}
+        {/* Botón para limpiar filtros sin cambios */}
+        {(selectedCategoriesLocal.length > 0 ||
+          selectedBrandsLocal.length > 0 ||
+          currentPriceRangeLocal.min !== Math.max(0, defaultPriceRange.min) ||
+          currentPriceRangeLocal.max !== defaultPriceRange.max) && (
+          <ClearFiltersButton onClick={clearFilters}>
+            <FaTimes /> Limpiar filtros
+          </ClearFiltersButton>
+        )}
+
+        {/* Mostrar selector de línea de negocio si hay más de una disponible */}
+        {availableBusinessLines.length > 1 && (
+          <FilterGroup>
             <SectionSubTitle>
-              <FaTag /> {group.label}
+              <FaIndustry /> Línea de Negocio
             </SectionSubTitle>
             <ChipsContainer>
-              {group.items.map((category) => (
+              {availableBusinessLines.map((line) => (
                 <Chip
-                  key={category.id}
-                  selected={selectedCategories.includes(category.name)}
-                  onClick={() => handleCategoryChange(category.name)}
+                  key={line}
+                  selected={activeBusinessLine === line}
+                  onClick={() => {
+                    setActiveBusinessLine(line);
+                    // Limpiar filtros de categoría al cambiar de línea
+                    if (activeBusinessLine !== line) {
+                      setSelectedCategoriesLocal([]);
+                      // Aplicar filtros con la nueva línea
+                      setTimeout(() => {
+                        onApplyFiltersRef.current({
+                          categories: [],
+                          brands: selectedBrandsLocal,
+                          price: currentPriceRangeLocal,
+                          businessLine: line,
+                        });
+                      }, 0);
+                    }
+                  }}
                 >
-                  {category.displayName}
+                  {line}
                 </Chip>
               ))}
             </ChipsContainer>
           </FilterGroup>
-        ))}
+        )}
+
+        {/* Mostrar categorías agrupadas */}
+        {categoryGroups.length > 0 &&
+          categoryGroups.map(([groupKey, group]) => (
+            <FilterGroup key={groupKey}>
+              <SectionSubTitle>
+                <FaTag /> {group.label}
+              </SectionSubTitle>
+              <ChipsContainer>
+                {group.items.map((category) => {
+                  // Comprobar si la categoría está disponible con los filtros actuales
+                  const isAvailable =
+                    !availableCategoryFilters.length ||
+                    availableCategoryFilters.includes(category.name);
+
+                  // La categoría estará deshabilitada si no está disponible Y no está seleccionada
+                  const isDisabled =
+                    !isAvailable &&
+                    !selectedCategoriesLocal.includes(category.name);
+
+                  return (
+                    <Chip
+                      key={category.id}
+                      selected={selectedCategoriesLocal.includes(category.name)}
+                      disabled={isDisabled}
+                      onClick={() =>
+                        !isDisabled && handleCategoryChange(category.name)
+                      }
+                    >
+                      {category.displayName}
+                    </Chip>
+                  );
+                })}
+              </ChipsContainer>
+            </FilterGroup>
+          ))}
 
         {/* Mostrar marcas y precio sin cambios */}
         {availableBrands.length > 0 && (
@@ -350,15 +710,48 @@ const FilterSidebar = ({
               <FaTrademark /> Marcas
             </SectionSubTitle>
             <ChipsContainer>
-              {availableBrands.map((brand) => (
-                <Chip
-                  key={brand.id}
-                  selected={selectedBrands.includes(brand.name)}
-                  onClick={() => handleBrandChange(brand.name)}
-                >
-                  {brand.name}
-                </Chip>
-              ))}
+              {availableBrands
+                // Filtrar marcas por línea de negocio activa si está definida
+                .filter((brand) => {
+                  if (activeBusinessLine === "DEFAULT") return true;
+
+                  // Si la marca tiene líneas de negocio específicas
+                  if (brand.businessLines && brand.businessLines.length > 0) {
+                    return brand.businessLines.includes(activeBusinessLine);
+                  }
+
+                  // Si no tiene línea específica, ver si hay productos de esta marca en esta línea
+                  return allProducts.some(
+                    (product) =>
+                      product.brand === brand.name &&
+                      product.lineaNegocio === activeBusinessLine
+                  );
+                })
+                .map((brand) => {
+                  // Asegurarse de que brand.name es un string
+                  const brandName = String(brand.name);
+
+                  // Verificar disponibilidad
+                  const isAvailable =
+                    !availableBrandFilters.length ||
+                    availableBrandFilters.includes(brandName);
+
+                  const isDisabled =
+                    !isAvailable && !selectedBrandsLocal.includes(brandName);
+
+                  return (
+                    <Chip
+                      key={brand.id || brandName}
+                      selected={selectedBrandsLocal.includes(brandName)}
+                      disabled={isDisabled}
+                      onClick={() =>
+                        !isDisabled && handleBrandChange(brandName)
+                      }
+                    >
+                      {brandName}
+                    </Chip>
+                  );
+                })}
             </ChipsContainer>
           </FilterGroup>
         )}
@@ -376,11 +769,11 @@ const FilterSidebar = ({
                 type="number"
                 min={0}
                 max={defaultPriceRange.max}
-                value={currentPriceRange.min}
+                value={currentPriceRangeLocal.min}
                 onChange={(e) => handlePriceChange("min", e.target.value)}
                 onBlur={() => {
-                  if (currentPriceRange.min > currentPriceRange.max) {
-                    setCurrentPriceRange((prev) => ({
+                  if (currentPriceRangeLocal.min > currentPriceRangeLocal.max) {
+                    setCurrentPriceRangeLocal((prev) => ({
                       ...prev,
                       min: prev.max,
                     }));
@@ -394,11 +787,11 @@ const FilterSidebar = ({
                 type="number"
                 min={0}
                 max={defaultPriceRange.max}
-                value={currentPriceRange.max}
+                value={currentPriceRangeLocal.max}
                 onChange={(e) => handlePriceChange("max", e.target.value)}
                 onBlur={() => {
-                  if (currentPriceRange.max < currentPriceRange.min) {
-                    setCurrentPriceRange((prev) => ({
+                  if (currentPriceRangeLocal.max < currentPriceRangeLocal.min) {
+                    setCurrentPriceRangeLocal((prev) => ({
                       ...prev,
                       max: prev.min,
                     }));
@@ -409,16 +802,6 @@ const FilterSidebar = ({
             </PriceInputGroup>
           </PriceRangeContainer>
         </FilterGroup>
-
-        {/* Botón para limpiar filtros sin cambios */}
-        {(selectedCategories.length > 0 ||
-          selectedBrands.length > 0 ||
-          currentPriceRange.min !== Math.max(0, defaultPriceRange.min) ||
-          currentPriceRange.max !== defaultPriceRange.max) && (
-          <ClearFiltersButton onClick={clearFilters}>
-            <FaTimes /> Limpiar filtros
-          </ClearFiltersButton>
-        )}
       </SidebarContainer>
     </SidebarWrapper>
   );

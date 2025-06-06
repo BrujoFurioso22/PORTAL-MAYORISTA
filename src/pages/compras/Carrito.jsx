@@ -1,9 +1,13 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useCart } from "../../context/CartContext";
 import Button from "../../components/ui/Button";
 import { useAppTheme } from "../../context/AppThemeContext";
+import { toast } from "react-toastify";
+import { useAuth } from "../../context/AuthContext";
+import { FaPlus, FaPencilAlt, FaCheck, FaMapMarkerAlt } from "react-icons/fa";
+import Input from "../../components/ui/Input";
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -12,9 +16,12 @@ const PageContainer = styled.div`
   background-color: ${({ theme }) => theme.colors.background};
 `;
 
-const PageTitle = styled.h1`
+const PageTitle = styled.div`
+  display: flex;
+  align-items: center;
   margin: 0 0 24px 0;
   color: ${({ theme }) => theme.colors.text};
+  gap: 12px;
 `;
 
 const CartEmptyState = styled.div`
@@ -43,11 +50,11 @@ const EmptyCartText = styled.p`
 
 const CartLayout = styled.div`
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
 
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+  @media (min-width: 900px) {
+    grid-template-columns: 2fr 1fr;
   }
 `;
 
@@ -59,7 +66,7 @@ const CartItemsList = styled.div`
   overflow: hidden;
 `;
 
-const CartItem = styled.div`
+const CartItemContainer = styled.div`
   display: flex;
   padding: 16px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
@@ -119,13 +126,16 @@ const QuantityButton = styled.button`
   width: 28px;
   height: 28px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
+  background-color: ${({ theme, disabled }) =>
+    disabled ? theme.colors.border : theme.colors.surface};
+  color: ${({ theme, disabled }) =>
+    disabled ? theme.colors.textLight : theme.colors.text};
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1rem;
-  cursor: pointer;
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
+  opacity: ${({ disabled }) => (disabled ? 0.7 : 1)};
 
   &:first-child {
     border-radius: 4px 0 0 4px;
@@ -135,7 +145,7 @@ const QuantityButton = styled.button`
     border-radius: 0 4px 4px 0;
   }
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: ${({ theme }) => theme.colors.background};
   }
 `;
@@ -206,11 +216,440 @@ const TotalRow = styled(SummaryRow)`
   font-size: 1.1rem;
 `;
 
+const StockWarning = styled.div`
+  color: ${({ theme }) => theme.colors.error};
+  font-size: 0.85rem;
+  margin: 4px 0 8px;
+  font-weight: 500;
+`;
+
+const StockInfo = styled.div`
+  color: ${({ theme }) => theme.colors.textLight};
+  font-size: 0.8rem;
+  margin-top: 6px;
+`;
+
+const StockAlertBanner = styled.div`
+  background-color: ${({ theme }) => theme.colors.errorLight || "#FFEBEE"};
+  color: ${({ theme }) => theme.colors.error};
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.8rem;
+`;
+
+const ShippingSection = styled.div`
+  margin: 24px 0;
+  background-color: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  border-radius: 8px;
+  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
+  padding: 20px;
+`;
+
+const SectionTitle = styled.h2`
+  font-size: 1.2rem;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const AddressCard = styled.div`
+  border: 1px solid
+    ${({ theme, selected }) =>
+      selected ? theme.colors.primary : theme.colors.border};
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  background-color: ${({ theme, selected }) =>
+    selected ? `${theme.colors.primary || "#E3F2FD"}15` : "transparent"};
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+    background-color: ${({ theme }) =>
+      `${theme.colors.primary || "#E3F2FD"}15`};
+  }
+`;
+
+const AddressInfo = styled.div`
+  flex: 1;
+`;
+
+const AddressName = styled.div`
+  font-weight: bold;
+  margin-bottom: 4px;
+`;
+
+const AddressDetails = styled.div`
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.textLight};
+`;
+
+const AddressActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const IconButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  color: ${({ theme }) => theme.colors.primary};
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primaryDark || theme.colors.primary};
+  }
+`;
+
+const NewAddressButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1px dashed ${({ theme }) => theme.colors.border};
+  border-radius: 6px;
+  padding: 12px;
+  width: 100%;
+  margin-top: 12px;
+  cursor: pointer;
+  color: ${({ theme }) => theme.colors.primary};
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+    background-color: ${({ theme }) =>
+      `${theme.colors.primaryLight || "#E3F2FD"}15`};
+  }
+`;
+
+// Formulario de dirección
+const AddressForm = styled.form`
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+
+  @media (min-width: 600px) {
+    grid-template-columns: 1fr 1fr;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 12px;
+  grid-column: ${({ fullWidth }) => (fullWidth ? "1 / -1" : "span 1")};
+`;
+
+const FormLabel = styled.label`
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.textLight};
+`;
+
+const FormInput = styled(Input)`
+  width: 100%;
+  font-size: 0.9rem;
+
+  &:focus {
+    border-color: ${({ theme }) => theme.colors.primary};
+    outline: none;
+  }
+`;
+
+const FormError = styled.div`
+  color: ${({ theme }) => theme.colors.error};
+  font-size: 0.8rem;
+  margin-top: 4px;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  margin-top: 8px;
+`;
+
+const CartItem = ({ item, handleQuantityChange, removeFromCart }) => {
+  console.log(item);
+
+  const maxStock = item?.stock || 0;
+  const discountedPrice = item?.discount
+    ? item.price * (1 - item.discount / 100)
+    : item?.price || 0;
+  const itemTotal = discountedPrice * item.quantity;
+  const isOverStock = item.quantity > maxStock;
+
+  return (
+    <CartItemContainer>
+      <ItemImage src={item?.image} alt={item?.name} />
+
+      <ItemDetails>
+        <ItemName>{item?.name}</ItemName>
+        <ItemBrand>{item?.brand}</ItemBrand>
+
+        {isOverStock && (
+          <StockWarning>⚠️ Stock disponible: {maxStock}</StockWarning>
+        )}
+
+        <ItemQuantityControl>
+          <QuantityButton
+            onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+            disabled={item.quantity <= 1}
+          >
+            -
+          </QuantityButton>
+          <QuantityInput
+            type="number"
+            min="1"
+            max={maxStock}
+            value={item.quantity}
+            onChange={(e) => {
+              const newQuantity = parseInt(e.target.value) || 1;
+              handleQuantityChange(item.id, newQuantity);
+            }}
+          />
+          <QuantityButton
+            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+            disabled={item.quantity >= maxStock}
+          >
+            +
+          </QuantityButton>
+        </ItemQuantityControl>
+
+        <StockInfo>
+          {maxStock > 0 ? `${maxStock} disponibles` : "Sin stock"}
+        </StockInfo>
+      </ItemDetails>
+
+      <ItemPricing>
+        <ItemPrice>${itemTotal.toFixed(2)}</ItemPrice>
+        <RemoveButton onClick={() => removeFromCart(item.id)}>
+          Eliminar
+        </RemoveButton>
+      </ItemPricing>
+    </CartItemContainer>
+  );
+};
+
 const Carrito = () => {
   const { cart, cartTotal, removeFromCart, updateQuantity, clearCart } =
     useCart();
   const navigate = useNavigate();
   const { theme } = useAppTheme();
+  const { user } = useAuth(); // Obtenemos el usuario actual
+
+  // Estados para manejar direcciones
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+
+  // Estado para el formulario de dirección
+  const [addressForm, setAddressForm] = useState({
+    name: "",
+    street: "",
+    number: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    phone: "",
+    isDefault: false,
+  });
+
+  // Estado para errores de validación
+  const [formErrors, setFormErrors] = useState({});
+
+  // Cargar direcciones del usuario
+  useEffect(() => {
+    if (user) {
+      console.log(user);
+
+      // Si el usuario tiene direcciones guardadas, las cargamos
+      if (user.addresses && Array.isArray(user.addresses)) {
+        setAddresses(user.addresses);
+
+        // Seleccionar dirección por defecto si existe
+        const defaultAddress = user.addresses.find((addr) => addr.isDefault);
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id);
+        } else if (user.addresses.length > 0) {
+          setSelectedAddressId(user.addresses[0].id);
+        }
+      } else {
+        // // Si no tiene direcciones, inicializamos como array vacío
+        // setAddresses([]);
+        // // Y mostramos el formulario para agregar una
+        // setShowAddressForm(true);
+        const sampleAddresses = [
+          {
+            id: "1",
+            name: "Mi Casa",
+            street: "Av. Principal",
+            number: "123",
+            city: "Ciudad Ejemplo",
+            state: "Estado Ejemplo",
+            zipCode: "12345",
+            phone: "555-1234",
+            isDefault: true,
+          },
+          {
+            id: "2",
+            name: "Oficina",
+            street: "Calle Comercial",
+            number: "456",
+            city: "Ciudad Trabajo",
+            state: "Estado Ejemplo",
+            zipCode: "54321",
+            phone: "555-5678",
+            isDefault: false,
+          },
+        ];
+
+        setAddresses(sampleAddresses);
+        setSelectedAddressId("1");
+      }
+    }
+  }, [user]);
+
+  // Función para seleccionar una dirección
+  const handleSelectAddress = (addressId) => {
+    setSelectedAddressId(addressId);
+  };
+
+  // Función para editar una dirección existente
+  const handleEditAddress = (address) => {
+    setEditingAddress(address);
+    setAddressForm({
+      name: address.name || "",
+      street: address.street || "",
+      number: address.number || "",
+      city: address.city || "",
+      state: address.state || "",
+      zipCode: address.zipCode || "",
+      phone: address.phone || "",
+      isDefault: address.isDefault || false,
+    });
+    setShowAddressForm(true);
+  };
+
+  // Función para manejar cambios en el formulario
+  const handleAddressFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setAddressForm({
+      ...addressForm,
+      [name]: type === "checkbox" ? checked : value,
+    });
+
+    // Limpiar errores al cambiar un campo
+    setFormErrors({
+      ...formErrors,
+      [name]: null,
+    });
+  };
+
+  // Validar formulario
+  const validateAddressForm = () => {
+    const errors = {};
+
+    if (!addressForm.name.trim()) errors.name = "Nombre es requerido";
+    if (!addressForm.street.trim()) errors.street = "Calle es requerida";
+    if (!addressForm.city.trim()) errors.city = "Ciudad es requerida";
+    if (!addressForm.state.trim())
+      errors.state = "Estado/Provincia es requerido";
+    if (!addressForm.zipCode.trim())
+      errors.zipCode = "Código postal es requerido";
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Guardar dirección
+  const handleSaveAddress = (e) => {
+    e.preventDefault();
+
+    if (!validateAddressForm()) {
+      return;
+    }
+
+    let updatedAddresses;
+
+    if (editingAddress) {
+      // Actualizar dirección existente
+      updatedAddresses = addresses.map((addr) =>
+        addr.id === editingAddress.id
+          ? { ...addressForm, id: editingAddress.id }
+          : addr
+      );
+      toast.success("Dirección actualizada correctamente");
+    } else {
+      // Crear nueva dirección
+      const newAddress = {
+        ...addressForm,
+        id: Date.now().toString(), // Generamos un ID único
+      };
+      updatedAddresses = [...addresses, newAddress];
+      toast.success("Dirección agregada correctamente");
+
+      // Seleccionar la nueva dirección
+      setSelectedAddressId(newAddress.id);
+    }
+
+    // Si se marca como predeterminada, actualizar las otras
+    if (addressForm.isDefault) {
+      updatedAddresses = updatedAddresses.map((addr) => ({
+        ...addr,
+        isDefault:
+          addr.id ===
+          (editingAddress?.id ||
+            updatedAddresses[updatedAddresses.length - 1].id),
+      }));
+    }
+
+    // Actualizar estado
+    setAddresses(updatedAddresses);
+
+    // También habría que actualizar las direcciones en el perfil del usuario
+    // Esto dependería de tu API y cómo manejas persistencia
+
+    // Resetear formulario
+    setShowAddressForm(false);
+    setEditingAddress(null);
+    setAddressForm({
+      name: "",
+      street: "",
+      number: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      phone: "",
+      isDefault: false,
+    });
+  };
+
+  // Cancelar edición/creación de dirección
+  const handleCancelAddressForm = () => {
+    setShowAddressForm(false);
+    setEditingAddress(null);
+    setFormErrors({});
+    setAddressForm({
+      name: "",
+      street: "",
+      number: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      phone: "",
+      isDefault: false,
+    });
+  };
 
   if (cart.length === 0) {
     return (
@@ -231,77 +670,273 @@ const Carrito = () => {
   }
 
   const handleQuantityChange = (id, newQuantity) => {
-    if (newQuantity > 0) {
-      updateQuantity(id, newQuantity);
+    if (newQuantity <= 0) return;
+
+    // Encontrar el ítem del carrito
+    const cartItem = cart.find((item) => item.id === id);
+    if (!cartItem) return;
+
+    // Obtener el stock máximo del producto
+    const maxStock = cartItem?.stock || 0;
+
+    // Limitar la cantidad al stock disponible
+    const validQuantity = Math.min(newQuantity, maxStock);
+
+    // Actualizar la cantidad
+    updateQuantity(id, validQuantity);
+
+    // Mostrar mensaje si se intenta exceder el stock
+    if (newQuantity > maxStock) {
+      toast.warning(
+        `Solo hay ${maxStock} unidades disponibles de este producto`
+      );
     }
   };
 
+  const hasInsufficientStock = cart.some(
+    (item) => item.quantity > (item?.stock || 0)
+  );
   const handleCheckout = () => {
-    alert("Procesando pedido...\n\nEsta sería la redirección al checkout.");
+    // Verificar que hay una dirección seleccionada
+    if (!selectedAddressId) {
+      toast.error("Por favor selecciona una dirección de envío");
+      return;
+    }
+
+    // Verificar que no hay productos sin stock suficiente
+    if (hasInsufficientStock) {
+      toast.error("Algunos productos no tienen stock suficiente");
+      return;
+    }
+
+    // Obtener la dirección seleccionada
+    const selectedAddress = addresses.find(
+      (addr) => addr.id === selectedAddressId
+    );
+
+    // Crear objeto de pedido
+    const order = {
+      items: cart,
+      total: cartTotal,
+      shippingAddress: selectedAddress,
+      date: new Date(),
+      status: "pending",
+    };
+
+    // Aquí procesarías el pedido con tu API
+    console.log("Procesando pedido:", order);
+
+    // Mensaje provisional
+    alert(
+      `Procesando pedido...\n\nDirección de envío: ${selectedAddress.street} ${
+        selectedAddress.number
+      }, ${selectedAddress.city}\n\nTotal: $${cartTotal.toFixed(2)}`
+    );
+
     clearCart();
     navigate("/");
   };
 
   return (
     <PageContainer>
-      <PageTitle>Carrito de compras</PageTitle>
+      <PageTitle>
+        <h1>Carrito de compras</h1>
+        {hasInsufficientStock && (
+          <StockAlertBanner>
+            ⚠️ Algunos productos en tu carrito no tienen stock suficiente. Por
+            favor ajusta las cantidades.
+          </StockAlertBanner>
+        )}
+      </PageTitle>
 
       <CartLayout>
-        <CartItemsList>
-          {cart.map((item) => {
-            const discountedPrice = item.discount
-              ? item.price * (1 - item.discount / 100)
-              : item.price;
+        <div>
+          <CartItemsList>
+            {cart.map((item) => (
+              <CartItem
+                key={item.id}
+                item={item}
+                handleQuantityChange={handleQuantityChange}
+                removeFromCart={removeFromCart}
+              />
+            ))}
+          </CartItemsList>
 
-            const itemTotal = discountedPrice * item.quantity;
+          {/* Nueva sección de direcciones */}
+          <ShippingSection>
+            <SectionTitle>
+              <FaMapMarkerAlt /> Dirección de envío
+            </SectionTitle>
 
-            return (
-              <CartItem key={item.id}>
-                <ItemImage src={item.image} alt={item.name} />
+            {addresses.length > 0 && (
+              <div>
+                {addresses.map((address) => (
+                  <AddressCard
+                    key={address.id}
+                    selected={selectedAddressId === address.id}
+                    onClick={() => handleSelectAddress(address.id)}
+                  >
+                    <AddressInfo>
+                      <AddressName>{address.name}</AddressName>
+                      <AddressDetails>
+                        {address.street} {address.number}, {address.city},{" "}
+                        {address.state} ({address.zipCode})
+                        {address.isDefault && (
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              color: theme.colors.success,
+                            }}
+                          >
+                            • Predeterminada
+                          </span>
+                        )}
+                      </AddressDetails>
+                    </AddressInfo>
+                    <AddressActions>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditAddress(address);
+                        }}
+                      >
+                        <FaPencilAlt size={14} />
+                      </IconButton>
+                    </AddressActions>
+                  </AddressCard>
+                ))}
+              </div>
+            )}
 
-                <ItemDetails>
-                  <ItemName>{item.name}</ItemName>
-                  <ItemBrand>{item.brand}</ItemBrand>
+            {!showAddressForm ? (
+              <NewAddressButton onClick={() => setShowAddressForm(true)}>
+                <FaPlus /> Agregar nueva dirección
+              </NewAddressButton>
+            ) : (
+              <AddressForm onSubmit={handleSaveAddress}>
+                <FormGroup>
+                  <FormLabel>Nombre para esta dirección</FormLabel>
+                  <FormInput
+                    name="name"
+                    value={addressForm.name}
+                    onChange={handleAddressFormChange}
+                    placeholder="Ej: Mi casa, Oficina"
+                    error={formErrors.name}
+                  />
+                  {formErrors.name && <FormError>{formErrors.name}</FormError>}
+                </FormGroup>
 
-                  <ItemQuantityControl>
-                    <QuantityButton
-                      onClick={() =>
-                        handleQuantityChange(item.id, item.quantity - 1)
-                      }
-                    >
-                      -
-                    </QuantityButton>
-                    <QuantityInput
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        handleQuantityChange(
-                          item.id,
-                          parseInt(e.target.value) || 1
-                        )
-                      }
+                <FormGroup>
+                  <FormLabel>Teléfono de contacto</FormLabel>
+                  <FormInput
+                    name="phone"
+                    value={addressForm.phone}
+                    onChange={handleAddressFormChange}
+                    placeholder="Número de teléfono"
+                  />
+                </FormGroup>
+
+                <FormGroup>
+                  <FormLabel>Calle</FormLabel>
+                  <FormInput
+                    name="street"
+                    value={addressForm.street}
+                    onChange={handleAddressFormChange}
+                    placeholder="Nombre de la calle"
+                    error={formErrors.street}
+                  />
+                  {formErrors.street && (
+                    <FormError>{formErrors.street}</FormError>
+                  )}
+                </FormGroup>
+
+                <FormGroup>
+                  <FormLabel>Número</FormLabel>
+                  <FormInput
+                    name="number"
+                    value={addressForm.number}
+                    onChange={handleAddressFormChange}
+                    placeholder="Número exterior"
+                  />
+                </FormGroup>
+
+                <FormGroup>
+                  <FormLabel>Ciudad</FormLabel>
+                  <FormInput
+                    name="city"
+                    value={addressForm.city}
+                    onChange={handleAddressFormChange}
+                    placeholder="Ciudad"
+                    error={formErrors.city}
+                  />
+                  {formErrors.city && <FormError>{formErrors.city}</FormError>}
+                </FormGroup>
+
+                <FormGroup>
+                  <FormLabel>Estado/Provincia</FormLabel>
+                  <FormInput
+                    name="state"
+                    value={addressForm.state}
+                    onChange={handleAddressFormChange}
+                    placeholder="Estado o provincia"
+                    error={formErrors.state}
+                  />
+                  {formErrors.state && (
+                    <FormError>{formErrors.state}</FormError>
+                  )}
+                </FormGroup>
+
+                <FormGroup>
+                  <FormLabel>Código Postal</FormLabel>
+                  <FormInput
+                    name="zipCode"
+                    value={addressForm.zipCode}
+                    onChange={handleAddressFormChange}
+                    placeholder="Código postal"
+                    error={formErrors.zipCode}
+                  />
+                  {formErrors.zipCode && (
+                    <FormError>{formErrors.zipCode}</FormError>
+                  )}
+                </FormGroup>
+
+                <FormGroup fullWidth>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="isDefault"
+                      checked={addressForm.isDefault}
+                      onChange={handleAddressFormChange}
+                      style={{ marginRight: 8 }}
                     />
-                    <QuantityButton
-                      onClick={() =>
-                        handleQuantityChange(item.id, item.quantity + 1)
-                      }
-                    >
-                      +
-                    </QuantityButton>
-                  </ItemQuantityControl>
-                </ItemDetails>
+                    Establecer como dirección predeterminada
+                  </label>
+                </FormGroup>
 
-                <ItemPricing>
-                  <ItemPrice>${itemTotal.toFixed(2)}</ItemPrice>
-                  <RemoveButton onClick={() => removeFromCart(item.id)}>
-                    Eliminar
-                  </RemoveButton>
-                </ItemPricing>
-              </CartItem>
-            );
-          })}
-        </CartItemsList>
+                <ButtonGroup>
+                  <Button
+                    text="Guardar dirección"
+                    variant="solid"
+                    type="submit"
+                    backgroundColor={theme.colors.primary}
+                  />
+                  <Button
+                    text="Cancelar"
+                    variant="outlined"
+                    type="button"
+                    onClick={handleCancelAddressForm}
+                  />
+                </ButtonGroup>
+              </AddressForm>
+            )}
+          </ShippingSection>
+        </div>
 
         <OrderSummary>
           <SummaryTitle>Resumen del pedido</SummaryTitle>
@@ -326,13 +961,28 @@ const Carrito = () => {
             <SummaryValue bold>${cartTotal.toFixed(2)}</SummaryValue>
           </TotalRow>
 
+          {/* Verificar que hay dirección seleccionada */}
           <Button
             text="Proceder al pago"
             variant="solid"
             backgroundColor={theme.colors.success}
             style={{ width: "100%", marginTop: "20px" }}
             onClick={handleCheckout}
+            disabled={hasInsufficientStock || !selectedAddressId}
           />
+
+          {!selectedAddressId && (
+            <div
+              style={{
+                color: theme.colors.error,
+                fontSize: "0.8rem",
+                textAlign: "center",
+                marginTop: "8px",
+              }}
+            >
+              Debes seleccionar una dirección de envío
+            </div>
+          )}
 
           <Button
             text="Seguir comprando"
