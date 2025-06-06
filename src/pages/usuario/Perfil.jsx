@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useAuth } from "../../context/AuthContext";
 import { useAppTheme } from "../../context/AppThemeContext";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import { toast } from "react-toastify";
+import {
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaLock,
+  FaCheck,
+  FaCopy,
+} from "react-icons/fa";
+import { profile_getAddresses } from "../../services/profile/profile";
 
 // Estilos para el componente
 const PageContainer = styled.div`
@@ -182,15 +191,20 @@ const AddressActions = styled.div`
 `;
 
 const ActionButton = styled.button`
+  display: flex;
+  align-items: center;
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.primary};
   cursor: pointer;
   font-size: 0.9rem;
-  padding: 0;
+  padding: 4px 8px;
 
   &:hover {
     text-decoration: underline;
+    background-color: ${({ theme }) =>
+      `${theme.colors.primary}15` || "#E3F2FD"}33;
+    border-radius: 4px;
   }
 `;
 
@@ -263,6 +277,213 @@ const EmpresasList = styled.ul`
   font-size: 0.98rem;
 `;
 
+// Estilos para el filtro de empresas
+const CompanyFilter = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+`;
+
+const CompanyFilterLabel = styled.label`
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const CompanyFilterSelect = styled.select`
+  padding: 8px 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 4px;
+  background-color: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 0.9rem;
+  cursor: pointer;
+`;
+
+// Estilos para SAP Badge
+const SapBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  background-color: ${({ theme }) => theme.colors.primary + "33"};
+  color: ${({ theme }) => theme.colors.primary};
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  margin-left: 8px;
+`;
+
+// Estilos para el estado vacío
+const EmptyState = styled.div`
+  padding: 24px;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.textLight};
+  background-color: ${({ theme }) => theme.colors.background};
+  border-radius: 8px;
+  border: 1px dashed ${({ theme }) => theme.colors.border};
+`;
+
+// Estilos para el formulario de dirección
+const AddressFormContainer = styled.div`
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+`;
+
+const FormTitle = styled.h3`
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+// Estilos para el checkbox
+const CheckboxField = styled.div`
+  display: flex;
+  align-items: center;
+  margin: 16px 0;
+`;
+
+const CheckboxLabel = styled.label`
+  margin-left: 8px;
+  cursor: pointer;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+// Estilos para el modal
+const ModalOverlay = styled.div`
+  display: ${({ $show }) => ($show ? "flex" : "none")};
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+`;
+
+const Modal = styled.div`
+  background-color: ${({ theme }) => theme.colors.surface};
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const ModalTitle = styled.h3`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: ${({ theme }) => theme.colors.textLight};
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 16px;
+  max-height: 60vh;
+  overflow-y: auto;
+`;
+
+const ModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  gap: 12px;
+`;
+
+const CompanySelect = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+`;
+
+const CompanyOption = styled.div`
+  padding: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+
+  &:hover {
+    background-color: ${({ theme }) =>
+      `${theme.colors.primary}15` || "#E3F2FD"};
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+// Añade esta definición justo después de CompanyFilterSelect o junto a los demás styled-components
+const TypeFilterButton = styled.button`
+  background: ${({ theme, $active }) =>
+    $active ? `${theme.colors.primary}15` || "#E3F2FD" : "transparent"};
+  border: 1px solid
+    ${({ theme, $active }) =>
+      $active ? theme.colors.primary : theme.colors.border};
+  color: ${({ theme, $active }) =>
+    $active ? theme.colors.primary : theme.colors.textLight};
+  padding: 4px 12px;
+  border-radius: 4px;
+  margin-right: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme, $active }) =>
+      !$active ? "rgba(33, 150, 243, 0.05)" : `${theme.colors.primary}15`};
+  }
+`;
+
+// También falta la definición del badge de tipo que se usa en los address cards
+const TypeBadge = styled.span`
+  display: inline-block;
+  background-color: ${({ theme, $type }) =>
+    $type === "B" ? theme.colors.info + "33" : theme.colors.success + "33"};
+  color: ${({ theme, $type }) =>
+    $type === "B" ? theme.colors.info : theme.colors.success};
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  margin-left: 8px;
+  font-weight: 500;
+`;
+
+// También parece que falta la función formatAddressType
+// Agrega esta función dentro del componente Perfil
+const formatAddressType = (type) => {
+  if (!type) return "";
+  const trimmedType = type.trim();
+
+  switch (trimmedType) {
+    case "B":
+      return "Facturación";
+    case "S":
+      return "Envío";
+    default:
+      return type;
+  }
+};
+
 // Componente Principal
 const Perfil = () => {
   const { user, updateUserInfo, changePassword } = useAuth();
@@ -300,6 +521,9 @@ const Perfil = () => {
       state: "CDMX",
       postalCode: "03740",
       isDefault: true,
+      empresaId: "EMPRESA1", // ID de la empresa asociada
+      source: "USER", // Puede ser "USER" o "SAP"
+      phone: "5555123456",
     },
     {
       id: 2,
@@ -310,8 +534,112 @@ const Perfil = () => {
       state: "Estado de México",
       postalCode: "50071",
       isDefault: false,
+      empresaId: "EMPRESA1",
+      source: "USER",
+      phone: "5559876543",
+    },
+    {
+      id: 3,
+      name: "Almacén Central",
+      street: "Av. Tecnológico 2000",
+      colony: "Parque Industrial",
+      city: "Querétaro",
+      state: "Querétaro",
+      postalCode: "76000",
+      isDefault: false,
+      empresaId: "EMPRESA2",
+      source: "SAP", // Esta dirección viene de SAP y no se puede editar
+      phone: "4421234567",
     },
   ]);
+
+  // Nuevos estados para manejar el CRUD
+  // Estado para la empresa seleccionada actualmente para filtrar direcciones
+  const [selectedEmpresa, setSelectedEmpresa] = useState(
+    user?.EMPRESAS[0] || "MAXXIMUNDO"
+  );
+
+  // Estado para el formulario de dirección con la nueva estructura
+  const [addressForm, setAddressForm] = useState({
+    ID: null,
+    ACCOUNT_USER: user?.RUC || user?.ID_BUSINESS_PARTNER || "",
+    CLASIFICATION: "GENERAL",
+    TYPE: "S",
+    COUNTRY: "EC",
+    STATE: "",
+    CITY: "",
+    STREET: "",
+    PREDETERMINED: false,
+    EMPRESA: selectedEmpresa, // Ahora usamos directamente el nombre
+    ORIGIN: "USER",
+  });
+
+  // Estado para controlar si el formulario está visible
+  const [showAddressForm, setShowAddressForm] = useState(false);
+
+  // Estado para manejar errores de validación
+  const [addressErrors, setAddressErrors] = useState({});
+
+  // Estado para controlar si estamos editando o creando una dirección
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+
+  // Estado para el modal de asignación de empresas
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [addressToAssign, setAddressToAssign] = useState(null);
+
+  // Estado para filtrar por tipo de dirección
+  const [addressTypeFilter, setAddressTypeFilter] = useState("all"); // "all", "B", "S"
+
+  // Obtener la lista de empresas disponibles (solo nombres)
+  const empresasDisponibles =
+    user && user.DIRECCIONES ? Object.keys(user.DIRECCIONES) : [];
+
+  // Usamos useEffect para cargar las direcciones al iniciar o cuando cambie el usuario
+  useEffect(() => {
+    // Si el usuario tiene direcciones, las cargamos
+    if (user && user.DIRECCIONES) {
+      console.log("Direcciones cargadas del usuario:", user.DIRECCIONES);
+    }
+  }, [user]);
+
+  // Versión extendida con más criterios de ordenamiento
+  const getAddressesByCompany = () => {
+    if (!user || !user.DIRECCIONES) return [];
+
+    // Obtenemos las direcciones de la empresa seleccionada
+    const addresses = user.DIRECCIONES[selectedEmpresa] || [];
+
+    // Filtramos por tipo si es necesario
+    const filteredByType =
+      addressTypeFilter === "all"
+        ? addresses
+        : addresses.filter((addr) => addr.TYPE.trim() === addressTypeFilter);
+
+    // Ordenamos con múltiples criterios
+    return [...filteredByType].sort((a, b) => {
+      // Criterio 1: Dirección predeterminada primero
+      if (a.PREDETERMINED && !b.PREDETERMINED) return -1;
+      if (!a.PREDETERMINED && b.PREDETERMINED) return 1;
+
+      // Criterio 2: Origen (USER antes que SAP)
+      if (a.ORIGIN === "USER" && b.ORIGIN === "SAP") return -1;
+      if (a.ORIGIN === "SAP" && b.ORIGIN === "USER") return 1;
+
+      // Criterio 3: Por clasificación alfabéticamente
+      return a.CLASIFICATION.localeCompare(b.CLASIFICATION);
+    });
+  };
+
+  // Obtenemos las direcciones filtradas por la empresa actual
+  const filteredAddresses = getAddressesByCompany();
+
+  // Función para obtener todas las direcciones (aplanadas)
+  const getAllAddresses = () => {
+    if (!user || !user.DIRECCIONES) return [];
+
+    // Aplanamos todas las direcciones en un solo array
+    return Object.values(user.DIRECCIONES).flat();
+  };
 
   // Manejadores de cambios
   const handlePersonalInfoChange = (e) => {
@@ -328,6 +656,23 @@ const Perfil = () => {
       ...passwordInfo,
       [name]: value,
     });
+  };
+
+  // Función para manejar cambios en el formulario
+  const handleAddressFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setAddressForm({
+      ...addressForm,
+      [name]: type === "checkbox" ? checked : value,
+    });
+
+    // Limpiar error al cambiar un campo
+    if (addressErrors[name]) {
+      setAddressErrors({
+        ...addressErrors,
+        [name]: null,
+      });
+    }
   };
 
   // Manejadores de envío de formularios
@@ -376,28 +721,516 @@ const Perfil = () => {
     }
   };
 
+  // Función para iniciar la edición de una dirección
+  const handleEditAddress = (address) => {
+    if (address.ORIGIN === "SAP") {
+      toast.warning(
+        "No puedes editar una dirección sincronizada con SAP. Contacta a soporte para solicitar cambios."
+      );
+      return;
+    }
+
+    // Adaptamos la dirección al formato del formulario
+    setAddressForm({
+      ...address,
+    });
+
+    setIsEditingAddress(true);
+    setShowAddressForm(true);
+    setAddressErrors({});
+  };
+
+  // Función para iniciar la creación de una nueva dirección
+  const handleAddNewAddress = () => {
+    setAddressForm({
+      ID: null,
+      ACCOUNT_USER: user?.RUC || user?.ID_BUSINESS_PARTNER || "",
+      CLASIFICATION: "GENERAL",
+      TYPE: "S",
+      COUNTRY: "EC",
+      STATE: "",
+      CITY: "",
+      STREET: "",
+      PREDETERMINED: false,
+      EMPRESA: selectedEmpresa,
+      ORIGIN: "USER",
+    });
+    setIsEditingAddress(false);
+    setShowAddressForm(true);
+    setAddressErrors({});
+  };
+
+  // Función para cancelar la edición/creación
+  const handleCancelAddressForm = () => {
+    setShowAddressForm(false);
+  };
+
+  // Función para validar el formulario
+  const validateAddressForm = () => {
+    const errors = {};
+
+    if (!addressForm.CLASIFICATION?.trim())
+      errors.CLASIFICATION = "La clasificación es obligatoria";
+    if (!addressForm.STREET?.trim())
+      errors.STREET = "La dirección es obligatoria";
+    if (!addressForm.CITY?.trim()) errors.CITY = "La ciudad es obligatoria";
+    if (!addressForm.STATE?.trim())
+      errors.STATE = "El estado/provincia es obligatorio";
+
+    setAddressErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Función para guardar una dirección
+  const handleSaveAddress = (e) => {
+    e.preventDefault();
+
+    if (!validateAddressForm()) return;
+
+    // Simulamos la actualización de las direcciones (en una aplicación real,
+    // esto sería una llamada a la API)
+    let updatedDirections = { ...user.DIRECCIONES };
+
+    // Aseguramos que existe el array para la empresa
+    if (!updatedDirections[selectedEmpresa]) {
+      updatedDirections[selectedEmpresa] = [];
+    }
+
+    if (isEditingAddress) {
+      // Actualizar dirección existente
+      updatedDirections[selectedEmpresa] = updatedDirections[
+        selectedEmpresa
+      ].map((addr) => (addr.ID === addressForm.ID ? { ...addressForm } : addr));
+      toast.success("Dirección actualizada correctamente");
+    } else {
+      // Crear nueva dirección
+      const newAddress = {
+        ...addressForm,
+        ID: Date.now(), // Generar un ID único (temporal)
+        EMPRESA: selectedEmpresa,
+        ORIGIN: "USER",
+      };
+      updatedDirections[selectedEmpresa] = [
+        ...updatedDirections[selectedEmpresa],
+        newAddress,
+      ];
+      toast.success("Dirección agregada correctamente");
+    }
+
+    // Si se marca como predeterminada, actualizar las demás direcciones
+    if (addressForm.PREDETERMINED) {
+      updatedDirections[selectedEmpresa] = updatedDirections[
+        selectedEmpresa
+      ].map((addr) => ({
+        ...addr,
+        PREDETERMINED:
+          addr.ID === (isEditingAddress ? addressForm.ID : Date.now()),
+      }));
+    }
+
+    // Actualizar el estado local (en una app real esto vendría de la API)
+    // Esto es solo para simular la actualización en el cliente
+    const updatedUser = {
+      ...user,
+      DIRECCIONES: updatedDirections,
+    };
+    // Si tienes una función para actualizar el usuario en el contexto
+    // updateUser(updatedUser);
+
+    // Cerrar el formulario
+    setShowAddressForm(false);
+  };
+
+  // Función para establecer una dirección como predeterminada
   const handleSetDefaultAddress = (id) => {
-    setAddresses(
-      addresses.map((address) => ({
-        ...address,
-        isDefault: address.id === id,
-      }))
+    // Simulamos la actualización de las direcciones
+    let updatedDirections = { ...user.DIRECCIONES };
+
+    // Actualizar todas las direcciones de la empresa seleccionada
+    updatedDirections[selectedEmpresa] = updatedDirections[selectedEmpresa].map(
+      (addr) => ({
+        ...addr,
+        PREDETERMINED: addr.ID === id,
+      })
     );
+
+    // Actualizar el estado local (en una app real esto vendría de la API)
+    const updatedUser = {
+      ...user,
+      DIRECCIONES: updatedDirections,
+    };
+    // Si tienes una función para actualizar el usuario en el contexto
+    // updateUser(updatedUser);
+
     toast.success("Dirección predeterminada actualizada");
   };
 
+  // Función para eliminar una dirección
   const handleDeleteAddress = (id) => {
-    if (window.confirm("¿Estás seguro de eliminar esta dirección?")) {
-      const filteredAddresses = addresses.filter(
-        (address) => address.id !== id
+    const addressToDelete = getAddressesByCompany().find(
+      (addr) => addr.ID === id
+    );
+
+    if (addressToDelete.ORIGIN === "SAP") {
+      toast.warning(
+        "No puedes eliminar una dirección sincronizada con SAP. Contacta a soporte para solicitar cambios."
       );
-      setAddresses(filteredAddresses);
+      return;
+    }
+
+    if (window.confirm("¿Estás seguro de eliminar esta dirección?")) {
+      // Simulamos la eliminación
+      let updatedDirections = { ...user.DIRECCIONES };
+
+      updatedDirections[selectedEmpresa] = updatedDirections[
+        selectedEmpresa
+      ].filter((address) => address.ID !== id);
+
+      // Actualizar el estado local
+      const updatedUser = {
+        ...user,
+        DIRECCIONES: updatedDirections,
+      };
+      // updateUser(updatedUser);
+
       toast.success("Dirección eliminada correctamente");
     }
   };
 
-  // Obtener empresas disponibles del usuario (ajusta el nombre según tu modelo)
-  const empresasDisponibles = user?.EMPRESAS || []; // O el campo correcto
+  // Función para abrir el modal de asignación de dirección a otra empresa
+  const handleOpenAssignModal = (address) => {
+    setAddressToAssign({ ...address });
+    setShowAssignModal(true);
+  };
+
+  // Función para asignar una dirección a otra empresa
+  const handleAssignToCompany = (empresaId) => {
+    if (!addressToAssign || !empresaId) return;
+
+    // Crear una copia de la dirección para la nueva empresa
+    const newAddress = {
+      ...addressToAssign,
+      ID: Date.now(), // Nueva ID
+      EMPRESA: empresaId,
+      PREDETERMINED: false, // No será predeterminada en la nueva empresa
+    };
+
+    // Simulamos la actualización
+    let updatedDirections = { ...user.DIRECCIONES };
+
+    // Aseguramos que existe el array para la empresa destino
+    if (!updatedDirections[empresaId]) {
+      updatedDirections[empresaId] = [];
+    }
+
+    // Agregamos la dirección a la nueva empresa
+    updatedDirections[empresaId].push(newAddress);
+
+    // Actualizamos el estado local
+    const updatedUser = {
+      ...user,
+      DIRECCIONES: updatedDirections,
+    };
+    // updateUser(updatedUser);
+
+    setShowAssignModal(false);
+    toast.success(`Dirección asignada a la empresa seleccionada`);
+  };
+
+  // JSX para el Tab de Direcciones
+  const renderAddressesTab = () => {
+    return (
+      <TabContent $active={activeTab === "addresses"}>
+        <Card>
+          <CardTitle>Mis direcciones</CardTitle>
+
+          {/* Selector de empresa para filtrar direcciones */}
+          <CompanyFilter>
+            <CompanyFilterLabel>Ver direcciones para:</CompanyFilterLabel>
+            <CompanyFilterSelect
+              value={selectedEmpresa}
+              onChange={(e) => setSelectedEmpresa(e.target.value)}
+            >
+              {empresasDisponibles.map((empresa, idx) => (
+                <option key={idx} value={empresa}>
+                  {empresa}
+                </option>
+              ))}
+            </CompanyFilterSelect>
+          </CompanyFilter>
+
+          {/* Selector de tipo de dirección */}
+          <div style={{ marginBottom: "16px", marginLeft: "12px" }}>
+            <span
+              style={{
+                marginRight: "12px",
+                fontSize: "0.9rem",
+                color: theme.colors.textLight,
+              }}
+            >
+              Filtrar por tipo:
+            </span>
+            <TypeFilterButton
+              $active={addressTypeFilter === "all"}
+              onClick={() => setAddressTypeFilter("all")}
+            >
+              Todas
+            </TypeFilterButton>
+            <TypeFilterButton
+              $active={addressTypeFilter === "B"}
+              onClick={() => setAddressTypeFilter("B")}
+            >
+              Facturación
+            </TypeFilterButton>
+            <TypeFilterButton
+              $active={addressTypeFilter === "S"}
+              onClick={() => setAddressTypeFilter("S")}
+            >
+              Envío
+            </TypeFilterButton>
+          </div>
+
+          {filteredAddresses.length > 0 ? (
+            filteredAddresses.map((address) => (
+              <AddressCard key={address.ID}>
+                <AddressCardHeader>
+                  <AddressName>
+                    {address.CLASIFICATION}
+                    {address.PREDETERMINED && (
+                      <DefaultBadge>Predeterminada</DefaultBadge>
+                    )}
+                    <TypeBadge $type={address.TYPE.trim()}>
+                      {formatAddressType(address.TYPE)}
+                    </TypeBadge>
+                    {address.ORIGIN === "SAP" && (
+                      <SapBadge>
+                        <FaLock size={10} style={{ marginRight: "4px" }} />
+                        SAP
+                      </SapBadge>
+                    )}
+                  </AddressName>
+                  <AddressActions>
+                    {address.ORIGIN !== "SAP" && !address.PREDETERMINED && (
+                      <ActionButton
+                        onClick={() => handleSetDefaultAddress(address.ID)}
+                      >
+                        <FaCheck size={14} style={{ marginRight: "4px" }} />
+                        Establecer como predeterminada
+                      </ActionButton>
+                    )}
+
+                    {/* Acciones según el origen de la dirección */}
+                    {address.ORIGIN === "SAP" ? (
+                      <ActionButton
+                        onClick={() =>
+                          toast.info(
+                            "Para modificar esta dirección, contacta a soporte."
+                          )
+                        }
+                      >
+                        <FaLock size={12} style={{ marginRight: "4px" }} />
+                        Sincronizada con SAP
+                      </ActionButton>
+                    ) : (
+                      <>
+                        <ActionButton
+                          onClick={() => handleEditAddress(address)}
+                        >
+                          <FaEdit size={14} style={{ marginRight: "4px" }} />
+                          Editar
+                        </ActionButton>
+                        <ActionButton
+                          onClick={() => handleDeleteAddress(address.ID)}
+                        >
+                          <FaTrash size={14} style={{ marginRight: "4px" }} />
+                          Eliminar
+                        </ActionButton>
+                      </>
+                    )}
+
+                    {/* Opción para asignar a otra empresa */}
+                    {empresasDisponibles.length > 1 && (
+                      <ActionButton
+                        onClick={() => handleOpenAssignModal(address)}
+                        style={{ marginLeft: "8px" }}
+                      >
+                        <FaCopy size={14} style={{ marginRight: "4px" }} />
+                        Asignar a otra empresa
+                      </ActionButton>
+                    )}
+                  </AddressActions>
+                </AddressCardHeader>
+
+                <AddressDetails>
+                  {address.STREET}
+                  <br />
+                  {address.CITY}, {address.STATE}
+                  {address.COUNTRY !== "EC" && <>, {address.COUNTRY}</>}
+                </AddressDetails>
+              </AddressCard>
+            ))
+          ) : (
+            <EmptyState>
+              No tienes direcciones guardadas para esta empresa.
+            </EmptyState>
+          )}
+
+          {/* Formulario para agregar/editar dirección */}
+          {showAddressForm ? (
+            <AddressFormContainer>
+              <FormTitle>
+                {isEditingAddress ? "Editar dirección" : "Nueva dirección"}
+              </FormTitle>
+              <Form onSubmit={handleSaveAddress}>
+                <FormGroup>
+                  <FormField>
+                    <Input
+                      label="Clasificación de la dirección"
+                      name="CLASIFICATION"
+                      value={addressForm.CLASIFICATION}
+                      onChange={handleAddressFormChange}
+                      error={addressErrors.CLASIFICATION}
+                      placeholder="Ej: Casa, Oficina, Almacén"
+                      required
+                    />
+                  </FormField>
+                  <FormField>
+                    <Input
+                      label="Tipo"
+                      name="TYPE"
+                      value={addressForm.TYPE}
+                      onChange={handleAddressFormChange}
+                      placeholder="Tipo de dirección (B: Facturación, S: Envío)"
+                    />
+                  </FormField>
+                </FormGroup>
+
+                <FormField>
+                  <Input
+                    label="Dirección completa"
+                    name="STREET"
+                    value={addressForm.STREET}
+                    onChange={handleAddressFormChange}
+                    error={addressErrors.STREET}
+                    placeholder="Calle, número, referencias"
+                    required
+                  />
+                </FormField>
+
+                <FormGroup>
+                  <FormField>
+                    <Input
+                      label="Ciudad"
+                      name="CITY"
+                      value={addressForm.CITY}
+                      onChange={handleAddressFormChange}
+                      error={addressErrors.CITY}
+                      placeholder="Ciudad"
+                      required
+                    />
+                  </FormField>
+                  <FormField>
+                    <Input
+                      label="Estado/Provincia"
+                      name="STATE"
+                      value={addressForm.STATE}
+                      onChange={handleAddressFormChange}
+                      error={addressErrors.STATE}
+                      placeholder="Estado o provincia"
+                      required
+                    />
+                  </FormField>
+                </FormGroup>
+
+                <CheckboxField>
+                  <input
+                    type="checkbox"
+                    id="isPredetermined"
+                    name="PREDETERMINED"
+                    checked={addressForm.PREDETERMINED}
+                    onChange={(e) => {
+                      setAddressForm({
+                        ...addressForm,
+                        PREDETERMINED: e.target.checked,
+                      });
+                    }}
+                  />
+                  <CheckboxLabel htmlFor="isPredetermined">
+                    Establecer como dirección predeterminada para{" "}
+                    {selectedEmpresa}
+                  </CheckboxLabel>
+                </CheckboxField>
+
+                <FormActions>
+                  <Button
+                    text="Cancelar"
+                    variant="outlined"
+                    type="button"
+                    onClick={handleCancelAddressForm}
+                  />
+                  <Button
+                    text={
+                      isEditingAddress ? "Guardar cambios" : "Guardar dirección"
+                    }
+                    variant="solid"
+                    type="submit"
+                    backgroundColor={theme.colors.primary}
+                  />
+                </FormActions>
+              </Form>
+            </AddressFormContainer>
+          ) : (
+            <Button
+              text="Agregar nueva dirección"
+              variant="outlined"
+              leftIcon={<FaPlus />}
+              onClick={handleAddNewAddress}
+              style={{ marginTop: "16px" }}
+            />
+          )}
+        </Card>
+      </TabContent>
+    );
+  };
+
+  // JSX para el Modal de Asignación de Empresas
+  const AssignAddressModal = () => (
+    <ModalOverlay $show={showAssignModal}>
+      <Modal>
+        <ModalHeader>
+          <ModalTitle>Asignar dirección a otra empresa</ModalTitle>
+          <CloseButton onClick={() => setShowAssignModal(false)}>×</CloseButton>
+        </ModalHeader>
+        <ModalBody>
+          <p>Selecciona la empresa a la que deseas asignar esta dirección:</p>
+          <p>
+            <strong>{addressToAssign?.CLASIFICATION}</strong> -{" "}
+            {addressToAssign?.STREET}
+          </p>
+
+          <CompanySelect>
+            {empresasDisponibles
+              .filter((empresa) => empresa !== selectedEmpresa)
+              .map((empresa, idx) => (
+                <CompanyOption
+                  key={idx}
+                  onClick={() => handleAssignToCompany(empresa)}
+                >
+                  {empresa}
+                </CompanyOption>
+              ))}
+          </CompanySelect>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            text="Cancelar"
+            variant="outlined"
+            onClick={() => setShowAssignModal(false)}
+          />
+        </ModalFooter>
+      </Modal>
+    </ModalOverlay>
+  );
 
   return (
     <PageContainer>
@@ -445,7 +1278,13 @@ const Perfil = () => {
             </AvatarSection>
             <FormSection>
               {/* Mostrar solo los datos, no formulario */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "18px",
+                }}
+              >
                 <div>
                   <strong>Nombre completo:</strong>
                   <div>{personalInfo.nombre}</div>
@@ -456,18 +1295,22 @@ const Perfil = () => {
                 </div>
                 <div>
                   <strong>Teléfono:</strong>
-                  <div>{personalInfo.telefono || <span style={{color:"#aaa"}}>No registrado</span>}</div>
+                  <div>
+                    {personalInfo.telefono || (
+                      <span style={{ color: "#aaa" }}>No registrado</span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <strong>Empresas disponibles:</strong>
-                  {empresasDisponibles.length > 0 ? (
+                  {user?.EMPRESAS.length > 0 ? (
                     <EmpresasList>
-                      {empresasDisponibles.map((empresa, idx) => (
-                        <li key={idx}>{empresa.NOMBRE || empresa.nombre || empresa}</li>
+                      {user?.EMPRESAS.map((empresa, idx) => (
+                        <li key={idx}>{empresa}</li>
                       ))}
                     </EmpresasList>
                   ) : (
-                    <div style={{color:"#aaa"}}>Sin empresas asignadas</div>
+                    <div style={{ color: "#aaa" }}>Sin empresas asignadas</div>
                   )}
                 </div>
               </div>
@@ -475,7 +1318,11 @@ const Perfil = () => {
                 <Button
                   text="Solicitar cambio de información"
                   variant="outlined"
-                  onClick={() => toast.info("Para modificar tus datos, contacta a soporte o solicita el cambio a tu administrador.")}
+                  onClick={() =>
+                    toast.info(
+                      "Para modificar tus datos, contacta a soporte o solicita el cambio a tu administrador."
+                    )
+                  }
                 />
               </FormActions>
             </FormSection>
@@ -537,52 +1384,13 @@ const Perfil = () => {
             </FormActions>
           </Form>
         </Card>
-
       </TabContent>
 
       {/* Tab: Direcciones */}
-      <TabContent $active={activeTab === "addresses"}>
-        <Card>
-          <CardTitle>Mis direcciones</CardTitle>
+      {renderAddressesTab()}
 
-          {addresses.map((address) => (
-            <AddressCard key={address.id}>
-              <AddressCardHeader>
-                <AddressName>
-                  {address.name}
-                  {address.isDefault && (
-                    <DefaultBadge>Predeterminada</DefaultBadge>
-                  )}
-                </AddressName>
-                <AddressActions>
-                  <ActionButton
-                    onClick={() => handleSetDefaultAddress(address.id)}
-                  >
-                    {address.isDefault ? "" : "Establecer como predeterminada"}
-                  </ActionButton>
-                  <ActionButton onClick={() => handleDeleteAddress(address.id)}>
-                    Eliminar
-                  </ActionButton>
-                </AddressActions>
-              </AddressCardHeader>
-
-              <AddressDetails>
-                {address.street}
-                <br />
-                {address.colony}
-                <br />
-                {address.city}, {address.state} C.P. {address.postalCode}
-              </AddressDetails>
-            </AddressCard>
-          ))}
-
-          <Button
-            text="Agregar nueva dirección"
-            variant="outlined"
-            leftIconName="Plus"
-          />
-        </Card>
-      </TabContent>
+      {/* Modal para asignar dirección a otra empresa */}
+      <AssignAddressModal />
 
       {/* Tab: Preferencias */}
       <TabContent $active={activeTab === "preferences"}>
@@ -604,7 +1412,6 @@ const Perfil = () => {
               <Slider />
             </Switch>
           </PreferenceItem>
-
         </Card>
 
         <Card>

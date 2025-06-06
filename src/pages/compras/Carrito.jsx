@@ -6,7 +6,7 @@ import Button from "../../components/ui/Button";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import { FaPlus, FaPencilAlt, FaCheck, FaMapMarkerAlt } from "react-icons/fa";
+import { FaPlus, FaPencilAlt, FaCheck, FaMapMarkerAlt, FaFileInvoice } from "react-icons/fa";
 import Input from "../../components/ui/Input";
 
 const PageContainer = styled.div`
@@ -446,6 +446,14 @@ const Carrito = () => {
   const { theme } = useAppTheme();
   const { user } = useAuth(); // Obtenemos el usuario actual
 
+  // Agregar nuevos estados para manejar los dos tipos de direcciones
+  const [shippingAddressId, setShippingAddressId] = useState(null);
+  const [billingAddressId, setBillingAddressId] = useState(null);
+  const [sameAsShipping, setSameAsShipping] = useState(true);
+
+  // Estados para los formularios
+  const [addressFormType, setAddressFormType] = useState("S"); // "S" o "B"
+
   // Estados para manejar direcciones
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
@@ -472,26 +480,32 @@ const Carrito = () => {
     if (user) {
       console.log(user);
 
-      // Si el usuario tiene direcciones guardadas, las cargamos
-      if (user.addresses && Array.isArray(user.addresses)) {
-        setAddresses(user.addresses);
-
-        // Seleccionar dirección por defecto si existe
-        const defaultAddress = user.addresses.find((addr) => addr.isDefault);
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress.id);
-        } else if (user.addresses.length > 0) {
-          setSelectedAddressId(user.addresses[0].id);
-        }
+      // Si el usuario tiene direcciones guardadas o usamos las de prueba
+      let userAddresses = [];
+      
+      if (user.DIRECCIONES) {
+        // Obtener todas las direcciones y aplanarlas en un solo array
+        const allAddresses = Object.values(user.DIRECCIONES).flat();
+        
+        userAddresses = allAddresses.map(addr => ({
+          id: addr.ID.toString(),
+          name: addr.CLASIFICATION,
+          street: addr.STREET,
+          number: "",
+          city: addr.CITY,
+          state: addr.STATE,
+          zipCode: "",
+          phone: "",
+          isDefault: addr.PREDETERMINED,
+          type: addr.TYPE.trim(),
+          empresa: addr.EMPRESA
+        }));
       } else {
-        // // Si no tiene direcciones, inicializamos como array vacío
-        // setAddresses([]);
-        // // Y mostramos el formulario para agregar una
-        // setShowAddressForm(true);
-        const sampleAddresses = [
+        // Direcciones de prueba
+        userAddresses = [
           {
             id: "1",
-            name: "Mi Casa",
+            name: "Casa",
             street: "Av. Principal",
             number: "123",
             city: "Ciudad Ejemplo",
@@ -499,6 +513,8 @@ const Carrito = () => {
             zipCode: "12345",
             phone: "555-1234",
             isDefault: true,
+            type: "S",
+            empresa: "EMPRESA1"
           },
           {
             id: "2",
@@ -509,12 +525,33 @@ const Carrito = () => {
             state: "Estado Ejemplo",
             zipCode: "54321",
             phone: "555-5678",
-            isDefault: false,
-          },
+            isDefault: true,
+            type: "B",
+            empresa: "EMPRESA1"
+          }
         ];
-
-        setAddresses(sampleAddresses);
-        setSelectedAddressId("1");
+      }
+      
+      setAddresses(userAddresses);
+      
+      // Seleccionar direcciones predeterminadas
+      const defaultShipping = userAddresses.find(addr => addr.type === "S" && addr.isDefault);
+      const defaultBilling = userAddresses.find(addr => addr.type === "B" && addr.isDefault);
+      
+      if (defaultShipping) {
+        setShippingAddressId(defaultShipping.id);
+      } else {
+        // Si no hay predeterminada, buscar cualquier dirección de envío
+        const anyShipping = userAddresses.find(addr => addr.type === "S");
+        if (anyShipping) setShippingAddressId(anyShipping.id);
+      }
+      
+      if (defaultBilling) {
+        setBillingAddressId(defaultBilling.id);
+      } else {
+        // Si no hay predeterminada, buscar cualquier dirección de facturación
+        const anyBilling = userAddresses.find(addr => addr.type === "B");
+        if (anyBilling) setBillingAddressId(anyBilling.id);
       }
     }
   }, [user]);
@@ -580,46 +617,45 @@ const Carrito = () => {
     }
 
     let updatedAddresses;
-
+    const newAddress = {
+      ...addressForm,
+      type: addressFormType
+    };
+    
     if (editingAddress) {
       // Actualizar dirección existente
-      updatedAddresses = addresses.map((addr) =>
-        addr.id === editingAddress.id
-          ? { ...addressForm, id: editingAddress.id }
-          : addr
+      updatedAddresses = addresses.map(addr => 
+        addr.id === editingAddress.id ? {...newAddress, id: editingAddress.id} : addr
       );
       toast.success("Dirección actualizada correctamente");
     } else {
       // Crear nueva dirección
-      const newAddress = {
-        ...addressForm,
-        id: Date.now().toString(), // Generamos un ID único
+      const newAddressWithId = {
+        ...newAddress,
+        id: Date.now().toString() // Generamos un ID único
       };
-      updatedAddresses = [...addresses, newAddress];
+      updatedAddresses = [...addresses, newAddressWithId];
       toast.success("Dirección agregada correctamente");
-
-      // Seleccionar la nueva dirección
-      setSelectedAddressId(newAddress.id);
+      
+      // Seleccionar la nueva dirección según el tipo
+      if (newAddress.type === "S") {
+        setShippingAddressId(newAddressWithId.id);
+      } else if (newAddress.type === "B") {
+        setBillingAddressId(newAddressWithId.id);
+      }
     }
-
-    // Si se marca como predeterminada, actualizar las otras
+    
+    // Si se marca como predeterminada, actualizar las otras del mismo tipo
     if (addressForm.isDefault) {
-      updatedAddresses = updatedAddresses.map((addr) => ({
+      updatedAddresses = updatedAddresses.map(addr => ({
         ...addr,
-        isDefault:
-          addr.id ===
-          (editingAddress?.id ||
-            updatedAddresses[updatedAddresses.length - 1].id),
+        isDefault: addr.type === addressForm.type 
+          ? addr.id === (editingAddress?.id || updatedAddresses[updatedAddresses.length - 1].id)
+          : addr.isDefault
       }));
     }
-
-    // Actualizar estado
+    
     setAddresses(updatedAddresses);
-
-    // También habría que actualizar las direcciones en el perfil del usuario
-    // Esto dependería de tu API y cómo manejas persistencia
-
-    // Resetear formulario
     setShowAddressForm(false);
     setEditingAddress(null);
     setAddressForm({
@@ -630,7 +666,7 @@ const Carrito = () => {
       state: "",
       zipCode: "",
       phone: "",
-      isDefault: false,
+      isDefault: false
     });
   };
 
@@ -697,45 +733,55 @@ const Carrito = () => {
     (item) => item.quantity > (item?.stock || 0)
   );
   const handleCheckout = () => {
-    // Verificar que hay una dirección seleccionada
-    if (!selectedAddressId) {
+    // Verificar que hay direcciones seleccionadas
+    if (!shippingAddressId) {
       toast.error("Por favor selecciona una dirección de envío");
       return;
     }
-
+    
+    if (!sameAsShipping && !billingAddressId) {
+      toast.error("Por favor selecciona una dirección de facturación");
+      return;
+    }
+    
     // Verificar que no hay productos sin stock suficiente
     if (hasInsufficientStock) {
       toast.error("Algunos productos no tienen stock suficiente");
       return;
     }
-
-    // Obtener la dirección seleccionada
-    const selectedAddress = addresses.find(
-      (addr) => addr.id === selectedAddressId
-    );
-
+    
+    // Obtener las direcciones seleccionadas
+    const shippingAddress = addresses.find(addr => addr.id === shippingAddressId);
+    const billingAddress = sameAsShipping 
+      ? shippingAddress
+      : addresses.find(addr => addr.id === billingAddressId);
+    
     // Crear objeto de pedido
     const order = {
       items: cart,
       total: cartTotal,
-      shippingAddress: selectedAddress,
+      shippingAddress: shippingAddress,
+      billingAddress: billingAddress,
       date: new Date(),
-      status: "pending",
+      status: "pending"
     };
-
+    
     // Aquí procesarías el pedido con tu API
     console.log("Procesando pedido:", order);
-
+    
     // Mensaje provisional
     alert(
-      `Procesando pedido...\n\nDirección de envío: ${selectedAddress.street} ${
-        selectedAddress.number
-      }, ${selectedAddress.city}\n\nTotal: $${cartTotal.toFixed(2)}`
+      `Procesando pedido...\n\n` +
+      `Dirección de envío: ${shippingAddress.street} ${shippingAddress.number || ""}, ${shippingAddress.city}\n\n` +
+      `Dirección de facturación: ${billingAddress.street} ${billingAddress.number || ""}, ${billingAddress.city}\n\n` +
+      `Total: $${cartTotal.toFixed(2)}`
     );
-
+    
     clearCart();
     navigate("/");
   };
+
+  const isEditingAddress = Boolean(editingAddress);
 
   return (
     <PageContainer>
@@ -762,32 +808,29 @@ const Carrito = () => {
             ))}
           </CartItemsList>
 
-          {/* Nueva sección de direcciones */}
+          {/* Sección de dirección de envío */}
           <ShippingSection>
             <SectionTitle>
               <FaMapMarkerAlt /> Dirección de envío
             </SectionTitle>
 
-            {addresses.length > 0 && (
+            {addresses.filter(addr => addr.type === "S").length > 0 ? (
               <div>
-                {addresses.map((address) => (
+                {addresses
+                  .filter(addr => addr.type === "S")
+                  .map((address) => (
                   <AddressCard
                     key={address.id}
-                    selected={selectedAddressId === address.id}
-                    onClick={() => handleSelectAddress(address.id)}
+                    selected={shippingAddressId === address.id}
+                    onClick={() => setShippingAddressId(address.id)}
                   >
                     <AddressInfo>
                       <AddressName>{address.name}</AddressName>
                       <AddressDetails>
-                        {address.street} {address.number}, {address.city},{" "}
-                        {address.state} ({address.zipCode})
+                        {address.street} {address.number}, {address.city}, {address.state} 
+                        {address.zipCode && ` (${address.zipCode})`}
                         {address.isDefault && (
-                          <span
-                            style={{
-                              marginLeft: 8,
-                              color: theme.colors.success,
-                            }}
-                          >
+                          <span style={{ marginLeft: 8, color: theme.colors.success }}>
                             • Predeterminada
                           </span>
                         )}
@@ -806,13 +849,94 @@ const Carrito = () => {
                   </AddressCard>
                 ))}
               </div>
+            ) : (
+              <EmptyAddressState>
+                No tienes direcciones de envío guardadas
+              </EmptyAddressState>
             )}
 
-            {!showAddressForm ? (
-              <NewAddressButton onClick={() => setShowAddressForm(true)}>
-                <FaPlus /> Agregar nueva dirección
-              </NewAddressButton>
-            ) : (
+            <NewAddressButton onClick={() => handleAddNewAddress("S")}>
+              <FaPlus /> Agregar nueva dirección de envío
+            </NewAddressButton>
+          </ShippingSection>
+
+          {/* Sección de dirección de facturación */}
+          <ShippingSection style={{ marginTop: "24px" }}>
+            <SectionTitle>
+              <FaFileInvoice /> Dirección de facturación
+            </SectionTitle>
+            
+            <UseShippingAddressOption>
+              <input
+                type="checkbox"
+                id="sameAsShipping"
+                checked={sameAsShipping}
+                onChange={(e) => setSameAsShipping(e.target.checked)}
+              />
+              <label htmlFor="sameAsShipping">
+                Usar la misma dirección de envío para facturación
+              </label>
+            </UseShippingAddressOption>
+
+            {!sameAsShipping && (
+              <>
+                {addresses.filter(addr => addr.type === "B").length > 0 ? (
+                  <div>
+                    {addresses
+                      .filter(addr => addr.type === "B")
+                      .map((address) => (
+                      <AddressCard
+                        key={address.id}
+                        selected={billingAddressId === address.id}
+                        onClick={() => setBillingAddressId(address.id)}
+                      >
+                        <AddressInfo>
+                          <AddressName>{address.name}</AddressName>
+                          <AddressDetails>
+                            {address.street} {address.number}, {address.city}, {address.state} 
+                            {address.zipCode && ` (${address.zipCode})`}
+                            {address.isDefault && (
+                              <span style={{ marginLeft: 8, color: theme.colors.info }}>
+                                • Predeterminada
+                              </span>
+                            )}
+                          </AddressDetails>
+                        </AddressInfo>
+                        <AddressActions>
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditAddress(address);
+                            }}
+                          >
+                            <FaPencilAlt size={14} />
+                          </IconButton>
+                        </AddressActions>
+                      </AddressCard>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyAddressState>
+                    No tienes direcciones de facturación guardadas
+                  </EmptyAddressState>
+                )}
+                
+                <NewAddressButton onClick={() => handleAddNewAddress("B")}>
+                  <FaPlus /> Agregar nueva dirección de facturación
+                </NewAddressButton>
+              </>
+            )}
+          </ShippingSection>
+
+          {/* Formulario para agregar/editar dirección */}
+          {showAddressForm && (
+            <AddressFormContainer>
+              <FormTitle>
+                {isEditingAddress 
+                  ? "Editar dirección" 
+                  : `Nueva dirección de ${addressFormType === "S" ? "envío" : "facturación"}`
+                }
+              </FormTitle>
               <AddressForm onSubmit={handleSaveAddress}>
                 <FormGroup>
                   <FormLabel>Nombre para esta dirección</FormLabel>
@@ -845,9 +969,7 @@ const Carrito = () => {
                     placeholder="Nombre de la calle"
                     error={formErrors.street}
                   />
-                  {formErrors.street && (
-                    <FormError>{formErrors.street}</FormError>
-                  )}
+                  {formErrors.street && <FormError>{formErrors.street}</FormError>}
                 </FormGroup>
 
                 <FormGroup>
@@ -881,9 +1003,7 @@ const Carrito = () => {
                     placeholder="Estado o provincia"
                     error={formErrors.state}
                   />
-                  {formErrors.state && (
-                    <FormError>{formErrors.state}</FormError>
-                  )}
+                  {formErrors.state && <FormError>{formErrors.state}</FormError>}
                 </FormGroup>
 
                 <FormGroup>
@@ -895,19 +1015,11 @@ const Carrito = () => {
                     placeholder="Código postal"
                     error={formErrors.zipCode}
                   />
-                  {formErrors.zipCode && (
-                    <FormError>{formErrors.zipCode}</FormError>
-                  )}
+                  {formErrors.zipCode && <FormError>{formErrors.zipCode}</FormError>}
                 </FormGroup>
 
                 <FormGroup fullWidth>
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer",
-                    }}
-                  >
+                  <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
                     <input
                       type="checkbox"
                       name="isDefault"
@@ -915,7 +1027,7 @@ const Carrito = () => {
                       onChange={handleAddressFormChange}
                       style={{ marginRight: 8 }}
                     />
-                    Establecer como dirección predeterminada
+                    Establecer como dirección predeterminada de {addressFormType === "S" ? "envío" : "facturación"}
                   </label>
                 </FormGroup>
 
@@ -934,8 +1046,8 @@ const Carrito = () => {
                   />
                 </ButtonGroup>
               </AddressForm>
-            )}
-          </ShippingSection>
+            </AddressFormContainer>
+          )}
         </div>
 
         <OrderSummary>
@@ -961,26 +1073,39 @@ const Carrito = () => {
             <SummaryValue bold>${cartTotal.toFixed(2)}</SummaryValue>
           </TotalRow>
 
-          {/* Verificar que hay dirección seleccionada */}
+          {/* Verificar que hay direcciones seleccionadas */}
           <Button
             text="Proceder al pago"
             variant="solid"
             backgroundColor={theme.colors.success}
             style={{ width: "100%", marginTop: "20px" }}
             onClick={handleCheckout}
-            disabled={hasInsufficientStock || !selectedAddressId}
+            disabled={
+              hasInsufficientStock || 
+              !shippingAddressId || 
+              (!sameAsShipping && !billingAddressId)
+            }
           />
-
-          {!selectedAddressId && (
-            <div
-              style={{
-                color: theme.colors.error,
-                fontSize: "0.8rem",
-                textAlign: "center",
-                marginTop: "8px",
-              }}
-            >
+          
+          {!shippingAddressId && (
+            <div style={{
+              color: theme.colors.error,
+              fontSize: "0.8rem",
+              textAlign: "center",
+              marginTop: "8px"
+            }}>
               Debes seleccionar una dirección de envío
+            </div>
+          )}
+          
+          {!sameAsShipping && !billingAddressId && (
+            <div style={{
+              color: theme.colors.error,
+              fontSize: "0.8rem",
+              textAlign: "center",
+              marginTop: "8px"
+            }}>
+              Debes seleccionar una dirección de facturación
             </div>
           )}
 
