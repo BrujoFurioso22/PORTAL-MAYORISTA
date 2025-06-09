@@ -13,7 +13,11 @@ import {
   FaCheck,
   FaCopy,
 } from "react-icons/fa";
-import { profile_getAddresses } from "../../services/profile/profile";
+import {
+  addresses_createAddress,
+  addresses_deleteAddress,
+  addresses_updateAddress,
+} from "../../services/users/addresses";
 
 // Estilos para el componente
 const PageContainer = styled.div`
@@ -202,8 +206,7 @@ const ActionButton = styled.button`
 
   &:hover {
     text-decoration: underline;
-    background-color: ${({ theme }) =>
-      `${theme.colors.primary}15` || "#E3F2FD"}33;
+    background-color: ${({ theme }) => `${theme.colors.primary}15`}33;
     border-radius: 4px;
   }
 `;
@@ -426,8 +429,7 @@ const CompanyOption = styled.div`
   text-align: center;
 
   &:hover {
-    background-color: ${({ theme }) =>
-      `${theme.colors.primary}15` || "#E3F2FD"};
+    background-color: ${({ theme }) => `${theme.colors.primary}15`};
     border-color: ${({ theme }) => theme.colors.primary};
   }
 `;
@@ -435,7 +437,7 @@ const CompanyOption = styled.div`
 // Añade esta definición justo después de CompanyFilterSelect o junto a los demás styled-components
 const TypeFilterButton = styled.button`
   background: ${({ theme, $active }) =>
-    $active ? `${theme.colors.primary}15` || "#E3F2FD" : "transparent"};
+    $active ? `${theme.colors.primary}15` : "transparent"};
   border: 1px solid
     ${({ theme, $active }) =>
       $active ? theme.colors.primary : theme.colors.border};
@@ -486,13 +488,13 @@ const formatAddressType = (type) => {
 
 // Componente Principal
 const Perfil = () => {
-  const { user, updateUserInfo, changePassword } = useAuth();
+  const { user } = useAuth();
   const { theme, toggleTheme } = useAppTheme();
   const [activeTab, setActiveTab] = useState("personal");
 
   // Estados para formularios
   const [personalInfo, setPersonalInfo] = useState({
-    nombre: user?.NOMBRE_USUARIO || "",
+    nombre: user?.NAME_USER || "",
     email: user?.EMAIL || "",
     telefono: "",
     empresa: "",
@@ -511,48 +513,6 @@ const Perfil = () => {
     darkMode: theme.mode === "dark",
   });
 
-  const [addresses, setAddresses] = useState([
-    {
-      id: 1,
-      name: "Oficina Principal",
-      street: "Av. Insurgentes Sur 1235",
-      colony: "Col. Extremadura Insurgentes",
-      city: "Ciudad de México",
-      state: "CDMX",
-      postalCode: "03740",
-      isDefault: true,
-      empresaId: "EMPRESA1", // ID de la empresa asociada
-      source: "USER", // Puede ser "USER" o "SAP"
-      phone: "5555123456",
-    },
-    {
-      id: 2,
-      name: "Bodega",
-      street: "Calle Industrial 56",
-      colony: "Zona Industrial",
-      city: "Toluca",
-      state: "Estado de México",
-      postalCode: "50071",
-      isDefault: false,
-      empresaId: "EMPRESA1",
-      source: "USER",
-      phone: "5559876543",
-    },
-    {
-      id: 3,
-      name: "Almacén Central",
-      street: "Av. Tecnológico 2000",
-      colony: "Parque Industrial",
-      city: "Querétaro",
-      state: "Querétaro",
-      postalCode: "76000",
-      isDefault: false,
-      empresaId: "EMPRESA2",
-      source: "SAP", // Esta dirección viene de SAP y no se puede editar
-      phone: "4421234567",
-    },
-  ]);
-
   // Nuevos estados para manejar el CRUD
   // Estado para la empresa seleccionada actualmente para filtrar direcciones
   const [selectedEmpresa, setSelectedEmpresa] = useState(
@@ -562,7 +522,7 @@ const Perfil = () => {
   // Estado para el formulario de dirección con la nueva estructura
   const [addressForm, setAddressForm] = useState({
     ID: null,
-    ACCOUNT_USER: user?.RUC || user?.ID_BUSINESS_PARTNER || "",
+    ACCOUNT_USER: user.ACCOUNT_USER || "",
     CLASIFICATION: "GENERAL",
     TYPE: "S",
     COUNTRY: "EC",
@@ -742,9 +702,11 @@ const Perfil = () => {
 
   // Función para iniciar la creación de una nueva dirección
   const handleAddNewAddress = () => {
+    console.log(user);
+    
     setAddressForm({
       ID: null,
-      ACCOUNT_USER: user?.RUC || user?.ID_BUSINESS_PARTNER || "",
+      ACCOUNT_USER: user.ACCOUNT_USER || "",
       CLASIFICATION: "GENERAL",
       TYPE: "S",
       COUNTRY: "EC",
@@ -758,6 +720,120 @@ const Perfil = () => {
     setIsEditingAddress(false);
     setShowAddressForm(true);
     setAddressErrors({});
+  };
+
+  // Actualizar la función handleSaveAddress para usar las nuevas funciones de API
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+
+    if (!validateAddressForm()) return;
+
+    // Mostrar indicador de carga
+    const toastId = toast.loading(
+      isEditingAddress ? "Actualizando dirección..." : "Creando dirección..."
+    );
+
+    try {
+      // Preparar los datos para la API
+      const addressData = {
+        ACCOUNT_USER: addressForm.ACCOUNT_USER,
+        CLASIFICATION: addressForm.CLASIFICATION,
+        TYPE: addressForm.TYPE,
+        COUNTRY: addressForm.COUNTRY,
+        STATE: addressForm.STATE,
+        CITY: addressForm.CITY,
+        STREET: addressForm.STREET,
+        PREDETERMINED: addressForm.PREDETERMINED,
+        ORIGIN: "USER", // Las direcciones creadas por el usuario siempre tendrán origen USER
+        EMPRESA: selectedEmpresa,
+      };
+
+      let result;
+
+      if (isEditingAddress) {
+        // Llamar a la API para actualizar
+        result = await addresses_updateAddress(addressForm.ID, addressData);
+      } else {
+        // Llamar a la API para crear
+        result = await addresses_createAddress(addressData);
+      }
+
+      if (result.success) {
+        // Actualizar el estado local
+        // (esto es provisional - idealmente la API te devolvería las direcciones actualizadas)
+        let updatedDirections = { ...user.DIRECCIONES };
+
+        // Aseguramos que existe el array para la empresa
+        if (!updatedDirections[selectedEmpresa]) {
+          updatedDirections[selectedEmpresa] = [];
+        }
+
+        if (isEditingAddress) {
+          // Actualizar dirección existente en el estado local
+          updatedDirections[selectedEmpresa] = updatedDirections[
+            selectedEmpresa
+          ].map((addr) =>
+            addr.ID === addressForm.ID
+              ? {
+                  ...addressData,
+                  ID: addressForm.ID, // Mantener el ID original
+                }
+              : addr
+          );
+        } else {
+          // Agregar nueva dirección al estado local
+          const newAddress = {
+            ...addressData,
+            ID: result.data?.ID || Date.now(), // Usar ID de la API si está disponible
+          };
+          updatedDirections[selectedEmpresa].push(newAddress);
+        }
+
+        // Si se marca como predeterminada, actualizar las demás direcciones
+        if (addressForm.PREDETERMINED) {
+          updatedDirections[selectedEmpresa] = updatedDirections[
+            selectedEmpresa
+          ].map((addr) => ({
+            ...addr,
+            PREDETERMINED:
+              addr.ID ===
+              (isEditingAddress
+                ? addressForm.ID
+                : result.data?.ID || Date.now()),
+          }));
+        }
+
+        // Si tienes una función para actualizar el usuario en el contexto de auth
+        // updateUser({ ...user, DIRECCIONES: updatedDirections });
+
+        toast.update(toastId, {
+          render: isEditingAddress
+            ? "Dirección actualizada correctamente"
+            : "Dirección creada correctamente",
+          type: "success",
+          isLoading: false,
+          autoClose: 3000,
+        });
+
+        // Cerrar el formulario
+        setShowAddressForm(false);
+      } else {
+        toast.update(toastId, {
+          render: `Error: ${result.error}`,
+          type: "error",
+          isLoading: false,
+          autoClose: 5000,
+        });
+      }
+    } catch (error) {
+      console.error("Error al guardar dirección:", error);
+      toast.update(toastId, {
+        render: "Error al guardar la dirección. Por favor, inténtalo de nuevo.",
+        type: "error",
+        isLoading: false,
+        autoClose: 5000,
+      });
+    }
   };
 
   // Función para cancelar la edición/creación
@@ -779,66 +855,6 @@ const Perfil = () => {
 
     setAddressErrors(errors);
     return Object.keys(errors).length === 0;
-  };
-
-  // Función para guardar una dirección
-  const handleSaveAddress = (e) => {
-    e.preventDefault();
-
-    if (!validateAddressForm()) return;
-
-    // Simulamos la actualización de las direcciones (en una aplicación real,
-    // esto sería una llamada a la API)
-    let updatedDirections = { ...user.DIRECCIONES };
-
-    // Aseguramos que existe el array para la empresa
-    if (!updatedDirections[selectedEmpresa]) {
-      updatedDirections[selectedEmpresa] = [];
-    }
-
-    if (isEditingAddress) {
-      // Actualizar dirección existente
-      updatedDirections[selectedEmpresa] = updatedDirections[
-        selectedEmpresa
-      ].map((addr) => (addr.ID === addressForm.ID ? { ...addressForm } : addr));
-      toast.success("Dirección actualizada correctamente");
-    } else {
-      // Crear nueva dirección
-      const newAddress = {
-        ...addressForm,
-        ID: Date.now(), // Generar un ID único (temporal)
-        EMPRESA: selectedEmpresa,
-        ORIGIN: "USER",
-      };
-      updatedDirections[selectedEmpresa] = [
-        ...updatedDirections[selectedEmpresa],
-        newAddress,
-      ];
-      toast.success("Dirección agregada correctamente");
-    }
-
-    // Si se marca como predeterminada, actualizar las demás direcciones
-    if (addressForm.PREDETERMINED) {
-      updatedDirections[selectedEmpresa] = updatedDirections[
-        selectedEmpresa
-      ].map((addr) => ({
-        ...addr,
-        PREDETERMINED:
-          addr.ID === (isEditingAddress ? addressForm.ID : Date.now()),
-      }));
-    }
-
-    // Actualizar el estado local (en una app real esto vendría de la API)
-    // Esto es solo para simular la actualización en el cliente
-    const updatedUser = {
-      ...user,
-      DIRECCIONES: updatedDirections,
-    };
-    // Si tienes una función para actualizar el usuario en el contexto
-    // updateUser(updatedUser);
-
-    // Cerrar el formulario
-    setShowAddressForm(false);
   };
 
   // Función para establecer una dirección como predeterminada
@@ -866,7 +882,7 @@ const Perfil = () => {
   };
 
   // Función para eliminar una dirección
-  const handleDeleteAddress = (id) => {
+  const handleDeleteAddress = async (id) => {
     const addressToDelete = getAddressesByCompany().find(
       (addr) => addr.ID === id
     );
@@ -879,21 +895,50 @@ const Perfil = () => {
     }
 
     if (window.confirm("¿Estás seguro de eliminar esta dirección?")) {
-      // Simulamos la eliminación
-      let updatedDirections = { ...user.DIRECCIONES };
+      // Mostrar indicador de carga
+      const toastId = toast.loading("Eliminando dirección...");
 
-      updatedDirections[selectedEmpresa] = updatedDirections[
-        selectedEmpresa
-      ].filter((address) => address.ID !== id);
+      try {
+        // URL de la API para eliminar
+        const response = await addresses_deleteAddress(id);
+        console.log(response);
+        
 
-      // Actualizar el estado local
-      const updatedUser = {
-        ...user,
-        DIRECCIONES: updatedDirections,
-      };
-      // updateUser(updatedUser);
+        if (response.status === 200) {
+          // Actualizar localmente
+          let updatedDirections = { ...user.DIRECCIONES };
 
-      toast.success("Dirección eliminada correctamente");
+          updatedDirections[selectedEmpresa] = updatedDirections[
+            selectedEmpresa
+          ].filter((address) => address.ID !== id);
+
+          // Si tienes una función para actualizar el usuario en el contexto de auth
+          // updateUser({ ...user, DIRECCIONES: updatedDirections });
+
+          toast.update(toastId, {
+            render: "Dirección eliminada correctamente",
+            type: "success",
+            isLoading: false,
+            autoClose: 3000,
+          });
+        } else {
+          toast.update(toastId, {
+            render: "Error al eliminar la dirección",
+            type: "error",
+            isLoading: false,
+            autoClose: 5000,
+          });
+        }
+      } catch (error) {
+        console.error("Error al eliminar dirección:", error);
+        toast.update(toastId, {
+          render:
+            "Error al eliminar la dirección. Por favor, inténtalo de nuevo.",
+          type: "error",
+          isLoading: false,
+          autoClose: 5000,
+        });
+      }
     }
   };
 
@@ -1183,7 +1228,7 @@ const Perfil = () => {
             <Button
               text="Agregar nueva dirección"
               variant="outlined"
-              leftIcon={<FaPlus />}
+              leftIconName={"Plus"}
               onClick={handleAddNewAddress}
               style={{ marginTop: "16px" }}
             />
