@@ -15,6 +15,7 @@ import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
 import { useProductCache } from "../../context/ProductCacheContext";
 import RenderLoader from "../../components/ui/RenderLoader"; // Importar RenderLoader
 import { FaSearch } from "react-icons/fa"; // Importar ícono de búsqueda
+import Select from "../../components/ui/Select";
 
 const PageContainer = styled.div`
   padding: 20px;
@@ -1267,27 +1268,33 @@ const Catalogo = () => {
             {/* Solo mostrar el selector de ordenación si hay productos */}
             {filteredProducts && filteredProducts.length > 0 && (
               <>
-                <SortSelect value={sortOption} onChange={handleSort}>
-                  <option value="default">Ordenar por: Destacados</option>
-                  <option value="price_asc">Menor precio</option>
-                  <option value="price_desc">Mayor precio</option>
-                  <option value="name_asc">Alfabético (A-Z)</option>
-                  <option value="rating">Mejor valorados</option>
-                </SortSelect>
+                <Select
+                  options={[
+                    { value: "default", label: "Destacados" },
+                    { value: "price_asc", label: "Menor precio" },
+                    { value: "price_desc", label: "Mayor precio" },
+                    { value: "name_asc", label: "Alfabético (A-Z)" },
+                    { value: "rating", label: "Mejor valorados" },
+                  ]}
+                  value={sortOption}
+                  onChange={handleSort}
+                  preValue="Ordenar por:"
+                  placeholder="Ordenar por..."
+                />
 
-                <PerPageContainer>
-                  <span>Mostrar:</span>
-                  <PerPageSelect
-                    value={productsPerPage}
-                    onChange={(e) => setProductsPerPage(Number(e.target.value))}
-                  >
-                    <option value={12}>12</option>
-                    <option value={36}>36</option>
-                    <option value={72}>72</option>
-                    <option value={144}>144</option>
-                  </PerPageSelect>
-                  <span>por página</span>
-                </PerPageContainer>
+                <Select
+                  options={[
+                    { value: 12, label: "12" },
+                    { value: 36, label: "36" },
+                    { value: 72, label: "72" },
+                    { value: 144, label: "144" },
+                  ]}
+                  value={productsPerPage}
+                  onChange={(e) => setProductsPerPage(Number(e.target.value))}
+                  preValue="Mostrar: "
+                  postValue=" items por página"
+                  placeholder="Mostrar items"
+                />
               </>
             )}
           </SortContainer>

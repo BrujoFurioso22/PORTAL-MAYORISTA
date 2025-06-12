@@ -6,8 +6,15 @@ import Button from "../../components/ui/Button";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import { FaPlus, FaPencilAlt, FaCheck, FaMapMarkerAlt, FaFileInvoice } from "react-icons/fa";
+import {
+  FaPlus,
+  FaPencilAlt,
+  FaCheck,
+  FaMapMarkerAlt,
+  FaFileInvoice,
+} from "react-icons/fa";
 import Input from "../../components/ui/Input";
+import { ROUTES } from "../../constants/routes";
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -205,7 +212,7 @@ const SummaryLabel = styled.span`
 `;
 
 const SummaryValue = styled.span`
-  font-weight: ${({ bold }) => (bold ? "bold" : "normal")};
+  font-weight: ${({ $bold }) => ($bold ? "bold" : "normal")};
   color: ${({ theme }) => theme.colors.text};
 `;
 
@@ -377,6 +384,121 @@ const ButtonGroup = styled.div`
   margin-top: 8px;
 `;
 
+// Nuevos estilos para las pestañas de empresas
+const CompanyTabs = styled.div`
+  display: flex;
+  overflow-x: auto;
+  margin-bottom: 24px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const CompanyTab = styled.button`
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid
+    ${({ theme, $active }) => ($active ? theme.colors.primary : "transparent")};
+  color: ${({ theme, $active }) =>
+    $active ? theme.colors.primary : theme.colors.textLight};
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const CompanySummary = styled.div`
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 6px;
+`;
+
+const CompanyName = styled.div`
+  font-weight: bold;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed ${({ theme }) => theme.colors.border};
+`;
+
+const ValidationWarning = styled.div`
+  color: ${({ theme }) => theme.colors.error};
+  font-size: 0.8rem;
+  margin-top: 4px;
+`;
+
+const EmptyAddressState = styled.div`
+  padding: 16px;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.textLight};
+  border: 1px dashed ${({ theme }) => theme.colors.border};
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  background-color: ${({ theme }) => `${theme.colors.background}80`};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+
+  &::before {
+    content: "📍";
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+`;
+
+// Y este componente para la opción de usar la misma dirección
+const UseShippingAddressOption = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 8px 0 16px;
+
+  input {
+    margin-right: 8px;
+  }
+
+  label {
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+`;
+
+// También te falta este componente usado en el formulario
+const AddressFormContainer = styled.div`
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 8px;
+  background-color: ${({ theme }) => theme.colors.surface};
+  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
+`;
+
+// Y este componente para el título del formulario
+const FormTitle = styled.h3`
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+// Opcional: Badge para mostrar los ítems seleccionados por empresa
+const ItemsCountBadge = styled.span`
+  background-color: ${({ theme }) => theme.colors.primaryLight};
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 12px;
+  margin-left: 8px;
+`;
+// Botón específico para pagar por empresa - más pequeño que el principal
+const CompanyCheckoutButton = styled(Button)`
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  margin-top: 8px;
+`;
+
 const CartItem = ({ item, handleQuantityChange, removeFromCart }) => {
   console.log(item);
 
@@ -449,14 +571,12 @@ const Carrito = () => {
   // Agregar nuevos estados para manejar los dos tipos de direcciones
   const [shippingAddressId, setShippingAddressId] = useState(null);
   const [billingAddressId, setBillingAddressId] = useState(null);
-  const [sameAsShipping, setSameAsShipping] = useState(true);
 
   // Estados para los formularios
   const [addressFormType, setAddressFormType] = useState("S"); // "S" o "B"
 
   // Estados para manejar direcciones
   const [addresses, setAddresses] = useState([]);
-  const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
 
@@ -475,6 +595,17 @@ const Carrito = () => {
   // Estado para errores de validación
   const [formErrors, setFormErrors] = useState({});
 
+  // Estados para agrupar el carrito por empresa
+  const [groupedCart, setGroupedCart] = useState({});
+  const [selectedCompany, setSelectedCompany] = useState(null);
+
+  // Función para validar que todas las direcciones estén seleccionadas
+  const isAllAddressesSelected = () => {
+    return Object.values(groupedCart).every((companyData) => {
+      return companyData.shippingAddressId && companyData.billingAddressId;
+    });
+  };
+
   // Cargar direcciones del usuario
   useEffect(() => {
     if (user) {
@@ -482,12 +613,12 @@ const Carrito = () => {
 
       // Si el usuario tiene direcciones guardadas o usamos las de prueba
       let userAddresses = [];
-      
+
       if (user.DIRECCIONES) {
         // Obtener todas las direcciones y aplanarlas en un solo array
         const allAddresses = Object.values(user.DIRECCIONES).flat();
-        
-        userAddresses = allAddresses.map(addr => ({
+
+        userAddresses = allAddresses.map((addr) => ({
           id: addr.ID.toString(),
           name: addr.CLASIFICATION,
           street: addr.STREET,
@@ -498,7 +629,7 @@ const Carrito = () => {
           phone: "",
           isDefault: addr.PREDETERMINED,
           type: addr.TYPE.trim(),
-          empresa: addr.EMPRESA
+          empresa: addr.EMPRESA,
         }));
       } else {
         // Direcciones de prueba
@@ -514,7 +645,7 @@ const Carrito = () => {
             phone: "555-1234",
             isDefault: true,
             type: "S",
-            empresa: "EMPRESA1"
+            empresa: "EMPRESA1",
           },
           {
             id: "2",
@@ -527,39 +658,99 @@ const Carrito = () => {
             phone: "555-5678",
             isDefault: true,
             type: "B",
-            empresa: "EMPRESA1"
-          }
+            empresa: "EMPRESA1",
+          },
         ];
       }
-      
+
       setAddresses(userAddresses);
-      
+
       // Seleccionar direcciones predeterminadas
-      const defaultShipping = userAddresses.find(addr => addr.type === "S" && addr.isDefault);
-      const defaultBilling = userAddresses.find(addr => addr.type === "B" && addr.isDefault);
-      
+      const defaultShipping = userAddresses.find(
+        (addr) => addr.type === "S" && addr.isDefault
+      );
+      const defaultBilling = userAddresses.find(
+        (addr) => addr.type === "B" && addr.isDefault
+      );
+
       if (defaultShipping) {
         setShippingAddressId(defaultShipping.id);
       } else {
         // Si no hay predeterminada, buscar cualquier dirección de envío
-        const anyShipping = userAddresses.find(addr => addr.type === "S");
+        const anyShipping = userAddresses.find((addr) => addr.type === "S");
         if (anyShipping) setShippingAddressId(anyShipping.id);
       }
-      
+
       if (defaultBilling) {
         setBillingAddressId(defaultBilling.id);
       } else {
         // Si no hay predeterminada, buscar cualquier dirección de facturación
-        const anyBilling = userAddresses.find(addr => addr.type === "B");
+        const anyBilling = userAddresses.find((addr) => addr.type === "B");
         if (anyBilling) setBillingAddressId(anyBilling.id);
       }
     }
   }, [user]);
 
-  // Función para seleccionar una dirección
-  const handleSelectAddress = (addressId) => {
-    setSelectedAddressId(addressId);
-  };
+  // Agrupar items del carrito por empresa
+  useEffect(() => {
+    const groupByCompany = () => {
+      const grouped = {};
+      console.log(cart);
+
+      cart.forEach((item) => {
+        const company = item.empresaId || "Sin empresa";
+
+        if (!grouped[company]) {
+          grouped[company] = {
+            items: [],
+            total: 0,
+            shippingAddressId: null,
+            billingAddressId: null,
+          };
+        }
+
+        grouped[company].items.push(item);
+        grouped[company].total += item.price * item.quantity;
+      });
+
+      setGroupedCart(grouped);
+
+      // Seleccionar la primera empresa por defecto
+      if (Object.keys(grouped).length > 0 && !selectedCompany) {
+        setSelectedCompany(Object.keys(grouped)[0]);
+      }
+
+      // Establecer direcciones predeterminadas para cada empresa
+      if (addresses.length > 0 && Object.keys(grouped).length > 0) {
+        Object.keys(grouped).forEach((company) => {
+          // Buscar direcciones predeterminadas para esta empresa
+          const defaultShipping = addresses.find(
+            (addr) =>
+              addr.type === "S" && addr.isDefault && addr.empresa === company
+          );
+          console.log(defaultShipping);
+
+          const defaultBilling = addresses.find(
+            (addr) =>
+              addr.type === "B" && addr.isDefault && addr.empresa === company
+          );
+
+          // Asignar direcciones predeterminadas si existen
+          if (defaultShipping) {
+            grouped[company].shippingAddressId = defaultShipping.id;
+          }
+
+          if (defaultBilling) {
+            grouped[company].billingAddressId = defaultBilling.id;
+          }
+        });
+
+        setGroupedCart(grouped);
+      }
+    };
+
+    groupByCompany();
+  }, [cart, addresses]);
 
   // Función para editar una dirección existente
   const handleEditAddress = (address) => {
@@ -619,24 +810,26 @@ const Carrito = () => {
     let updatedAddresses;
     const newAddress = {
       ...addressForm,
-      type: addressFormType
+      type: addressFormType,
     };
-    
+
     if (editingAddress) {
       // Actualizar dirección existente
-      updatedAddresses = addresses.map(addr => 
-        addr.id === editingAddress.id ? {...newAddress, id: editingAddress.id} : addr
+      updatedAddresses = addresses.map((addr) =>
+        addr.id === editingAddress.id
+          ? { ...newAddress, id: editingAddress.id }
+          : addr
       );
       toast.success("Dirección actualizada correctamente");
     } else {
       // Crear nueva dirección
       const newAddressWithId = {
         ...newAddress,
-        id: Date.now().toString() // Generamos un ID único
+        id: Date.now().toString(), // Generamos un ID único
       };
       updatedAddresses = [...addresses, newAddressWithId];
       toast.success("Dirección agregada correctamente");
-      
+
       // Seleccionar la nueva dirección según el tipo
       if (newAddress.type === "S") {
         setShippingAddressId(newAddressWithId.id);
@@ -644,17 +837,20 @@ const Carrito = () => {
         setBillingAddressId(newAddressWithId.id);
       }
     }
-    
+
     // Si se marca como predeterminada, actualizar las otras del mismo tipo
     if (addressForm.isDefault) {
-      updatedAddresses = updatedAddresses.map(addr => ({
+      updatedAddresses = updatedAddresses.map((addr) => ({
         ...addr,
-        isDefault: addr.type === addressForm.type 
-          ? addr.id === (editingAddress?.id || updatedAddresses[updatedAddresses.length - 1].id)
-          : addr.isDefault
+        isDefault:
+          addr.type === addressForm.type
+            ? addr.id ===
+              (editingAddress?.id ||
+                updatedAddresses[updatedAddresses.length - 1].id)
+            : addr.isDefault,
       }));
     }
-    
+
     setAddresses(updatedAddresses);
     setShowAddressForm(false);
     setEditingAddress(null);
@@ -666,7 +862,7 @@ const Carrito = () => {
       state: "",
       zipCode: "",
       phone: "",
-      isDefault: false
+      isDefault: false,
     });
   };
 
@@ -732,55 +928,130 @@ const Carrito = () => {
   const hasInsufficientStock = cart.some(
     (item) => item.quantity > (item?.stock || 0)
   );
-  const handleCheckout = () => {
-    // Verificar que hay direcciones seleccionadas
-    if (!shippingAddressId) {
-      toast.error("Por favor selecciona una dirección de envío");
+
+  // Función para verificar stock insuficiente por empresa
+  const hasInsufficientStockForCompany = (company) => {
+    if (!groupedCart[company]) return false;
+
+    return groupedCart[company].items.some(
+      (item) => item.quantity > (item?.stock || 0)
+    );
+  };
+  const handleCheckoutAll = () => {
+    // Verificar que todas las empresas tienen direcciones seleccionadas
+    if (!isAllAddressesSelected()) {
+      toast.error(
+        "Por favor, selecciona direcciones de envío y facturación para todas las empresas"
+      );
       return;
     }
-    
-    if (!sameAsShipping && !billingAddressId) {
-      toast.error("Por favor selecciona una dirección de facturación");
-      return;
-    }
-    
-    // Verificar que no hay productos sin stock suficiente
+
+    // Verificar stock
     if (hasInsufficientStock) {
       toast.error("Algunos productos no tienen stock suficiente");
       return;
     }
-    
-    // Obtener las direcciones seleccionadas
-    const shippingAddress = addresses.find(addr => addr.id === shippingAddressId);
-    const billingAddress = sameAsShipping 
-      ? shippingAddress
-      : addresses.find(addr => addr.id === billingAddressId);
-    
-    // Crear objeto de pedido
-    const order = {
-      items: cart,
-      total: cartTotal,
-      shippingAddress: shippingAddress,
-      billingAddress: billingAddress,
-      date: new Date(),
-      status: "pending"
-    };
-    
-    // Aquí procesarías el pedido con tu API
-    console.log("Procesando pedido:", order);
-    
-    // Mensaje provisional
+
+    // Preparar órdenes por empresa
+    const orders = Object.entries(groupedCart).map(([company, data]) => {
+      const shippingAddress = addresses.find(
+        (addr) => addr.id === data.shippingAddressId
+      );
+      const billingAddress = addresses.find(
+        (addr) => addr.id === data.billingAddressId
+      );
+
+      return {
+        company,
+        items: data.items,
+        total: data.total,
+        shippingAddress,
+        billingAddress,
+        date: new Date(),
+        status: "pending",
+      };
+    });
+
+    console.log("Procesando pedidos por empresa:", orders);
+
+    // Aquí procesarías los pedidos con tu API
     alert(
-      `Procesando pedido...\n\n` +
-      `Dirección de envío: ${shippingAddress.street} ${shippingAddress.number || ""}, ${shippingAddress.city}\n\n` +
-      `Dirección de facturación: ${billingAddress.street} ${billingAddress.number || ""}, ${billingAddress.city}\n\n` +
-      `Total: $${cartTotal.toFixed(2)}`
+      `Procesando ${orders.length} pedidos para diferentes empresas...\n\n` +
+        orders
+          .map(
+            (order) =>
+              `Empresa: ${order.company}\n` +
+              `Total: $${order.total.toFixed(2)}\n` +
+              `Dirección de envío: ${order.shippingAddress.street}, ${order.shippingAddress.city}\n` +
+              `Dirección de facturación: ${order.billingAddress.street}, ${order.billingAddress.city}\n`
+          )
+          .join("\n")
     );
-    
-    clearCart();
-    navigate("/");
+
+    // clearCart();
+    // navigate("/");
   };
 
+  // Función para procesar el pago de una sola empresa
+  const handleCheckoutSingleCompany = (company) => {
+    const companyData = groupedCart[company];
+
+    if (!companyData) {
+      toast.error("No se encontró información para esta empresa");
+      return;
+    }
+
+    // Verificar direcciones
+    if (!companyData.shippingAddressId || !companyData.billingAddressId) {
+      toast.error("Por favor, selecciona las direcciones para esta empresa");
+      return;
+    }
+
+    // Verificar stock
+    if (hasInsufficientStockForCompany(company)) {
+      toast.error("Algunos productos no tienen stock suficiente");
+      return;
+    }
+
+    // Preparar orden para esta empresa
+    const shippingAddress = addresses.find(
+      (addr) => addr.id === companyData.shippingAddressId
+    );
+    const billingAddress = addresses.find(
+      (addr) => addr.id === companyData.billingAddressId
+    );
+
+    const order = {
+      company,
+      items: companyData.items,
+      total: companyData.total,
+      shippingAddress,
+      billingAddress,
+      date: new Date(),
+      status: "pending",
+    };
+
+    console.log(`Procesando pedido para la empresa ${company}:`, order);
+
+    // Aquí procesarías este pedido individual con tu API
+    // Esta alerta es solo para demostración
+    alert(
+      `Procesando pedido para la empresa ${company}:\n\n` +
+        `Total: $${order.total.toFixed(2)}\n` +
+        `Dirección de envío: ${order.shippingAddress.street}, ${order.shippingAddress.city}\n` +
+        `Dirección de facturación: ${order.billingAddress.street}, ${order.billingAddress.city}\n` +
+        `\n${order.items.length} productos en el pedido`
+    );
+
+    // Actualizar el carrito manteniendo solo los elementos de otras empresas
+    // const newCart = cart.filter(item =>
+    //   item.empresaId !== company
+    // );
+    // clearCart();
+    // newCart.forEach(item => addToCart(item, item.quantity));
+
+    // navigate("/");
+  };
   const isEditingAddress = Boolean(editingAddress);
 
   return (
@@ -795,147 +1066,206 @@ const Carrito = () => {
         )}
       </PageTitle>
 
+      {/* Pestañas de empresas */}
+      <CompanyTabs>
+        {console.log(groupedCart)}
+        {Object.keys(groupedCart).map((company) => (
+          <CompanyTab
+            key={company}
+            $active={selectedCompany === company}
+            onClick={() => setSelectedCompany(company)}
+          >
+            {company}
+          </CompanyTab>
+        ))}
+      </CompanyTabs>
+
       <CartLayout>
         <div>
+          {/* Mostrar productos solo de la empresa seleccionada */}
           <CartItemsList>
-            {cart.map((item) => (
-              <CartItem
-                key={item.id}
-                item={item}
-                handleQuantityChange={handleQuantityChange}
-                removeFromCart={removeFromCart}
-              />
-            ))}
+            {selectedCompany &&
+              groupedCart[selectedCompany]?.items.map((item) => (
+                <CartItem
+                  key={item.id}
+                  item={item}
+                  handleQuantityChange={handleQuantityChange}
+                  removeFromCart={removeFromCart}
+                />
+              ))}
           </CartItemsList>
 
-          {/* Sección de dirección de envío */}
+          {/* Sección de dirección de envío para la empresa seleccionada */}
           <ShippingSection>
             <SectionTitle>
-              <FaMapMarkerAlt /> Dirección de envío
+              <FaMapMarkerAlt /> Dirección de envío para {selectedCompany}
             </SectionTitle>
 
-            {addresses.filter(addr => addr.type === "S").length > 0 ? (
+            {addresses.filter(
+              (addr) => addr.type === "S" && addr.empresa === selectedCompany
+            ).length > 0 ? (
               <div>
                 {addresses
-                  .filter(addr => addr.type === "S")
+                  .filter(
+                    (addr) =>
+                      addr.type === "S" && addr.empresa === selectedCompany
+                  )
                   .map((address) => (
-                  <AddressCard
-                    key={address.id}
-                    selected={shippingAddressId === address.id}
-                    onClick={() => setShippingAddressId(address.id)}
-                  >
-                    <AddressInfo>
-                      <AddressName>{address.name}</AddressName>
-                      <AddressDetails>
-                        {address.street} {address.number}, {address.city}, {address.state} 
-                        {address.zipCode && ` (${address.zipCode})`}
-                        {address.isDefault && (
-                          <span style={{ marginLeft: 8, color: theme.colors.success }}>
-                            • Predeterminada
-                          </span>
-                        )}
-                      </AddressDetails>
-                    </AddressInfo>
-                    <AddressActions>
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditAddress(address);
-                        }}
-                      >
-                        <FaPencilAlt size={14} />
-                      </IconButton>
-                    </AddressActions>
-                  </AddressCard>
-                ))}
+                    <AddressCard
+                      key={address.id}
+                      selected={
+                        groupedCart[selectedCompany]?.shippingAddressId ===
+                        address.id
+                      }
+                      onClick={() => {
+                        const updated = { ...groupedCart };
+                        updated[selectedCompany].shippingAddressId = address.id;
+                        setGroupedCart(updated);
+                      }}
+                    >
+                      <AddressInfo>
+                        <AddressName>{address.name}</AddressName>
+                        <AddressDetails>
+                          {address.street} {address.number}, {address.city},{" "}
+                          {address.state}
+                          {address.zipCode && ` (${address.zipCode})`}
+                          {address.isDefault && (
+                            <span
+                              style={{
+                                marginLeft: 8,
+                                color: theme.colors.success,
+                              }}
+                            >
+                              • Predeterminada
+                            </span>
+                          )}
+                        </AddressDetails>
+                      </AddressInfo>
+                      <AddressActions>
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditAddress(address);
+                          }}
+                        >
+                          <FaPencilAlt size={14} />
+                        </IconButton>
+                      </AddressActions>
+                    </AddressCard>
+                  ))}
               </div>
             ) : (
               <EmptyAddressState>
-                No tienes direcciones de envío guardadas
+                No tienes direcciones de envío para esta empresa.
               </EmptyAddressState>
             )}
 
-            <NewAddressButton onClick={() => handleAddNewAddress("S")}>
-              <FaPlus /> Agregar nueva dirección de envío
+            <NewAddressButton
+              onClick={() =>
+                navigate(ROUTES.ECOMMERCE.PERFIL, {
+                  state: {
+                    activeTab: "addresses",
+                    openAddressForm: true,
+                    addressType: "S",
+                    empresa: selectedCompany,
+                  },
+                })
+              }
+            >
+              <FaPlus /> Ir a Perfil para agregar dirección de envío
             </NewAddressButton>
           </ShippingSection>
 
-          {/* Sección de dirección de facturación */}
+          {/* Sección de dirección de facturación similar a la de envío */}
           <ShippingSection style={{ marginTop: "24px" }}>
             <SectionTitle>
               <FaFileInvoice /> Dirección de facturación
             </SectionTitle>
-            
-            <UseShippingAddressOption>
-              <input
-                type="checkbox"
-                id="sameAsShipping"
-                checked={sameAsShipping}
-                onChange={(e) => setSameAsShipping(e.target.checked)}
-              />
-              <label htmlFor="sameAsShipping">
-                Usar la misma dirección de envío para facturación
-              </label>
-            </UseShippingAddressOption>
 
-            {!sameAsShipping && (
-              <>
-                {addresses.filter(addr => addr.type === "B").length > 0 ? (
-                  <div>
-                    {addresses
-                      .filter(addr => addr.type === "B")
-                      .map((address) => (
-                      <AddressCard
-                        key={address.id}
-                        selected={billingAddressId === address.id}
-                        onClick={() => setBillingAddressId(address.id)}
-                      >
-                        <AddressInfo>
-                          <AddressName>{address.name}</AddressName>
-                          <AddressDetails>
-                            {address.street} {address.number}, {address.city}, {address.state} 
-                            {address.zipCode && ` (${address.zipCode})`}
-                            {address.isDefault && (
-                              <span style={{ marginLeft: 8, color: theme.colors.info }}>
-                                • Predeterminada
-                              </span>
-                            )}
-                          </AddressDetails>
-                        </AddressInfo>
-                        <AddressActions>
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditAddress(address);
-                            }}
-                          >
-                            <FaPencilAlt size={14} />
-                          </IconButton>
-                        </AddressActions>
-                      </AddressCard>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyAddressState>
-                    No tienes direcciones de facturación guardadas
-                  </EmptyAddressState>
-                )}
-                
-                <NewAddressButton onClick={() => handleAddNewAddress("B")}>
-                  <FaPlus /> Agregar nueva dirección de facturación
-                </NewAddressButton>
-              </>
+            {addresses.filter(
+              (addr) => addr.type === "B" && addr.empresa === selectedCompany
+            ).length > 0 ? (
+              <div>
+                {addresses
+                  .filter(
+                    (addr) =>
+                      addr.type === "B" && addr.empresa === selectedCompany
+                  )
+                  .map((address) => (
+                    <AddressCard
+                      key={address.id}
+                      selected={
+                        groupedCart[selectedCompany]?.billingAddressId ===
+                        address.id
+                      }
+                      onClick={() => {
+                        const updated = { ...groupedCart };
+                        updated[selectedCompany].billingAddressId = address.id;
+                        setGroupedCart(updated);
+                      }}
+                    >
+                      <AddressInfo>
+                        <AddressName>{address.name}</AddressName>
+                        <AddressDetails>
+                          {address.street} {address.number}, {address.city},{" "}
+                          {address.state}
+                          {address.zipCode && ` (${address.zipCode})`}
+                          {address.isDefault && (
+                            <span
+                              style={{
+                                marginLeft: 8,
+                                color: theme.colors.info,
+                              }}
+                            >
+                              • Predeterminada
+                            </span>
+                          )}
+                        </AddressDetails>
+                      </AddressInfo>
+                      <AddressActions>
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditAddress(address);
+                          }}
+                        >
+                          <FaPencilAlt size={14} />
+                        </IconButton>
+                      </AddressActions>
+                    </AddressCard>
+                  ))}
+              </div>
+            ) : (
+              <EmptyAddressState>
+                No tienes direcciones de facturación para esta empresa.
+              </EmptyAddressState>
             )}
+
+            <NewAddressButton
+              onClick={() =>
+                navigate(ROUTES.ECOMMERCE.PERFIL, {
+                  state: {
+                    activeTab: "addresses",
+                    openAddressForm: true,
+                    addressType: "B",
+                    empresa: selectedCompany,
+                  },
+                })
+              }
+            >
+              <FaPlus /> Ir a Perfil para agregar dirección de facturación
+            </NewAddressButton>
           </ShippingSection>
 
           {/* Formulario para agregar/editar dirección */}
           {showAddressForm && (
             <AddressFormContainer>
               <FormTitle>
-                {isEditingAddress 
-                  ? "Editar dirección" 
-                  : `Nueva dirección de ${addressFormType === "S" ? "envío" : "facturación"}`
-                }
+                {isEditingAddress
+                  ? "Editar dirección"
+                  : `Nueva dirección de ${
+                      addressFormType === "S" ? "envío" : "facturación"
+                    }`}
               </FormTitle>
               <AddressForm onSubmit={handleSaveAddress}>
                 <FormGroup>
@@ -969,7 +1299,9 @@ const Carrito = () => {
                     placeholder="Nombre de la calle"
                     error={formErrors.street}
                   />
-                  {formErrors.street && <FormError>{formErrors.street}</FormError>}
+                  {formErrors.street && (
+                    <FormError>{formErrors.street}</FormError>
+                  )}
                 </FormGroup>
 
                 <FormGroup>
@@ -1003,7 +1335,9 @@ const Carrito = () => {
                     placeholder="Estado o provincia"
                     error={formErrors.state}
                   />
-                  {formErrors.state && <FormError>{formErrors.state}</FormError>}
+                  {formErrors.state && (
+                    <FormError>{formErrors.state}</FormError>
+                  )}
                 </FormGroup>
 
                 <FormGroup>
@@ -1015,11 +1349,19 @@ const Carrito = () => {
                     placeholder="Código postal"
                     error={formErrors.zipCode}
                   />
-                  {formErrors.zipCode && <FormError>{formErrors.zipCode}</FormError>}
+                  {formErrors.zipCode && (
+                    <FormError>{formErrors.zipCode}</FormError>
+                  )}
                 </FormGroup>
 
                 <FormGroup fullWidth>
-                  <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      cursor: "pointer",
+                    }}
+                  >
                     <input
                       type="checkbox"
                       name="isDefault"
@@ -1027,7 +1369,8 @@ const Carrito = () => {
                       onChange={handleAddressFormChange}
                       style={{ marginRight: 8 }}
                     />
-                    Establecer como dirección predeterminada de {addressFormType === "S" ? "envío" : "facturación"}
+                    Establecer como dirección predeterminada de{" "}
+                    {addressFormType === "S" ? "envío" : "facturación"}
                   </label>
                 </FormGroup>
 
@@ -1053,61 +1396,63 @@ const Carrito = () => {
         <OrderSummary>
           <SummaryTitle>Resumen del pedido</SummaryTitle>
 
-          <SummaryRow>
-            <SummaryLabel>Subtotal ({cart.length} productos)</SummaryLabel>
-            <SummaryValue>${cartTotal.toFixed(2)}</SummaryValue>
-          </SummaryRow>
+          {/* Resumen por empresa */}
+          {Object.entries(groupedCart).map(([company, data]) => (
+            <CompanySummary key={company}>
+              <CompanyName>
+                {company}
+              </CompanyName>
+              <SummaryRow>
+                <SummaryLabel>
+                  Subtotal ({data.items.length} productos)
+                </SummaryLabel>
+                <SummaryValue>${data.total.toFixed(2)}</SummaryValue>
+              </SummaryRow>
 
-          <SummaryRow>
-            <SummaryLabel>Descuentos</SummaryLabel>
-            <SummaryValue>$0.00</SummaryValue>
-          </SummaryRow>
+              {/* Validación de direcciones por empresa */}
+              {!data.shippingAddressId && (
+                <ValidationWarning>Falta dirección de envío</ValidationWarning>
+              )}
+              {!data.billingAddressId && (
+                <ValidationWarning>
+                  Falta dirección de facturación
+                </ValidationWarning>
+              )}
 
-          <SummaryRow>
-            <SummaryLabel>Envío</SummaryLabel>
-            <SummaryValue>Gratis</SummaryValue>
-          </SummaryRow>
+              {/* Botón para pagar solo esta empresa */}
+              <CompanyCheckoutButton
+                text={`Proceder al pedido`}
+                color={theme.colors.white}
+                variant="outlined"
+                size="small"
+                leftIconName={"ShoppingCart"}
+                backgroundColor={theme.colors.primary}
+                style={{ width: "100%" }}
+                onClick={() => handleCheckoutSingleCompany(company)}
+                disabled={
+                  !data.shippingAddressId ||
+                  !data.billingAddressId ||
+                  hasInsufficientStockForCompany(company)
+                }
+
+              />
+            </CompanySummary>
+          ))}
 
           <TotalRow>
-            <SummaryLabel>Total</SummaryLabel>
-            <SummaryValue bold>${cartTotal.toFixed(2)}</SummaryValue>
+            <SummaryLabel>Total General</SummaryLabel>
+            <SummaryValue $bold>${cartTotal.toFixed(2)}</SummaryValue>
           </TotalRow>
 
-          {/* Verificar que hay direcciones seleccionadas */}
+          {/* Botón para pagar todo junto */}
           <Button
-            text="Proceder al pago"
+            text="Pedir todo junto"
             variant="solid"
             backgroundColor={theme.colors.success}
             style={{ width: "100%", marginTop: "20px" }}
-            onClick={handleCheckout}
-            disabled={
-              hasInsufficientStock || 
-              !shippingAddressId || 
-              (!sameAsShipping && !billingAddressId)
-            }
+            onClick={handleCheckoutAll}
+            disabled={!isAllAddressesSelected() || hasInsufficientStock}
           />
-          
-          {!shippingAddressId && (
-            <div style={{
-              color: theme.colors.error,
-              fontSize: "0.8rem",
-              textAlign: "center",
-              marginTop: "8px"
-            }}>
-              Debes seleccionar una dirección de envío
-            </div>
-          )}
-          
-          {!sameAsShipping && !billingAddressId && (
-            <div style={{
-              color: theme.colors.error,
-              fontSize: "0.8rem",
-              textAlign: "center",
-              marginTop: "8px"
-            }}>
-              Debes seleccionar una dirección de facturación
-            </div>
-          )}
 
           <Button
             text="Seguir comprando"

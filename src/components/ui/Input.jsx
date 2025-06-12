@@ -28,7 +28,7 @@ const InputWrapper = styled.div`
       ? `1px solid ${theme.colors.error}`
       : `1px solid ${theme.colors.border}`};
   border-radius: 5px;
-  padding: 8px;
+  padding: 4px 8px;
   transition: border-color 0.3s ease, background-color 0.3s ease;
   position: relative;
   opacity: ${({ disabled }) => (disabled ? 0.7 : 1)};

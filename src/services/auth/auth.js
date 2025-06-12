@@ -1,4 +1,5 @@
 import api from "../../constants/api";
+import { useAuth } from "../../context/AuthContext";
 import {
   guardarRefreshToken,
   guardarToken,
@@ -34,3 +35,4 @@ export const auth_me = async () => {
   const response = await api.get("/auth/me");
   return response.data;
 };
+
