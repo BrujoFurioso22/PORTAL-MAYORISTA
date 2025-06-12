@@ -15,6 +15,7 @@ import {
 } from "react-icons/fa";
 import Input from "../../components/ui/Input";
 import { ROUTES } from "../../constants/routes";
+import RenderIcon from "../../components/ui/RenderIcon";
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -561,6 +562,34 @@ const CartItem = ({ item, handleQuantityChange, removeFromCart }) => {
   );
 };
 
+// Añadir esta función para encontrar la mejor dirección disponible
+const findBestAvailableAddress = (addresses, company, type) => {
+  // 1. Buscar predeterminada para esta empresa
+  const defaultForCompany = addresses.find(
+    (addr) => addr.type === type && addr.isDefault && addr.empresa === company
+  );
+  if (defaultForCompany) return defaultForCompany.id;
+
+  // 2. Buscar cualquier dirección de este tipo para esta empresa
+  const anyForCompany = addresses.find(
+    (addr) => addr.type === type && addr.empresa === company
+  );
+  if (anyForCompany) return anyForCompany.id;
+
+  // 3. Buscar predeterminada global
+  const defaultGlobal = addresses.find(
+    (addr) => addr.type === type && addr.isDefault
+  );
+  if (defaultGlobal) return defaultGlobal.id;
+
+  // 4. Buscar cualquier dirección de este tipo
+  const anyAddress = addresses.find((addr) => addr.type === type);
+  if (anyAddress) return anyAddress.id;
+
+  // No hay direcciones disponibles
+  return null;
+};
+
 const Carrito = () => {
   const { cart, cartTotal, removeFromCart, updateQuantity, clearCart } =
     useCart();
@@ -630,6 +659,7 @@ const Carrito = () => {
           isDefault: addr.PREDETERMINED,
           type: addr.TYPE.trim(),
           empresa: addr.EMPRESA,
+          origen: addr.ORIGIN,
         }));
       } else {
         // Direcciones de prueba
@@ -701,11 +731,14 @@ const Carrito = () => {
         const company = item.empresaId || "Sin empresa";
 
         if (!grouped[company]) {
+          // Verificar si ya existía esta empresa en el agrupamiento anterior
+          // y mantener sus direcciones seleccionadas
           grouped[company] = {
             items: [],
             total: 0,
-            shippingAddressId: null,
-            billingAddressId: null,
+            // Mantener las direcciones previamente seleccionadas si existían
+            shippingAddressId: groupedCart[company]?.shippingAddressId || null,
+            billingAddressId: groupedCart[company]?.billingAddressId || null,
           };
         }
 
@@ -713,39 +746,35 @@ const Carrito = () => {
         grouped[company].total += item.price * item.quantity;
       });
 
-      setGroupedCart(grouped);
-
-      // Seleccionar la primera empresa por defecto
-      if (Object.keys(grouped).length > 0 && !selectedCompany) {
-        setSelectedCompany(Object.keys(grouped)[0]);
-      }
-
-      // Establecer direcciones predeterminadas para cada empresa
-      if (addresses.length > 0 && Object.keys(grouped).length > 0) {
+      // Asignar direcciones predeterminadas solo para empresas nuevas o sin dirección seleccionada
+      if (addresses.length > 0) {
         Object.keys(grouped).forEach((company) => {
-          // Buscar direcciones predeterminadas para esta empresa
-          const defaultShipping = addresses.find(
-            (addr) =>
-              addr.type === "S" && addr.isDefault && addr.empresa === company
-          );
-          console.log(defaultShipping);
-
-          const defaultBilling = addresses.find(
-            (addr) =>
-              addr.type === "B" && addr.isDefault && addr.empresa === company
-          );
-
-          // Asignar direcciones predeterminadas si existen
-          if (defaultShipping) {
-            grouped[company].shippingAddressId = defaultShipping.id;
+          // Solo asignar direcciones predeterminadas si no hay una ya seleccionada
+          if (!grouped[company].shippingAddressId) {
+            grouped[company].shippingAddressId = findBestAvailableAddress(
+              addresses,
+              company,
+              "S"
+            );
           }
 
-          if (defaultBilling) {
-            grouped[company].billingAddressId = defaultBilling.id;
+          if (!grouped[company].billingAddressId) {
+            grouped[company].billingAddressId = findBestAvailableAddress(
+              addresses,
+              company,
+              "B"
+            );
           }
         });
+      }
 
-        setGroupedCart(grouped);
+      setGroupedCart(grouped);
+
+      // Actualizar selectedCompany si es necesario
+      if (Object.keys(grouped).length > 0) {
+        if (!selectedCompany || !grouped[selectedCompany]) {
+          setSelectedCompany(Object.keys(grouped)[0]);
+        }
       }
     };
 
@@ -1124,7 +1153,27 @@ const Carrito = () => {
                       }}
                     >
                       <AddressInfo>
-                        <AddressName>{address.name}</AddressName>
+                        <AddressName>
+                          {address.name}{" "}
+                          {address.origen === "SAP" && (
+                            <span
+                              style={{
+                                marginLeft: "8px",
+                                fontSize: "0.75rem",
+                                padding: "2px 6px",
+                                backgroundColor: theme.colors.background,
+                                borderRadius: "4px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                color: theme.colors.textLight,
+                              }}
+                            >
+                              <RenderIcon name="Lock" size={10} />
+                              <span>Sistema</span>
+                            </span>
+                          )}
+                        </AddressName>
                         <AddressDetails>
                           {address.street} {address.number}, {address.city},{" "}
                           {address.state}
@@ -1142,14 +1191,35 @@ const Carrito = () => {
                         </AddressDetails>
                       </AddressInfo>
                       <AddressActions>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditAddress(address);
-                          }}
-                        >
-                          <FaPencilAlt size={14} />
-                        </IconButton>
+                        {address.origen === "SAP" ? (
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast.info(
+                                "Las direcciones sincronizadas con el sistema no se pueden editar. Contacta a soporte para solicitar cambios."
+                              );
+                            }}
+                            style={{ color: theme.colors.textLight }}
+                          >
+                            <RenderIcon name="Lock" size={14} />
+                          </IconButton>
+                        ) : (
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Redirigir a la página de perfil con los parámetros para editar esta dirección
+                              navigate(ROUTES.ECOMMERCE.PERFIL, {
+                                state: {
+                                  activeTab: "addresses",
+                                  editAddressId: address.id,
+                                  empresa: address.empresa,
+                                },
+                              });
+                            }}
+                          >
+                            <FaPencilAlt size={14} />
+                          </IconButton>
+                        )}
                       </AddressActions>
                     </AddressCard>
                   ))}
@@ -1205,7 +1275,27 @@ const Carrito = () => {
                       }}
                     >
                       <AddressInfo>
-                        <AddressName>{address.name}</AddressName>
+                        <AddressName>
+                          {address.name}{" "}
+                          {address.origen === "SAP" && (
+                            <span
+                              style={{
+                                marginLeft: "8px",
+                                fontSize: "0.75rem",
+                                padding: "2px 6px",
+                                backgroundColor: theme.colors.background,
+                                borderRadius: "4px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                color: theme.colors.textLight,
+                              }}
+                            >
+                              <RenderIcon name="Lock" size={10} />
+                              <span>Sistema</span>
+                            </span>
+                          )}
+                        </AddressName>
                         <AddressDetails>
                           {address.street} {address.number}, {address.city},{" "}
                           {address.state}
@@ -1223,14 +1313,34 @@ const Carrito = () => {
                         </AddressDetails>
                       </AddressInfo>
                       <AddressActions>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditAddress(address);
-                          }}
-                        >
-                          <FaPencilAlt size={14} />
-                        </IconButton>
+                        {address.origen === "SAP" ? (
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast.info(
+                                "Las direcciones sincronizadas con el sistema no se pueden editar. Contacta a soporte para solicitar cambios."
+                              );
+                            }}
+                            style={{ color: theme.colors.textLight }}
+                          >
+                            <RenderIcon name="Lock" size={14} />
+                          </IconButton>
+                        ) : (
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(ROUTES.ECOMMERCE.PERFIL, {
+                                state: {
+                                  activeTab: "addresses",
+                                  editAddressId: address.id,
+                                  empresa: address.empresa,
+                                },
+                              });
+                            }}
+                          >
+                            <FaPencilAlt size={14} />
+                          </IconButton>
+                        )}
                       </AddressActions>
                     </AddressCard>
                   ))}
@@ -1399,9 +1509,7 @@ const Carrito = () => {
           {/* Resumen por empresa */}
           {Object.entries(groupedCart).map(([company, data]) => (
             <CompanySummary key={company}>
-              <CompanyName>
-                {company}
-              </CompanyName>
+              <CompanyName>{company}</CompanyName>
               <SummaryRow>
                 <SummaryLabel>
                   Subtotal ({data.items.length} productos)
@@ -1434,7 +1542,6 @@ const Carrito = () => {
                   !data.billingAddressId ||
                   hasInsufficientStockForCompany(company)
                 }
-
               />
             </CompanySummary>
           ))}

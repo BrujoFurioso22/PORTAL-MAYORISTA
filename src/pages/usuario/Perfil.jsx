@@ -19,7 +19,7 @@ import {
   addresses_updateAddress,
 } from "../../services/users/addresses";
 import { auth_me } from "../../services/auth/auth";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Select from "../../components/ui/Select";
 
 // Estilos para el componente
@@ -1409,6 +1409,7 @@ const Perfil = () => {
   );
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Verificar si hay parámetros en el state de la navegación
@@ -1451,6 +1452,7 @@ const Perfil = () => {
           setAddressErrors({});
         }, 0);
       }
+      window.history.replaceState({}, document.title);
     }
   }, [location.state, user, empresasDisponibles]);
 
