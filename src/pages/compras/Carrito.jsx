@@ -6,13 +6,6 @@ import Button from "../../components/ui/Button";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import {
-  FaPlus,
-  FaPencilAlt,
-  FaCheck,
-  FaMapMarkerAlt,
-  FaFileInvoice,
-} from "react-icons/fa";
 import Input from "../../components/ui/Input";
 import { ROUTES } from "../../constants/routes";
 import RenderIcon from "../../components/ui/RenderIcon";
@@ -335,53 +328,6 @@ const NewAddressButton = styled(Button)`
   }
 `;
 
-// Formulario de dirección
-const AddressForm = styled.form`
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-
-  @media (min-width: 600px) {
-    grid-template-columns: 1fr 1fr;
-  }
-`;
-
-const FormGroup = styled.div`
-  margin-bottom: 12px;
-  grid-column: ${({ fullWidth }) => (fullWidth ? "1 / -1" : "span 1")};
-`;
-
-const FormLabel = styled.label`
-  display: block;
-  margin-bottom: 4px;
-  font-size: 0.9rem;
-  color: ${({ theme }) => theme.colors.textLight};
-`;
-
-const FormInput = styled(Input)`
-  width: 100%;
-  font-size: 0.9rem;
-
-  &:focus {
-    border-color: ${({ theme }) => theme.colors.primary};
-    outline: none;
-  }
-`;
-
-const FormError = styled.div`
-  color: ${({ theme }) => theme.colors.error};
-  font-size: 0.8rem;
-  margin-top: 4px;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 12px;
-  grid-column: 1 / -1;
-  margin-top: 8px;
-`;
-
 // Nuevos estilos para las pestañas de empresas
 const CompanyTabs = styled.div`
   display: flex;
@@ -450,52 +396,65 @@ const EmptyAddressState = styled.div`
   }
 `;
 
-// Y este componente para la opción de usar la misma dirección
-const UseShippingAddressOption = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 8px 0 16px;
-
-  input {
-    margin-right: 8px;
-  }
-
-  label {
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
+// Agrega estas definiciones de componentes styled después de EmptyAddressState y antes de CompanyCheckoutButton
+const ProcessingOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
 `;
 
-// También te falta este componente usado en el formulario
-const AddressFormContainer = styled.div`
-  margin-top: 24px;
-  padding: 20px;
-  border-radius: 8px;
+const ProcessingCard = styled.div`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background-color: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  z-index: 1000;
 `;
 
-// Y este componente para el título del formulario
-const FormTitle = styled.h3`
+const ProcessingTitle = styled.h3`
   margin: 0 0 16px 0;
-  font-size: 1.1rem;
   color: ${({ theme }) => theme.colors.text};
 `;
 
-// Opcional: Badge para mostrar los ítems seleccionados por empresa
-const ItemsCountBadge = styled.span`
-  background-color: ${({ theme }) => theme.colors.primaryLight};
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: 0.7rem;
-  padding: 2px 6px;
-  border-radius: 12px;
-  margin-left: 8px;
+const ProcessingMessage = styled.p`
+  margin-bottom: 20px;
+  color: ${({ theme }) => theme.colors.textLight};
 `;
-// Botón específico para pagar por empresa - más pequeño que el principal
+
+const SuccessIcon = styled.div`
+  font-size: 3rem;
+  color: ${({ theme }) => theme.colors.success};
+  margin-bottom: 16px;
+`;
+
+const ProgressIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0;
+  gap: 8px;
+`;
+
 const CompanyCheckoutButton = styled(Button)`
-  font-size: 0.85rem;
-  padding: 6px 12px;
-  margin-top: 8px;
+  width: 100%;
+  margin-top: 16px;
+  background-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.white};
+  &:hover {
+    background-color: ${({ theme }) =>
+      theme.colors.primaryDark || theme.colors.primary};
+  }
 `;
 
 const CartItem = ({ item, handleQuantityChange, removeFromCart }) => {
@@ -592,42 +551,32 @@ const findBestAvailableAddress = (addresses, company, type) => {
 };
 
 const Carrito = () => {
-  const { cart, cartTotal, removeFromCart, updateQuantity, clearCart } =
-    useCart();
+  const {
+    cart,
+    cartTotal,
+    removeFromCart,
+    updateQuantity,
+    removeItemsByCompany,
+    clearCart,
+  } = useCart();
   const navigate = useNavigate();
   const { theme } = useAppTheme();
   const { user } = useAuth(); // Obtenemos el usuario actual
 
-  // Agregar nuevos estados para manejar los dos tipos de direcciones
-  const [shippingAddressId, setShippingAddressId] = useState(null);
-  const [billingAddressId, setBillingAddressId] = useState(null);
-
-  // Estados para los formularios
-  const [addressFormType, setAddressFormType] = useState("S"); // "S" o "B"
-
   // Estados para manejar direcciones
   const [addresses, setAddresses] = useState([]);
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [editingAddress, setEditingAddress] = useState(null);
-
-  // Estado para el formulario de dirección
-  const [addressForm, setAddressForm] = useState({
-    name: "",
-    street: "",
-    number: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    phone: "",
-    isDefault: false,
-  });
-
-  // Estado para errores de validación
-  const [formErrors, setFormErrors] = useState({});
 
   // Estados para agrupar el carrito por empresa
   const [groupedCart, setGroupedCart] = useState({});
   const [selectedCompany, setSelectedCompany] = useState(null);
+
+  // Agregar estos nuevos estados para el proceso de checkout
+  const [isProcessingOrders, setIsProcessingOrders] = useState(false);
+  const [currentProcessingCompany, setCurrentProcessingCompany] = useState("");
+  const [completedOrders, setCompletedOrders] = useState(0);
+  const [showSuccessCard, setShowSuccessCard] = useState(false);
+  const [totalOrdersToProcess, setTotalOrdersToProcess] = useState(0);
+  const [lastProcessedCompanies, setLastProcessedCompanies] = useState([]);
 
   // Función para validar que todas las direcciones estén seleccionadas
   const isAllAddressesSelected = () => {
@@ -662,63 +611,9 @@ const Carrito = () => {
           empresa: addr.EMPRESA,
           origen: addr.ORIGIN,
         }));
-      } else {
-        // Direcciones de prueba
-        userAddresses = [
-          {
-            id: "1",
-            name: "Casa",
-            street: "Av. Principal",
-            number: "123",
-            city: "Ciudad Ejemplo",
-            state: "Estado Ejemplo",
-            zipCode: "12345",
-            phone: "555-1234",
-            isDefault: true,
-            type: "S",
-            empresa: "EMPRESA1",
-          },
-          {
-            id: "2",
-            name: "Oficina",
-            street: "Calle Comercial",
-            number: "456",
-            city: "Ciudad Trabajo",
-            state: "Estado Ejemplo",
-            zipCode: "54321",
-            phone: "555-5678",
-            isDefault: true,
-            type: "B",
-            empresa: "EMPRESA1",
-          },
-        ];
       }
 
       setAddresses(userAddresses);
-
-      // Seleccionar direcciones predeterminadas
-      const defaultShipping = userAddresses.find(
-        (addr) => addr.type === "S" && addr.isDefault
-      );
-      const defaultBilling = userAddresses.find(
-        (addr) => addr.type === "B" && addr.isDefault
-      );
-
-      if (defaultShipping) {
-        setShippingAddressId(defaultShipping.id);
-      } else {
-        // Si no hay predeterminada, buscar cualquier dirección de envío
-        const anyShipping = userAddresses.find((addr) => addr.type === "S");
-        if (anyShipping) setShippingAddressId(anyShipping.id);
-      }
-
-      if (defaultBilling) {
-        setBillingAddressId(defaultBilling.id);
-      } else {
-        // Si no hay predeterminada, buscar cualquier dirección de facturación
-        const anyBilling = userAddresses.find((addr) => addr.type === "B");
-        if (anyBilling) setBillingAddressId(anyBilling.id);
-      }
     }
   }, [user]);
 
@@ -782,137 +677,6 @@ const Carrito = () => {
     groupByCompany();
   }, [cart, addresses]);
 
-  // Función para editar una dirección existente
-  const handleEditAddress = (address) => {
-    setEditingAddress(address);
-    setAddressForm({
-      name: address.name || "",
-      street: address.street || "",
-      number: address.number || "",
-      city: address.city || "",
-      state: address.state || "",
-      zipCode: address.zipCode || "",
-      phone: address.phone || "",
-      isDefault: address.isDefault || false,
-    });
-    setShowAddressForm(true);
-  };
-
-  // Función para manejar cambios en el formulario
-  const handleAddressFormChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setAddressForm({
-      ...addressForm,
-      [name]: type === "checkbox" ? checked : value,
-    });
-
-    // Limpiar errores al cambiar un campo
-    setFormErrors({
-      ...formErrors,
-      [name]: null,
-    });
-  };
-
-  // Validar formulario
-  const validateAddressForm = () => {
-    const errors = {};
-
-    if (!addressForm.name.trim()) errors.name = "Nombre es requerido";
-    if (!addressForm.street.trim()) errors.street = "Calle es requerida";
-    if (!addressForm.city.trim()) errors.city = "Ciudad es requerida";
-    if (!addressForm.state.trim())
-      errors.state = "Estado/Provincia es requerido";
-    if (!addressForm.zipCode.trim())
-      errors.zipCode = "Código postal es requerido";
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  // Guardar dirección
-  const handleSaveAddress = (e) => {
-    e.preventDefault();
-
-    if (!validateAddressForm()) {
-      return;
-    }
-
-    let updatedAddresses;
-    const newAddress = {
-      ...addressForm,
-      type: addressFormType,
-    };
-
-    if (editingAddress) {
-      // Actualizar dirección existente
-      updatedAddresses = addresses.map((addr) =>
-        addr.id === editingAddress.id
-          ? { ...newAddress, id: editingAddress.id }
-          : addr
-      );
-      toast.success("Dirección actualizada correctamente");
-    } else {
-      // Crear nueva dirección
-      const newAddressWithId = {
-        ...newAddress,
-        id: Date.now().toString(), // Generamos un ID único
-      };
-      updatedAddresses = [...addresses, newAddressWithId];
-      toast.success("Dirección agregada correctamente");
-
-      // Seleccionar la nueva dirección según el tipo
-      if (newAddress.type === "S") {
-        setShippingAddressId(newAddressWithId.id);
-      } else if (newAddress.type === "B") {
-        setBillingAddressId(newAddressWithId.id);
-      }
-    }
-
-    // Si se marca como predeterminada, actualizar las otras del mismo tipo
-    if (addressForm.isDefault) {
-      updatedAddresses = updatedAddresses.map((addr) => ({
-        ...addr,
-        isDefault:
-          addr.type === addressForm.type
-            ? addr.id ===
-              (editingAddress?.id ||
-                updatedAddresses[updatedAddresses.length - 1].id)
-            : addr.isDefault,
-      }));
-    }
-
-    setAddresses(updatedAddresses);
-    setShowAddressForm(false);
-    setEditingAddress(null);
-    setAddressForm({
-      name: "",
-      street: "",
-      number: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      phone: "",
-      isDefault: false,
-    });
-  };
-
-  // Cancelar edición/creación de dirección
-  const handleCancelAddressForm = () => {
-    setShowAddressForm(false);
-    setEditingAddress(null);
-    setFormErrors({});
-    setAddressForm({
-      name: "",
-      street: "",
-      number: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      phone: "",
-      isDefault: false,
-    });
-  };
-
   if (cart.length === 0) {
     return (
       <PageContainer>
@@ -967,7 +731,7 @@ const Carrito = () => {
       (item) => item.quantity > (item?.stock || 0)
     );
   };
-  const handleCheckoutAll = () => {
+  const handleCheckoutAll = async () => {
     // Verificar que todas las empresas tienen direcciones seleccionadas
     if (!isAllAddressesSelected()) {
       toast.error(
@@ -982,65 +746,55 @@ const Carrito = () => {
       return;
     }
 
-    // Preparar órdenes por empresa
-    const orders = Object.entries(groupedCart).map(([company, data]) => {
-      const shippingAddress = addresses.find(
-        (addr) => addr.id === data.shippingAddressId
-      );
-      const billingAddress = addresses.find(
-        (addr) => addr.id === data.billingAddressId
-      );
+    // Iniciar proceso de pedidos múltiples
+    const companiesToProcess = Object.keys(groupedCart);
+    setTotalOrdersToProcess(companiesToProcess.length);
+    setCompletedOrders(0);
+    setIsProcessingOrders(true);
 
-      return {
-        company,
-        items: data.items,
-        total: data.total,
-        shippingAddress,
-        billingAddress,
-        date: new Date(),
-        status: "pending",
-      };
-    });
+    // Guardar las empresas que se van a procesar
+    setLastProcessedCompanies([...companiesToProcess]);
 
-    console.log("Procesando pedidos por empresa:", orders);
+    // Procesar cada empresa secuencialmente
+    for (const company of companiesToProcess) {
+      // Actualizar la empresa actual que se está procesando
+      setCurrentProcessingCompany(company);
 
-    // Aquí procesarías los pedidos con tu API
-    alert(
-      `Procesando ${orders.length} pedidos para diferentes empresas...\n\n` +
-        orders
-          .map(
-            (order) =>
-              `Empresa: ${order.company}\n` +
-              `Total: $${order.total.toFixed(2)}\n` +
-              `Dirección de envío: ${order.shippingAddress.street}, ${order.shippingAddress.city}\n` +
-              `Dirección de facturación: ${order.billingAddress.street}, ${order.billingAddress.city}\n`
-          )
-          .join("\n")
-    );
+      try {
+        // Llamar a la función existente para procesar el pedido de esta empresa
+        await handleCheckoutSingleCompanyInternal(company);
 
-    // clearCart();
-    // navigate("/");
+        // Incrementar contador de órdenes completadas
+        setCompletedOrders((prev) => prev + 1);
+      } catch (error) {
+        console.error(`Error al procesar pedido para ${company}:`, error);
+        toast.error(`Error al procesar pedido para ${company}`);
+        setIsProcessingOrders(false);
+        return;
+      }
+    }
+
+    // Mostrar tarjeta de éxito cuando todos los pedidos estén procesados
+    setIsProcessingOrders(false);
+    setShowSuccessCard(true);
   };
 
-  // Función para procesar el pago de una sola empresa
-  const handleCheckoutSingleCompany = async (company) => {
+  // Versión interna de handleCheckoutSingleCompany que no muestra toast individuales
+  const handleCheckoutSingleCompanyInternal = async (company) => {
     const companyData = groupedCart[company];
 
     if (!companyData) {
-      toast.error("No se encontró información para esta empresa");
-      return;
+      throw new Error("No se encontró información para esta empresa");
     }
 
     // Verificar direcciones
     if (!companyData.shippingAddressId || !companyData.billingAddressId) {
-      toast.error("Por favor, selecciona las direcciones para esta empresa");
-      return;
+      throw new Error("Faltan direcciones para esta empresa");
     }
 
     // Verificar stock
     if (hasInsufficientStockForCompany(company)) {
-      toast.error("Algunos productos no tienen stock suficiente");
-      return;
+      throw new Error("Algunos productos no tienen stock suficiente");
     }
 
     // Preparar orden para esta empresa
@@ -1069,35 +823,71 @@ const Carrito = () => {
       PRODUCTOS: productsToProcess,
     };
 
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // Simular un delay para el procesamiento
+
     const responseOrder = await order_createOrder(orderToProcess);
 
     if (!responseOrder.success) {
-      toast.error("Error al procesar el pedido: " + responseOrder.message);
-      return;
+      throw new Error(responseOrder.message || "Error al procesar el pedido");
     }
 
-    toast.success("Pedido procesado correctamente");
+    return responseOrder;
+  };
 
-    // Aquí procesarías este pedido individual con tu API
-    // Esta alerta es solo para demostración
-    // alert(
-    //   `Procesando pedido para la empresa ${company}:\n\n` +
-    //     `Total: $${order.total.toFixed(2)}\n` +
-    //     `Dirección de envío: ${order.shippingAddress.street}, ${order.shippingAddress.city}\n` +
-    //     `Dirección de facturación: ${order.billingAddress.street}, ${order.billingAddress.city}\n` +
-    //     `\n${order.items.length} productos en el pedido`
-    // );
+  // Modificar la función handleCheckoutSingleCompany existente
+  const handleCheckoutSingleCompany = async (company) => {
+    try {
+      setCurrentProcessingCompany(company);
+      setIsProcessingOrders(true);
+      setTotalOrdersToProcess(1);
+      setCompletedOrders(0);
 
-    // Actualizar el carrito manteniendo solo los elementos de otras empresas
-    // const newCart = cart.filter(item =>
-    //   item.empresaId !== company
-    // );
-    // clearCart();
-    // newCart.forEach(item => addToCart(item, item.quantity));
+      await handleCheckoutSingleCompanyInternal(company);
 
+      setCompletedOrders(1);
+      setIsProcessingOrders(false);
+      setShowSuccessCard(true);
+
+      // Guardar la empresa que se procesó para limpiarla cuando se cierre el modal
+      setLastProcessedCompanies([company]);
+    } catch (error) {
+      console.error(`Error al procesar pedido para ${company}:`, error);
+      toast.error(`Error al procesar pedido: ${error.message}`);
+      setIsProcessingOrders(false);
+    }
+  };
+
+  // Agregar función para cerrar la tarjeta de éxito e ir a Mis Pedidos
+  const handleGoToOrders = () => {
+    // Limpiar el carrito solo de las empresas procesadas
+    if (lastProcessedCompanies.length === Object.keys(groupedCart).length) {
+      // Si se procesaron todas las empresas, limpiar todo
+      clearCart();
+    } else {
+      // Si solo se procesaron algunas empresas, limpiar selectivamente
+      lastProcessedCompanies.forEach((company) => {
+        removeItemsByCompany(company);
+      });
+    }
+
+    setShowSuccessCard(false);
+    navigate(ROUTES.ECOMMERCE.MIS_PEDIDOS);
+  };
+
+  // Agregar función para cerrar la tarjeta de éxito y seguir comprando
+  const handleContinueShopping = () => {
+    // Aplicar la misma lógica de limpieza
+    if (lastProcessedCompanies.length === Object.keys(groupedCart).length) {
+      clearCart();
+    } else {
+      lastProcessedCompanies.forEach((company) => {
+        removeItemsByCompany(company);
+      });
+    }
+
+    setShowSuccessCard(false);
     // navigate("/");
   };
-  const isEditingAddress = Boolean(editingAddress);
 
   return (
     <PageContainer>
@@ -1143,7 +933,8 @@ const Carrito = () => {
           {/* Sección de dirección de envío para la empresa seleccionada */}
           <ShippingSection>
             <SectionTitle>
-              <FaMapMarkerAlt /> Dirección de envío para {selectedCompany}
+              <RenderIcon name="FaMapMarkerAlt" size={20} />
+              Dirección de envío para {selectedCompany}
             </SectionTitle>
 
             {addresses.filter(
@@ -1268,7 +1059,8 @@ const Carrito = () => {
           {/* Sección de dirección de facturación similar a la de envío */}
           <ShippingSection style={{ marginTop: "24px" }}>
             <SectionTitle>
-              <FaFileInvoice /> Dirección de facturación
+              <RenderIcon name="FaFileInvoice" size={20} />
+              Dirección de facturación
             </SectionTitle>
 
             {addresses.filter(
@@ -1386,141 +1178,6 @@ const Carrito = () => {
               size="small"
             />
           </ShippingSection>
-
-          {/* Formulario para agregar/editar dirección */}
-          {showAddressForm && (
-            <AddressFormContainer>
-              <FormTitle>
-                {isEditingAddress
-                  ? "Editar dirección"
-                  : `Nueva dirección de ${
-                      addressFormType === "S" ? "envío" : "facturación"
-                    }`}
-              </FormTitle>
-              <AddressForm onSubmit={handleSaveAddress}>
-                <FormGroup>
-                  <FormLabel>Nombre para esta dirección</FormLabel>
-                  <FormInput
-                    name="name"
-                    value={addressForm.name}
-                    onChange={handleAddressFormChange}
-                    placeholder="Ej: Mi casa, Oficina"
-                    error={formErrors.name}
-                  />
-                  {formErrors.name && <FormError>{formErrors.name}</FormError>}
-                </FormGroup>
-
-                <FormGroup>
-                  <FormLabel>Teléfono de contacto</FormLabel>
-                  <FormInput
-                    name="phone"
-                    value={addressForm.phone}
-                    onChange={handleAddressFormChange}
-                    placeholder="Número de teléfono"
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <FormLabel>Calle</FormLabel>
-                  <FormInput
-                    name="street"
-                    value={addressForm.street}
-                    onChange={handleAddressFormChange}
-                    placeholder="Nombre de la calle"
-                    error={formErrors.street}
-                  />
-                  {formErrors.street && (
-                    <FormError>{formErrors.street}</FormError>
-                  )}
-                </FormGroup>
-
-                <FormGroup>
-                  <FormLabel>Número</FormLabel>
-                  <FormInput
-                    name="number"
-                    value={addressForm.number}
-                    onChange={handleAddressFormChange}
-                    placeholder="Número exterior"
-                  />
-                </FormGroup>
-
-                <FormGroup>
-                  <FormLabel>Ciudad</FormLabel>
-                  <FormInput
-                    name="city"
-                    value={addressForm.city}
-                    onChange={handleAddressFormChange}
-                    placeholder="Ciudad"
-                    error={formErrors.city}
-                  />
-                  {formErrors.city && <FormError>{formErrors.city}</FormError>}
-                </FormGroup>
-
-                <FormGroup>
-                  <FormLabel>Estado/Provincia</FormLabel>
-                  <FormInput
-                    name="state"
-                    value={addressForm.state}
-                    onChange={handleAddressFormChange}
-                    placeholder="Estado o provincia"
-                    error={formErrors.state}
-                  />
-                  {formErrors.state && (
-                    <FormError>{formErrors.state}</FormError>
-                  )}
-                </FormGroup>
-
-                <FormGroup>
-                  <FormLabel>Código Postal</FormLabel>
-                  <FormInput
-                    name="zipCode"
-                    value={addressForm.zipCode}
-                    onChange={handleAddressFormChange}
-                    placeholder="Código postal"
-                    error={formErrors.zipCode}
-                  />
-                  {formErrors.zipCode && (
-                    <FormError>{formErrors.zipCode}</FormError>
-                  )}
-                </FormGroup>
-
-                <FormGroup fullWidth>
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      name="isDefault"
-                      checked={addressForm.isDefault}
-                      onChange={handleAddressFormChange}
-                      style={{ marginRight: 8 }}
-                    />
-                    Establecer como dirección predeterminada de{" "}
-                    {addressFormType === "S" ? "envío" : "facturación"}
-                  </label>
-                </FormGroup>
-
-                <ButtonGroup>
-                  <Button
-                    text="Guardar dirección"
-                    variant="solid"
-                    type="submit"
-                    backgroundColor={theme.colors.primary}
-                  />
-                  <Button
-                    text="Cancelar"
-                    variant="outlined"
-                    type="button"
-                    onClick={handleCancelAddressForm}
-                  />
-                </ButtonGroup>
-              </AddressForm>
-            </AddressFormContainer>
-          )}
         </div>
 
         <OrderSummary>
@@ -1589,6 +1246,66 @@ const Carrito = () => {
           />
         </OrderSummary>
       </CartLayout>
+
+      {/* Agregar estos componentes al final del return para mostrar el progreso y éxito */}
+      {isProcessingOrders && (
+        <>
+          <ProcessingOverlay />
+          <ProcessingCard>
+            <ProcessingTitle>Procesando pedido</ProcessingTitle>
+            <ProcessingMessage>
+              Generando orden para empresa:{" "}
+              <strong>{currentProcessingCompany}</strong>
+            </ProcessingMessage>
+            <ProgressIndicator>
+              <RenderIcon
+                name="FaSpinner"
+                size={24}
+                style={{ animation: "spin 1s linear infinite" }}
+              />
+              <div>
+                {completedOrders} de {totalOrdersToProcess} empresas procesadas
+              </div>
+            </ProgressIndicator>
+          </ProcessingCard>
+        </>
+      )}
+
+      {showSuccessCard && (
+        <>
+          <ProcessingOverlay />
+          <ProcessingCard>
+            <SuccessIcon>
+              <RenderIcon
+                name="FaCheckCircle"
+                size={48}
+                color={theme.colors.success}
+              />
+            </SuccessIcon>
+            <ProcessingTitle>¡Pedido realizado con éxito!</ProcessingTitle>
+            <ProcessingMessage>
+              {completedOrders > 1
+                ? `Se han generado ${completedOrders} órdenes correctamente.`
+                : "Tu pedido ha sido generado correctamente."}
+            </ProcessingMessage>
+            <Button
+              text="Ver mis pedidos"
+              variant="solid"
+              backgroundColor={theme.colors.primary}
+              style={{ width: "100%", marginBottom: "12px" }}
+              onClick={handleGoToOrders}
+              leftIconName="FaListAlt"
+            />
+            <Button
+              text="Seguir comprando"
+              variant="outlined"
+              style={{ width: "100%" }}
+              onClick={handleContinueShopping}
+              leftIconName="FaShoppingCart"
+            />
+          </ProcessingCard>
+        </>
+      )}
     </PageContainer>
   );
 };

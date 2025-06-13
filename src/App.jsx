@@ -45,6 +45,15 @@ const GlobalStyle = createGlobalStyle`
   button, a, input, select, textarea, div, span, p, h1, h2, h3, h4, h5, h6 {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
+
+   @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
 `;
 
 const App = () => {

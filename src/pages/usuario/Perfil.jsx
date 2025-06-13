@@ -1544,6 +1544,7 @@ const Perfil = () => {
               <FormActions>
                 <Button
                   text="Solicitar cambio de información"
+                  size="small"
                   variant="outlined"
                   onClick={() =>
                     toast.info(
@@ -1601,10 +1602,11 @@ const Perfil = () => {
             </FormGroup>
 
             <FormActions>
-              <Button text="Cancelar" variant="outlined" />
+              <Button text="Cancelar" size="small" variant="outlined" />
               <Button
                 text="Actualizar contraseña"
                 variant="solid"
+                size="small"
                 type="submit"
                 backgroundColor={theme.colors.primary}
               />

@@ -100,6 +100,12 @@ export function CartProvider({ children }) {
     setCart([]);
   };
 
+  const removeItemsByCompany = (companyId) => {
+    setCart((prevCart) =>
+      prevCart.filter((item) => item.empresaId !== companyId)
+    );
+  };
+
   const value = {
     cart,
     cartTotal,
@@ -107,6 +113,7 @@ export function CartProvider({ children }) {
     removeFromCart,
     updateQuantity,
     clearCart,
+    removeItemsByCompany,
     itemCount: cart.reduce((count, item) => count + item.quantity, 0),
     isAdminOrCoord: isAdminOrCoord(), // Exportar esta función para usar en componentes
   };

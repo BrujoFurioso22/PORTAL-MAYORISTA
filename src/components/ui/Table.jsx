@@ -1,3 +1,4 @@
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableHeader,
@@ -9,9 +10,31 @@ import {
   Pagination,
   PageButton,
 } from "../../styles/TableStyles";
+import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import styled from "styled-components";
+
+// Estilos para el encabezado de columna ordenable
+const SortableHeader = styled.div`
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  > span {
+    margin-right: 8px;
+  }
+
+  > svg {
+    font-size: 14px;
+  }
+`;
 
 /**
- * Componente de tabla de datos reutilizable
+ * Componente de tabla de datos reutilizable con ordenación
  * @param {Object} props - Props del componente
  * @param {Array} props.columns - Definición de columnas
  * @param {Array} props.data - Datos a mostrar
@@ -31,7 +54,78 @@ const DataTable = ({
   bordered = false,
   striped = true,
   onRowClick,
+  initialSortField = null,  // Nueva prop para campo de ordenación inicial
+  initialSortDirection = "asc",
+
 }) => {
+  // Estados para ordenación
+  const [sortField, setSortField] = useState(initialSortField);
+  const [sortDirection, setSortDirection] = useState(initialSortDirection);
+
+  // Función para manejar la ordenación
+  const handleSort = (field, dataType) => {
+    if (sortField === field) {
+      // Si hacemos clic en la misma columna, invertir dirección
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Si es una nueva columna, establecerla como campo de ordenación y dirección ascendente
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Obtener datos ordenados con useMemo para evitar cálculos innecesarios
+  const sortedData = useMemo(() => {
+    if (!sortField || !data.length) return data;
+
+    // Encontrar la definición de la columna ordenada
+    const sortColumn = columns.find((col) => col.field === sortField);
+
+    // Obtener el tipo de datos para la ordenación
+    const dataType = sortColumn?.dataType || "text";
+
+    return [...data].sort((a, b) => {
+      // Obtener los valores a comparar
+      let valueA = a[sortField];
+      let valueB = b[sortField];
+
+      // Si la columna tiene una función de renderizado personalizada,
+      // podemos usar la propiedad sortValue para la ordenación
+      if (sortColumn.sortValue) {
+        valueA = sortColumn.sortValue(a);
+        valueB = sortColumn.sortValue(b);
+      }
+
+      // Aplicar la lógica de ordenación según el tipo de datos
+      let comparison = 0;
+
+      switch (dataType) {
+        case "number":
+          // Convertir a números para comparación numérica
+          comparison = (Number(valueA) || 0) - (Number(valueB) || 0);
+          break;
+
+        case "date":
+          // Convertir a Date para comparación de fechas
+          const dateA = valueA ? new Date(valueA) : new Date(0);
+          const dateB = valueB ? new Date(valueB) : new Date(0);
+          comparison = dateA - dateB;
+          break;
+
+        default: // 'text' o cualquier otro tipo
+          // Ordenar como texto
+          const strA = String(valueA || "").toLowerCase();
+          const strB = String(valueB || "").toLowerCase();
+          if (strA < strB) comparison = -1;
+          if (strA > strB) comparison = 1;
+          break;
+      }
+
+      // Aplicar dirección de ordenación
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [data, sortField, sortDirection, columns]);
+
   if (!data || data.length === 0) {
     return (
       <EmptyState>
@@ -52,7 +146,24 @@ const DataTable = ({
                 width={column.width}
                 $align={column.align}
               >
-                {column.header}
+                {column.sortable !== false ? (
+                  <SortableHeader
+                    onClick={() => handleSort(column.field, column.dataType)}
+                  >
+                    <span>{column.header}</span>
+                    {sortField === column.field ? (
+                      sortDirection === "asc" ? (
+                        <FaSortUp />
+                      ) : (
+                        <FaSortDown />
+                      )
+                    ) : (
+                      <FaSort />
+                    )}
+                  </SortableHeader>
+                ) : (
+                  column.header
+                )}
               </TableHeaderCell>
             ))}
             {rowActions && (
@@ -61,7 +172,7 @@ const DataTable = ({
           </tr>
         </TableHeader>
         <TableBody>
-          {data.map((row, rowIndex) => (
+          {sortedData.map((row, rowIndex) => (
             <TableRow
               key={rowIndex}
               $striped={striped}
@@ -86,11 +197,13 @@ const DataTable = ({
           <PageButton
             onClick={() => pagination.onPageChange(1)}
             disabled={pagination.currentPage === 1}
+            size="small"
             text={"Primera"}
           />
           <PageButton
             onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
             disabled={pagination.currentPage === 1}
+            size="small"
             text={"Anterior"}
           />
 
@@ -113,6 +226,7 @@ const DataTable = ({
                   key={pageNum}
                   $active={pagination.currentPage === pageNum}
                   onClick={() => pagination.onPageChange(pageNum)}
+                  size="small"
                   text={pageNum}
                 />
               );
@@ -122,11 +236,13 @@ const DataTable = ({
           <PageButton
             onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
             disabled={pagination.currentPage === pagination.totalPages}
+            size="small"
             text={"Siguiente"}
           />
           <PageButton
             onClick={() => pagination.onPageChange(pagination.totalPages)}
             disabled={pagination.currentPage === pagination.totalPages}
+            size="small"
             text={"Última"}
           />
         </Pagination>

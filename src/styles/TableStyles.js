@@ -95,7 +95,7 @@ export const PageButton = styled(Button)`
     $active ? theme.colors.white : theme.colors.text};
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {

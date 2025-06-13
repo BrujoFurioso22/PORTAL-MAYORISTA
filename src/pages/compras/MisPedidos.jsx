@@ -4,15 +4,15 @@ import { useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import DataTable from "../../components/ui/Table";
 import { useAppTheme } from "../../context/AppThemeContext";
-import { format } from "date-fns";
+import { differenceInHours, format, formatDistance } from "date-fns";
 import { es } from "date-fns/locale";
 import { order_getOrdersByAccount } from "../../services/order/order";
 import { useAuth } from "../../context/AuthContext";
 import { FaSearch } from "react-icons/fa";
+import Select from "../../components/ui/Select";
 
 // Mantener los estilos existentes para la página
 const PageContainer = styled.div`
-  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
   background-color: ${({ theme }) => theme.colors.background};
@@ -131,8 +131,8 @@ const MisPedidos = () => {
   const [dateFilter, setDateFilter] = useState("todos");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 10;
-  
+  const ordersPerPage = 8;
+
   // Estado para los pedidos
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -141,28 +141,28 @@ const MisPedidos = () => {
   // Traducir estado a español para mostrar
   const translateStatus = (status) => {
     const statusMap = {
-      "PENDIENTE": "Pendiente",
-      "EN_PROCESO": "En Proceso",
-      "ENVIADO": "Enviado",
-      "ENTREGADO": "Entregado",
-      "CANCELADO": "Cancelado",
-      "pendiente": "Pendiente",
+      PENDIENTE: "Pendiente",
+      EN_PROCESO: "En Proceso",
+      ENVIADO: "Enviado",
+      ENTREGADO: "Entregado",
+      CANCELADO: "Cancelado",
+      pendiente: "Pendiente",
       "en-proceso": "En Proceso",
-      "enviado": "Enviado",
-      "entregado": "Entregado",
-      "cancelado": "Cancelado",
+      enviado: "Enviado",
+      entregado: "Entregado",
+      cancelado: "Cancelado",
     };
     return statusMap[status] || status;
   };
-  
+
   // Función para mapear el estado de API a los valores que espera el componente
   const mapApiStatus = (apiStatus) => {
     const statusMap = {
-      "PENDIENTE": "pendiente",
-      "EN_PROCESO": "en-proceso", 
-      "ENVIADO": "enviado",
-      "ENTREGADO": "entregado",
-      "CANCELADO": "cancelado"
+      PENDIENTE: "pendiente",
+      EN_PROCESO: "en-proceso",
+      ENVIADO: "enviado",
+      ENTREGADO: "entregado",
+      CANCELADO: "cancelado",
     };
     return statusMap[apiStatus] || "pendiente";
   };
@@ -172,29 +172,33 @@ const MisPedidos = () => {
     try {
       setLoading(true);
       const response = await order_getOrdersByAccount(user.ACCOUNT_USER);
-      
+      console.log(response);
+
       if (response.success && response.data) {
         // Transformar los datos de la API al formato que espera nuestro componente
-        const formattedOrders = response.data.map(order => {
+        const formattedOrders = response.data.map((order) => {
           // Calcular el total si está vacío
           const total = order.CABECERA.TOTAL || order.CABECERA.SUBTOTAL;
-          
+
           // Calcular la cantidad total de items
-          const itemsCount = order.DETALLE.reduce((sum, item) => sum + item.QUANTITY, 0);
-          
+          const itemsCount = order.DETALLE.reduce(
+            (sum, item) => sum + item.QUANTITY,
+            0
+          );
+
           return {
             id: order.CABECERA.ID_CART_HEADER,
-            date: new Date(), // Como no tenemos fecha en el API, usamos la actual
+            date: order.CABECERA.createdAt, // Como no tenemos fecha en el API, usamos la actual
             total: total,
             items: itemsCount,
             status: mapApiStatus(order.CABECERA.STATUS),
             paymentMethod: "Pendiente", // Este dato no viene en la API
             empresaId: order.CABECERA.ENTERPRISE,
             // Guardamos la información original para mostrarla en detalles
-            originalData: order
+            originalData: order,
           };
         });
-        
+
         setOrders(formattedOrders);
         setError(null);
       } else {
@@ -275,28 +279,47 @@ const MisPedidos = () => {
     {
       header: "Nº de Pedido",
       field: "id",
-      render: (row) => row.id.substring(0, 8) + "..."
+      render: (row) => row.id.substring(0, 8) + "...",
     },
     {
       header: "Fecha",
       field: "date",
-      render: (row) => format(row.date, "d 'de' MMMM, yyyy", { locale: es })
+      dataType: "date",
+      render: (row) => {
+        const date = new Date(row.date);
+        const now = new Date();
+        const hoursAgo = differenceInHours(now, date);
+
+        if (hoursAgo >= 1) {
+          // Si pasó más de una hora, mostrar fecha y hora completas
+          return format(date, "d 'de' MMMM, yyyy HH:mm", { locale: es });
+        } else {
+          // Si pasó menos de una hora, mostrar tiempo relativo
+          return formatDistance(date, now, {
+            addSuffix: true, // Añade "hace" al principio
+            locale: es,
+          });
+        }
+      },
+      sortValue: (row) => new Date(row.date).getTime()
     },
     {
       header: "Proveedor",
-      field: "empresaId"
+      field: "empresaId",
     },
     {
       header: "Total",
       field: "total",
+      dataType: "number",
       render: (row) => `$${row.total.toFixed(2)}`,
-      align: "right"
+      align: "right",
     },
     {
       header: "Productos",
       field: "items",
+      dataType: "number",
       render: (row) => `${row.items} items`,
-      align: "center"
+      align: "center",
     },
     {
       header: "Estado",
@@ -306,19 +329,20 @@ const MisPedidos = () => {
           {translateStatus(row.status)}
         </StatusBadge>
       ),
-      align: "center"
+      align: "center",
     },
     {
       header: "Pago",
-      field: "paymentMethod"
-    }
+      field: "paymentMethod",
+      sortable: false
+    },
   ];
 
   // Configuración de paginación para el DataTable
   const paginationConfig = {
     currentPage,
     totalPages,
-    onPageChange: setCurrentPage
+    onPageChange: setCurrentPage,
   };
 
   // Función para renderizar acciones por fila
@@ -335,6 +359,32 @@ const MisPedidos = () => {
     navigate(`/mis-pedidos/${row.id}`);
   };
 
+  const statusOptions = [
+    { value: "todos", label: "Todos" },
+    { value: "pendiente", label: "Pendiente" },
+    { value: "en-proceso", label: "En Proceso" },
+    { value: "enviado", label: "Enviado" },
+    { value: "entregado", label: "Entregado" },
+    { value: "cancelado", label: "Cancelado" },
+  ];
+
+  const dateOptions = [
+    { value: "todos", label: "Todos" },
+    { value: "este-mes", label: "Este mes" },
+    { value: "ultimo-mes", label: "Último mes" },
+  ];
+
+  const handleStatusChange = (e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1); // Resetear a primera página al cambiar filtro
+  };
+
+  // Handler para cambio en select de fecha
+  const handleDateChange = (e) => {
+    setDateFilter(e.target.value);
+    setCurrentPage(1); // Resetear a primera página al cambiar filtro
+  };
+
   return (
     <PageContainer>
       <PageTitle>Mis Pedidos</PageTitle>
@@ -342,43 +392,42 @@ const MisPedidos = () => {
       <FiltersContainer>
         <FilterGroup>
           <FilterLabel>Estado:</FilterLabel>
-          <FilterSelect
+          <Select
+            options={statusOptions}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="todos">Todos</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="en-proceso">En Proceso</option>
-            <option value="enviado">Enviado</option>
-            <option value="entregado">Entregado</option>
-            <option value="cancelado">Cancelado</option>
-          </FilterSelect>
+            onChange={handleStatusChange}
+            placeholder="Seleccionar estado"
+            width="180px"
+            name="statusFilter"
+          />
 
           <FilterLabel>Fecha:</FilterLabel>
-          <FilterSelect
+          <Select
+            options={dateOptions}
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-          >
-            <option value="todos">Todos</option>
-            <option value="este-mes">Este mes</option>
-            <option value="ultimo-mes">Último mes</option>
-          </FilterSelect>
+            onChange={handleDateChange}
+            placeholder="Seleccionar período"
+            width="180px"
+            name="dateFilter"
+          />
         </FilterGroup>
 
-        <div style={{ position: 'relative' }}>
-          <FaSearch style={{ 
-            position: 'absolute', 
-            left: '10px', 
-            top: '50%', 
-            transform: 'translateY(-50%)',
-            color: theme.colors.textLight
-          }} />
+        <div style={{ position: "relative" }}>
+          <FaSearch
+            style={{
+              position: "absolute",
+              left: "10px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: theme.colors.textLight,
+            }}
+          />
           <SearchInput
             type="text"
             placeholder="Buscar por número o proveedor"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: '32px' }}
+            style={{ paddingLeft: "32px" }}
           />
         </div>
       </FiltersContainer>
@@ -399,7 +448,7 @@ const MisPedidos = () => {
           />
         </NoOrdersContainer>
       ) : filteredOrders.length > 0 ? (
-        <DataTable 
+        <DataTable
           columns={columns}
           data={currentOrders}
           emptyMessage="No se encontraron pedidos con los filtros seleccionados"
@@ -408,12 +457,14 @@ const MisPedidos = () => {
           bordered={false}
           striped={true}
           onRowClick={handleViewDetails}
+          initialSortField="date"
+          initialSortDirection="desc"
         />
       ) : (
         <NoOrdersContainer>
           <NoOrdersIcon>📦</NoOrdersIcon>
           <NoOrdersText>
-            {searchTerm || statusFilter !== "todos" || dateFilter !== "todos" 
+            {searchTerm || statusFilter !== "todos" || dateFilter !== "todos"
               ? "No se encontraron pedidos con los filtros seleccionados"
               : "No tienes pedidos registrados aún"}
           </NoOrdersText>
