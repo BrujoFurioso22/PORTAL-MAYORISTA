@@ -75,7 +75,7 @@ const SearchIcon = styled.div`
   color: ${({ theme }) => theme.colors.white};
 `;
 
-const IconButton = styled.button`
+const IconButton = styled(Button)`
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.white};
@@ -203,17 +203,6 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
         alignItems="center"
         style={{ gap: "1rem" }}
       >
-        {/* Mostrar el botón de sidebar solo cuando sea necesario */}
-        {/* {showSidebarToggle && (
-          <Button
-            leftIconName={"Menu"}
-            onClick={onToggleSidebar}
-            variant="outlined"
-            size="small"
-            color={theme.colors.white}
-            style={{ border: `solid 1px ${theme.colors.white}` }}
-          />
-        )} */}
         <Logo onClick={handleGoToHome}>PORTAL MAYORISTA</Logo>
       </FlexBoxComponent>
 
@@ -234,16 +223,20 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
         <UserGreeting>Hola, {user?.NAME_USER}</UserGreeting>
 
         {!isAdminOrCoord && (
-          <IconButton onClick={handleGoToCart}>
-            <FaShoppingCart />
-            {itemCount > 0 && <CartCount>{itemCount}</CartCount>}
-          </IconButton>
+          <IconButton
+            text={itemCount > 0 && <CartCount>{itemCount}</CartCount>}
+            leftIconName={"FaShoppingCart"}
+            iconSize={18}
+            onClick={handleGoToCart}
+          />
         )}
 
         <UserMenu>
-          <IconButton onClick={toggleUserMenu}>
-            <FaUser />
-          </IconButton>
+          <IconButton
+            onClick={toggleUserMenu}
+            iconSize={16}
+            leftIconName={"FaUser"}
+          />
 
           <UserMenuDropdown $isOpen={isUserMenuOpen}>
             <UserMenuItem onClick={handleProfile}>

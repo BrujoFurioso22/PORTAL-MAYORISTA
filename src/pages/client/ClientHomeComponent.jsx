@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../../context/AuthContext";
 import { empresas } from "../../mock/products";
+import Button from "../../components/ui/Button";
 
 const PageContainer = styled.div`
   padding: 2rem;
@@ -60,23 +61,6 @@ const CardFooter = styled.div`
 const ProductCount = styled.span`
   font-size: 0.9rem;
   color: ${({ theme }) => theme.colors.textLight};
-`;
-
-const ViewButton = styled.button`
-  background: transparent;
-  color: ${({ theme }) => theme.colors.primary};
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  padding: 0.4rem 1rem;
-  border-radius: 4px;
-  font-weight: 500;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.primary};
-    color: white;
-  }
 `;
 
 // Cinta para destacar visualmente las empresas con acceso
@@ -174,9 +158,11 @@ const ClientHomeComponent = () => {
               </CardBody>
               <CardFooter>
                 <ProductCount>{empresa.products} productos</ProductCount>
-                <ViewButton>
-                  {hasAccess ? "Ver catálogo" : "Solicitar acceso"}
-                </ViewButton>
+                <Button
+                  size="small"
+                  text={hasAccess ? "Ver catálogo" : "Solicitar acceso"}
+                  variant="outlined"
+                />
               </CardFooter>
             </CompanyCard>
           );

@@ -139,7 +139,7 @@ const QuantitySelector = styled.div`
   /* margin: 20px 0; */
 `;
 
-const QuantityButton = styled.button`
+const QuantityButton = styled(Button)`
   width: 36px;
   height: 36px;
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -188,7 +188,7 @@ const ButtonsContainer = styled.div`
   margin-top: 20px;
 `;
 
-const BackLink = styled.button`
+const BackLink = styled(Button)`
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.primary};
@@ -199,9 +199,7 @@ const BackLink = styled.button`
   margin-bottom: 24px;
   font-size: 0.9rem;
 
-  &:hover {
-    text-decoration: underline;
-  }
+  
 `;
 
 // Agregar este nuevo componente para las especificaciones
@@ -298,13 +296,14 @@ const DetalleProducto = () => {
     if (!cart || !product) return 0;
 
     console.log(cart);
-    
 
     const cartItem = cart.find((item) => item?.id === product.id);
     console.log(cartItem);
-    
-    console.log("Cantidad actual en el carrito:", cartItem ? cartItem.quantity : 0);
-    
+
+    console.log(
+      "Cantidad actual en el carrito:",
+      cartItem ? cartItem.quantity : 0
+    );
 
     return cartItem ? cartItem.quantity : 0;
   }, [cart, product]);
@@ -406,7 +405,11 @@ const DetalleProducto = () => {
 
   return (
     <PageContainer>
-      <BackLink onClick={navigateBack}>← Regresar al catálogo</BackLink>
+      <BackLink
+        onClick={navigateBack}
+        text={"Regresar al catálogo"}
+        leftIconName={"FaChevronLeft"}
+      />
 
       <ProductLayout>
         <ImageSection>
@@ -489,9 +492,8 @@ const DetalleProducto = () => {
                 <QuantityButton
                   onClick={decreaseQuantity}
                   disabled={quantity <= 1}
-                >
-                  -
-                </QuantityButton>
+                  text={"-"}
+                />
                 <QuantityInput
                   type="number"
                   min="1"
@@ -503,9 +505,8 @@ const DetalleProducto = () => {
                 <QuantityButton
                   onClick={increaseQuantity}
                   disabled={quantity >= availableStock}
-                >
-                  +
-                </QuantityButton>
+                  text={"+"}
+                />
               </QuantitySelector>
               {currentInCart > 0 && (
                 <span

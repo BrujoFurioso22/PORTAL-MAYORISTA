@@ -28,7 +28,7 @@ const PageHeader = styled.div`
   gap: 16px;
 `;
 
-const BackButton = styled.button`
+const BackButton = styled(Button)`
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.primary};
@@ -374,9 +374,11 @@ const SearchResults = () => {
   return (
     <PageContainer>
       <PageHeader>
-        <BackButton onClick={handleNavigate}>
-          <FaArrowLeft /> Volver al inicio
-        </BackButton>
+        <BackButton
+          onClick={handleNavigate}
+          leftIconName={"FaArrowLeft"}
+          text={"Volver al inicio"}
+        />
 
         <PageTitle>Resultados de búsqueda</PageTitle>
         <SearchInfo>
@@ -493,7 +495,7 @@ const SearchResults = () => {
           <Button
             text="Volver al inicio"
             variant="solid"
-            backgroundColor={({theme}) => theme.colors.primary}
+            backgroundColor={({ theme }) => theme.colors.primary}
             onClick={handleNavigate}
           />
         </NoResultsContainer>

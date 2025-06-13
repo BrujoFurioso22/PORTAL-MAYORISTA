@@ -85,9 +85,7 @@ export default function Input({
   type = "text",
   placeholder,
   leftIconName,
-  leftIconLibrary,
   rightIconName,
-  rightIconLibrary,
   onLeftIconClick,
   onRightIconClick,
   errorMessage,
@@ -111,8 +109,7 @@ export default function Input({
           >
             <RenderIcon
               name={leftIconName}
-              size={20}
-              library={leftIconLibrary}
+              size={16}
               color={disabled ? theme.colors.textLight : theme.colors.text}
             />
           </IconContainer>
@@ -131,8 +128,7 @@ export default function Input({
           >
             <RenderIcon
               name={rightIconName}
-              size={20}
-              library={rightIconLibrary}
+              size={16}
               color={disabled ? theme.colors.textLight : theme.colors.text}
             />
           </IconContainer>

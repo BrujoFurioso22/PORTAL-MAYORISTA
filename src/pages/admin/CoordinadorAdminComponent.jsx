@@ -134,18 +134,6 @@ const ModalTitle = styled.h2`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.textLight};
-  font-size: 1.5rem;
-  cursor: pointer;
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.text};
-  }
-`;
-
 const FormGroup = styled.div`
   margin-bottom: 16px;
   width: 100%;
@@ -296,7 +284,7 @@ const EmpresasSelector = ({ selectedEmpresas, onChange }) => {
               }}
             >
               {selectedEmpresas.includes(empresa) && (
-                <RenderIcon name="Check" size={14} color="#ffffff" />
+                <RenderIcon name="FaCheck" size={14} color="#ffffff" />
               )}
             </div>
             <span
@@ -745,7 +733,7 @@ const CoordinadorAdminComponent = () => {
           }}
         >
           <RenderIcon
-            name={row.STATUS_USER ? "CheckCircle" : "MinusCircle"}
+            name={row.STATUS_USER ? "FaCheckCircle" : "FaMinusCircle"}
             size={18}
           />
         </div>
@@ -763,19 +751,20 @@ const CoordinadorAdminComponent = () => {
             : "Activar coordinador"
         }
         onClick={() => handleToggleStatus(coordinador)}
-        leftIconName={coordinador.STATUS_USER ? "ToggleRight" : "ToggleLeft"}
-        leftIconLibrary={1}
+        leftIconName={
+          coordinador.STATUS_USER ? "FaToggleRight" : "FaToggleLeft"
+        }
       />
 
       <ActionButton
         title="Editar coordinador"
         onClick={() => handleOpenEditModal(coordinador)}
-        leftIconName={"Edit"}
+        leftIconName={"FaEdit"}
       />
       <ActionButton
         title="Eliminar coordinador"
         onClick={() => handleOpenDeleteModal(coordinador)}
-        leftIconName={"Trash"}
+        leftIconName={"FaTrash"}
       />
     </ActionsGroup>
   );
@@ -788,7 +777,7 @@ const CoordinadorAdminComponent = () => {
         <div style={{ display: "flex", gap: "16px" }}>
           <SearchContainer>
             <SearchIcon>
-              <RenderIcon name={"Search"} library={4} size={14} />
+              <RenderIcon name={"FaSearch"} library={4} size={14} />
             </SearchIcon>
             <SearchInput
               type="text"
@@ -801,8 +790,7 @@ const CoordinadorAdminComponent = () => {
 
         <Button
           text="Nuevo Coordinador"
-          leftIconLibrary={4}
-          leftIconName={"UserPlus"}
+          leftIconName={"FaUserPlus"}
           onClick={handleOpenCreateModal}
         />
       </ActionsContainer>
@@ -841,7 +829,7 @@ const CoordinadorAdminComponent = () => {
           <ModalContent>
             <ModalHeader>
               <ModalTitle>Crear Nuevo Coordinador</ModalTitle>
-              <CloseButton onClick={handleCloseModals}>&times;</CloseButton>
+              <RenderIcon name="FaTimes" size={20} onClick={handleCloseModals}/>
             </ModalHeader>
 
             <form onSubmit={handleCreateCoordinador}>
@@ -925,7 +913,7 @@ const CoordinadorAdminComponent = () => {
           <ModalContent>
             <ModalHeader>
               <ModalTitle>Editar Coordinador</ModalTitle>
-              <CloseButton onClick={handleCloseModals}>&times;</CloseButton>
+              <RenderIcon name="FaTimes" size={20} onClick={handleCloseModals}/>
             </ModalHeader>
 
             <form onSubmit={handleUpdateCoordinador}>
@@ -1007,7 +995,7 @@ const CoordinadorAdminComponent = () => {
           <ModalContent>
             <ModalHeader>
               <ModalTitle>Eliminar Coordinador</ModalTitle>
-              <CloseButton onClick={handleCloseModals}>&times;</CloseButton>
+              <RenderIcon name="FaTimes" size={20} onClick={handleCloseModals}  />
             </ModalHeader>
 
             <p>

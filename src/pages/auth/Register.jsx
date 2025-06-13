@@ -350,7 +350,7 @@ const Register = () => {
           onChange={handleIdentificationChange}
           placeholder="Ejemplo: 1234567890001"
           required
-          leftIconName="IdCard"
+          leftIconName="FaIdCard"
           leftIconLibrary={4}
           errorMessage={error}
         />
@@ -449,7 +449,7 @@ const Register = () => {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Ingresa tu correo"
             required
-            leftIconName="Mail"
+            leftIconName="FaMail"
             errorMessage={error}
           />
 
@@ -480,7 +480,7 @@ const Register = () => {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Ingresa tu contraseña"
           required
-          leftIconName="Lock"
+          leftIconName="FaLock"
           rightIcon={{
             name: showPassword ? "Eye" : "EyeOff",
             library: 4,
@@ -530,7 +530,7 @@ const Register = () => {
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Confirma tu contraseña"
           required
-          leftIconName="Lock"
+          leftIconName="FaLock"
         />
 
         <Button

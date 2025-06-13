@@ -295,7 +295,7 @@ const AdminDashboardComponent = () => {
             title: "Nuevo usuario registrado",
             user: "Carlos Mendoza",
             time: "10 min",
-            icon: <RenderIcon name="Users" library={4} size={16} />,
+            icon: <RenderIcon name="FaUsers" size={16} />,
             color: theme.colors.primary,
           },
           {
@@ -304,7 +304,7 @@ const AdminDashboardComponent = () => {
             description: "Pedido #ORD-2025-1010",
             user: "María García",
             time: "35 min",
-            icon: <RenderIcon name="ShoppingCart" library={4} size={16} />,
+            icon: <RenderIcon name="FaShoppingCart" size={16} />,
             color: theme.colors.success,
           },
           {
@@ -312,9 +312,7 @@ const AdminDashboardComponent = () => {
             title: "Alerta de inventario bajo",
             description: "3 productos con stock crítico",
             time: "1 hora",
-            icon: (
-              <RenderIcon name="ExclamationTriangle" library={4} size={16} />
-            ),
+            icon: <RenderIcon name="FaExclamationTriangle" size={16} />,
             color: theme.colors.warning,
           },
           {
@@ -323,7 +321,7 @@ const AdminDashboardComponent = () => {
             description: "Pedido #ORD-2025-1005",
             user: "Luis Coordinador",
             time: "2 horas",
-            icon: <RenderIcon name="Check" library={4} size={16} />,
+            icon: <RenderIcon name="FaCheck" size={16} />,
             color: theme.colors.success,
           },
         ]);
@@ -372,13 +370,12 @@ const AdminDashboardComponent = () => {
           <StatHeader>
             <StatTitle>Usuarios totales</StatTitle>
             <StatIcon color={theme.colors.primary}>
-              <RenderIcon name="Users" library={4} size={16} />
+              <RenderIcon name="FaUsers" size={16} />
             </StatIcon>
           </StatHeader>
           <StatValue>{stats.totalUsers}</StatValue>
           <StatFooter $positive={true}>
-            <RenderIcon name="ChartLine" library={4} size={16} /> 8% más que el
-            mes pasado
+            <RenderIcon name="FaChartLine" size={16} /> 8% más que el mes pasado
           </StatFooter>
         </StatCard>
 
@@ -386,7 +383,7 @@ const AdminDashboardComponent = () => {
           <StatHeader>
             <StatTitle>Coordinadores</StatTitle>
             <StatIcon color={theme.colors.info}>
-              <RenderIcon name="UserTie" library={4} size={16} />
+              <RenderIcon name="FaUserTie" size={16} />
             </StatIcon>
           </StatHeader>
           <StatValue>{stats.totalCoordinadores}</StatValue>
@@ -397,13 +394,13 @@ const AdminDashboardComponent = () => {
           <StatHeader>
             <StatTitle>Clientes</StatTitle>
             <StatIcon color={theme.colors.success}>
-              <RenderIcon name="Users" library={4} size={16} />
+              <RenderIcon name="FaUsers" size={16} />
             </StatIcon>
           </StatHeader>
           <StatValue>{stats.totalClientes}</StatValue>
           <StatFooter $positive={true}>
-            <RenderIcon name="ChartLine" library={4} size={16} /> 12% más que el
-            mes pasado
+            <RenderIcon name="FaChartLine" size={16} /> 12% más que el mes
+            pasado
           </StatFooter>
         </StatCard>
 
@@ -411,7 +408,7 @@ const AdminDashboardComponent = () => {
           <StatHeader>
             <StatTitle>Pedidos totales</StatTitle>
             <StatIcon color={theme.colors.warning}>
-              <RenderIcon name="ShoppingCart" library={4} size={16} />
+              <RenderIcon name="FaShoppingCart" size={16} />
             </StatIcon>
           </StatHeader>
           <StatValue>{stats.totalPedidos}</StatValue>
@@ -426,7 +423,7 @@ const AdminDashboardComponent = () => {
         <SectionCard>
           <SectionTitle>
             <RenderIcon
-              name="Users"
+              name="FaUsers"
               library={4}
               size={16}
               color={({ theme }) => theme.colors.primary}
@@ -439,7 +436,7 @@ const AdminDashboardComponent = () => {
               onClick={() => navigateToSection(ROUTES.ADMIN.USER_ADMIN)}
             >
               <ActionIcon color={theme.colors.primary}>
-                <RenderIcon name="Users" library={4} size={16} />
+                <RenderIcon name="FaUsers" size={16} />
               </ActionIcon>
               <ActionContent>
                 <ActionTitle>Administrar Usuarios</ActionTitle>
@@ -453,7 +450,7 @@ const AdminDashboardComponent = () => {
               onClick={() => navigateToSection(ROUTES.ADMIN.COORDINADOR_ADMIN)}
             >
               <ActionIcon color={theme.colors.info}>
-                <RenderIcon name="UserTie" library={4} size={16} />
+                <Fa name="FaUserTie" size={16} />
               </ActionIcon>
               <ActionContent>
                 <ActionTitle>Administrar Coordinadores</ActionTitle>
@@ -465,7 +462,7 @@ const AdminDashboardComponent = () => {
 
             <ActionCard>
               <ActionIcon color={theme.colors.warning}>
-                <RenderIcon name="Box" library={4} size={16} />
+                <RenderIcon name="FaBox" size={16} />
               </ActionIcon>
               <ActionContent>
                 <ActionTitle>Productos y Catálogos</ActionTitle>
@@ -477,7 +474,7 @@ const AdminDashboardComponent = () => {
 
             <ActionCard>
               <ActionIcon color={theme.colors.success}>
-                <RenderIcon name="ShoppingCart" library={4} size={16} />
+                <RenderIcon name="FaShoppingCart" size={16} />
               </ActionIcon>
               <ActionContent>
                 <ActionTitle>Pedidos</ActionTitle>
@@ -491,8 +488,7 @@ const AdminDashboardComponent = () => {
 
         <SectionCard>
           <SectionTitle>
-            <RenderIcon name="ChartLine" library={4} size={16} /> Actividad
-            Reciente
+            <RenderIcon name="FaChartLine" size={16} /> Actividad Reciente
           </SectionTitle>
 
           <RecentActivityList>
@@ -531,7 +527,7 @@ const AdminDashboardComponent = () => {
       <SectionCard>
         <SectionTitle>
           <RenderIcon
-            name="ExclamationTriangle"
+            name="FaExclamationTriangle"
             size={18}
             library={4}
             color={theme.colors.warning}
@@ -542,7 +538,7 @@ const AdminDashboardComponent = () => {
         <RecentActivityList>
           <ActivityItem>
             <ActivityIcon color={theme.colors.error}>
-              <RenderIcon name="ExclamationTriangle" size={16} library={4} />
+              <RenderIcon name="FaExclamationTriangle" size={16} />
             </ActivityIcon>
             <ActivityContent>
               <ActivityTitle>3 productos con stock crítico</ActivityTitle>

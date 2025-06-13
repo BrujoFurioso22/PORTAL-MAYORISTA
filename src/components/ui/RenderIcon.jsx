@@ -1,4 +1,3 @@
-// components/RenderIcon.jsx
 import * as FiIcons from "react-icons/fi";
 import * as AiIcons from "react-icons/ai";
 import * as MdIcons from "react-icons/md";
@@ -10,18 +9,17 @@ import { FiHelpCircle } from "react-icons/fi";
 import { useAppTheme } from "../../context/AppThemeContext";
 
 const iconLibraries = {
-  1: { prefix: "Fi", icons: FiIcons }, // Feather
-  2: { prefix: "Ai", icons: AiIcons }, // Ant Design
-  3: { prefix: "Md", icons: MdIcons }, // Material Design
-  4: { prefix: "Fa", icons: FaIcons }, // FontAwesome
-  5: { prefix: "Ri", icons: RiIcons }, // Remix
-  6: { prefix: "Bs", icons: BsIcons }, // Bootstrap
-  7: { prefix: "Lu", icons: LuIcons }, // Bootstrap
+  "Fi": FiIcons, // Feather
+  "Ai": AiIcons, // Ant Design
+  "Md": MdIcons, // Material Design
+  "Fa": FaIcons, // FontAwesome
+  "Ri": RiIcons, // Remix
+  "Bs": BsIcons, // Bootstrap
+  "Lu": LuIcons, // Lucide
 };
 
 export default function RenderIcon({
   name = "",
-  library = 1,
   size = 24,
   color,
   style,
@@ -29,16 +27,23 @@ export default function RenderIcon({
 }) {
   const { colors } = useAppTheme();
 
-  const selectedLibrary = iconLibraries[library];
-
-  if (!selectedLibrary || !name) {
+  // Si no hay nombre, mostramos el icono de ayuda
+  if (!name) {
     return <FiHelpCircle size={size} style={{ color: "red" }} {...props} />;
   }
 
-  const { prefix, icons } = selectedLibrary;
-  const iconName = prefix + name; // Ej: Fi + ArrowLeft
+  // Extraemos el prefijo (primeros 2 caracteres del nombre)
+  const prefix = name.substring(0, 2);
+  
+  // Buscamos la biblioteca correspondiente al prefijo
+  const iconLibrary = iconLibraries[prefix];
 
-  const IconComponent = icons[iconName];
+  if (!iconLibrary) {
+    return <FiHelpCircle size={size} style={{ color: "red" }} {...props} />;
+  }
+
+  // Obtenemos el componente del icono de la biblioteca
+  const IconComponent = iconLibrary[name];
 
   if (IconComponent) {
     return (

@@ -142,7 +142,7 @@ const Login = () => {
             label="Correo Electrónico"
             type="email"
             placeholder="Ingresa tu correo"
-            leftIconName="Mail"
+            leftIconName="FaEnvelope"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -153,8 +153,8 @@ const Login = () => {
             label="Contraseña"
             type={showPassword ? "text" : "password"}
             placeholder="Ingresa tu contraseña"
-            leftIconName="Lock"
-            rightIconName={showPassword ? "EyeOff" : "Eye"}
+            leftIconName="FaLock"
+            rightIconName={showPassword ? "FaEyeSlash" : "FaEye"}
             onRightIconClick={() => setShowPassword(!showPassword)}
             value={password}
             onChange={(e) => setPassword(e.target.value)}

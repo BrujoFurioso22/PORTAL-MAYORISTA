@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import Button from "../components/ui/Button";
 
 export const Table = styled.table`
   width: 100%;
@@ -85,7 +86,7 @@ export const Pagination = styled.div`
   margin-bottom: 24px;
 `;
 
-export const PageButton = styled.button`
+export const PageButton = styled(Button)`
   padding: 8px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background-color: ${({ theme, $active }) =>

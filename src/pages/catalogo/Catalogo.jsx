@@ -16,6 +16,7 @@ import { useProductCache } from "../../context/ProductCacheContext";
 import RenderLoader from "../../components/ui/RenderLoader"; // Importar RenderLoader
 import { FaSearch } from "react-icons/fa"; // Importar ícono de búsqueda
 import Select from "../../components/ui/Select";
+import Button from "../../components/ui/Button";
 
 const PageContainer = styled.div`
   padding: 20px;
@@ -203,42 +204,11 @@ const TextArea = styled.textarea`
   color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
 `;
 
-const Button = styled.button`
-  padding: 0.75rem 1.5rem;
-  background-color: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) =>
-    theme.colors.white}; // Usar theme.colors.white en lugar de "white" fijo
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-
-  &:hover {
-    background-color: ${({ theme }) =>
-      theme.colors.accent}; // Cambiar a accent para mejor contraste
-  }
-`;
-
 // Añadir este estilo para contener los botones
 const ButtonGroup = styled.div`
   display: flex;
   gap: 1rem;
   margin-top: 1.5rem;
-`;
-
-// Añadir un estilo para el botón secundario
-const SecondaryButton = styled.button`
-  padding: 0.75rem 1.5rem;
-  background-color: transparent;
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.background};
-  }
 `;
 
 const Pagination = styled.div`
@@ -249,7 +219,7 @@ const Pagination = styled.div`
   padding: 16px 0;
 `;
 
-const PageButton = styled.button`
+const PageButton = styled(Button)`
   padding: 8px 12px;
   border: 1px solid
     ${({ theme, $active }) =>
@@ -1150,7 +1120,7 @@ const Catalogo = () => {
       <NoAccessContainer>
         <h2>Empresa no encontrada</h2>
         <p>La empresa que estás buscando no existe en nuestro sistema.</p>
-        <Button onClick={handleNavigate}>Volver al inicio</Button>
+        <Button onClick={handleNavigate} text={"Volver al inicio"} />
       </NoAccessContainer>
     );
   }
@@ -1204,10 +1174,13 @@ const Catalogo = () => {
             </FormGroup>
 
             <ButtonGroup>
-              <SecondaryButton type="button" onClick={handleNavigate}>
-                Regresar
-              </SecondaryButton>
-              <Button type="submit">Enviar solicitud</Button>
+              <Button
+                type="button"
+                variant="outlined"
+                onClick={handleNavigate}
+                text={"Regresar"}
+              />
+              <Button type="submit" text={"Enviar Solicitud"} />
             </ButtonGroup>
           </form>
         </FormContainer>
@@ -1365,9 +1338,10 @@ const Catalogo = () => {
               <PageButton
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-              >
-                &lt; Anterior
-              </PageButton>
+                leftIconName={"FaChevronLeft"}
+                text={"Anterior"}
+                size="small"
+              />
 
               {/* Mostrar números de página */}
               {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -1380,23 +1354,24 @@ const Catalogo = () => {
                 .map((page, index, array) => (
                   <React.Fragment key={page}>
                     {index > 0 && array[index - 1] !== page - 1 && (
-                      <PageButton disabled>...</PageButton>
+                      <PageButton disabled text="..." />
                     )}
                     <PageButton
                       $active={currentPage === page}
                       onClick={() => handlePageChange(page)}
-                    >
-                      {page}
-                    </PageButton>
+                      text={page}
+                      size="small"
+                    />
                   </React.Fragment>
                 ))}
 
               <PageButton
+                size="small"
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-              >
-                Siguiente &gt;
-              </PageButton>
+                rightIconName={"FaChevronRight"}
+                text={"Siguiente"}
+              />
             </Pagination>
           )}
         </div>

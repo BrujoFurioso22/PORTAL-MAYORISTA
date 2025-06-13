@@ -1,11 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button";
+import DataTable from "../../components/ui/Table";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { order_getOrdersByAccount } from "../../services/order/order";
+import { useAuth } from "../../context/AuthContext";
+import { FaSearch } from "react-icons/fa";
 
+// Mantener los estilos existentes para la página
 const PageContainer = styled.div`
   padding: 24px;
   max-width: 1200px;
@@ -53,46 +58,6 @@ const SearchInput = styled.input`
   background-color: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
   width: 200px;
-`;
-
-const OrdersContainer = styled.div`
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
-`;
-
-const OrdersTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background-color: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const TableHeader = styled.thead`
-  background-color: ${({ theme }) => theme.colors.surface};
-  border-bottom: 2px solid ${({ theme }) => theme.colors.border};
-`;
-
-const TableHeaderCell = styled.th`
-  padding: 16px;
-  text-align: left;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.textLight};
-`;
-
-const TableBody = styled.tbody``;
-
-const TableRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.background};
-  }
-`;
-
-const TableCell = styled.td`
-  padding: 16px;
 `;
 
 const StatusBadge = styled.span`
@@ -158,127 +123,99 @@ const NoOrdersText = styled.p`
   color: ${({ theme }) => theme.colors.textLight};
 `;
 
-const Pagination = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-top: 20px;
-  gap: 8px;
-`;
-
-const PageButton = styled.button`
-  padding: 6px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme, $active }) =>
-    $active ? theme.colors.primary : theme.colors.surface};
-  color: ${({ theme, $active }) =>
-    $active ? theme.colors.white : theme.colors.text};
-  border-radius: 4px;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-
-// Datos de prueba
-const mockOrders = [
-  {
-    id: "ORD-2025-1001",
-    date: new Date(2025, 3, 15), // 15 de abril de 2025
-    total: 1250.75,
-    items: 8,
-    status: "entregado",
-    paymentMethod: "Transferencia",
-    empresaId: "maxximundo",
-  },
-  {
-    id: "ORD-2025-1002",
-    date: new Date(2025, 3, 10), // 10 de abril de 2025
-    total: 458.2,
-    items: 3,
-    status: "enviado",
-    paymentMethod: "Transferencia",
-    empresaId: "stox",
-  },
-  {
-    id: "ORD-2025-1003",
-    date: new Date(2025, 3, 5), // 5 de abril de 2025
-    total: 876.5,
-    items: 5,
-    status: "en-proceso",
-    paymentMethod: "Crédito",
-    empresaId: "maxximundo",
-  },
-  {
-    id: "ORD-2025-1004",
-    date: new Date(2025, 2, 28), // 28 de marzo de 2025
-    total: 2100.0,
-    items: 12,
-    status: "entregado",
-    paymentMethod: "Transferencia",
-    empresaId: "ikonix",
-  },
-  {
-    id: "ORD-2025-1005",
-    date: new Date(2025, 2, 20), // 20 de marzo de 2025
-    total: 345.8,
-    items: 2,
-    status: "cancelado",
-    paymentMethod: "Crédito",
-    empresaId: "stox",
-  },
-  {
-    id: "ORD-2025-1006",
-    date: new Date(2025, 2, 15), // 15 de marzo de 2025
-    total: 950.25,
-    items: 6,
-    status: "entregado",
-    paymentMethod: "Transferencia",
-    empresaId: "maxximundo",
-  },
-  {
-    id: "ORD-2025-1007",
-    date: new Date(2025, 2, 8), // 8 de marzo de 2025
-    total: 540.0,
-    items: 4,
-    status: "pendiente",
-    paymentMethod: "Pendiente",
-    empresaId: "automax",
-  },
-];
-
-const empresasMap = {
-  maxximundo: "Maxximundo",
-  stox: "Stox",
-  ikonix: "Ikonix",
-  automax: "Automax",
-};
-
 const MisPedidos = () => {
   const navigate = useNavigate();
   const { theme } = useAppTheme();
+  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState("todos");
   const [dateFilter, setDateFilter] = useState("todos");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 10;
+  
+  // Estado para los pedidos
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Traducir estado a español para mostrar
   const translateStatus = (status) => {
     const statusMap = {
-      pendiente: "Pendiente",
+      "PENDIENTE": "Pendiente",
+      "EN_PROCESO": "En Proceso",
+      "ENVIADO": "Enviado",
+      "ENTREGADO": "Entregado",
+      "CANCELADO": "Cancelado",
+      "pendiente": "Pendiente",
       "en-proceso": "En Proceso",
-      enviado: "Enviado",
-      entregado: "Entregado",
-      cancelado: "Cancelado",
+      "enviado": "Enviado",
+      "entregado": "Entregado",
+      "cancelado": "Cancelado",
     };
     return statusMap[status] || status;
   };
+  
+  // Función para mapear el estado de API a los valores que espera el componente
+  const mapApiStatus = (apiStatus) => {
+    const statusMap = {
+      "PENDIENTE": "pendiente",
+      "EN_PROCESO": "en-proceso", 
+      "ENVIADO": "enviado",
+      "ENTREGADO": "entregado",
+      "CANCELADO": "cancelado"
+    };
+    return statusMap[apiStatus] || "pendiente";
+  };
+
+  // Función para obtener los pedidos del usuario
+  const handleObtainOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await order_getOrdersByAccount(user.ACCOUNT_USER);
+      
+      if (response.success && response.data) {
+        // Transformar los datos de la API al formato que espera nuestro componente
+        const formattedOrders = response.data.map(order => {
+          // Calcular el total si está vacío
+          const total = order.CABECERA.TOTAL || order.CABECERA.SUBTOTAL;
+          
+          // Calcular la cantidad total de items
+          const itemsCount = order.DETALLE.reduce((sum, item) => sum + item.QUANTITY, 0);
+          
+          return {
+            id: order.CABECERA.ID_CART_HEADER,
+            date: new Date(), // Como no tenemos fecha en el API, usamos la actual
+            total: total,
+            items: itemsCount,
+            status: mapApiStatus(order.CABECERA.STATUS),
+            paymentMethod: "Pendiente", // Este dato no viene en la API
+            empresaId: order.CABECERA.ENTERPRISE,
+            // Guardamos la información original para mostrarla en detalles
+            originalData: order
+          };
+        });
+        
+        setOrders(formattedOrders);
+        setError(null);
+      } else {
+        setError("No se pudieron cargar los pedidos");
+      }
+    } catch (err) {
+      console.error("Error al obtener pedidos:", err);
+      setError("Error al obtener los pedidos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && user.ACCOUNT_USER) {
+      handleObtainOrders();
+    }
+  }, [user]);
 
   // Aplicar filtros a los pedidos
-  const filteredOrders = mockOrders.filter((order) => {
+  const filteredOrders = orders.filter((order) => {
     // Filtro de estado
     if (statusFilter !== "todos" && order.status !== statusFilter) {
       return false;
@@ -316,9 +253,7 @@ const MisPedidos = () => {
     if (
       searchTerm &&
       !order.id.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      !empresasMap[order.empresaId]
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
+      !order.empresaId.toLowerCase().includes(searchTerm.toLowerCase())
     ) {
       return false;
     }
@@ -335,14 +270,69 @@ const MisPedidos = () => {
   );
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  // Definición de columnas para el DataTable
+  const columns = [
+    {
+      header: "Nº de Pedido",
+      field: "id",
+      render: (row) => row.id.substring(0, 8) + "..."
+    },
+    {
+      header: "Fecha",
+      field: "date",
+      render: (row) => format(row.date, "d 'de' MMMM, yyyy", { locale: es })
+    },
+    {
+      header: "Proveedor",
+      field: "empresaId"
+    },
+    {
+      header: "Total",
+      field: "total",
+      render: (row) => `$${row.total.toFixed(2)}`,
+      align: "right"
+    },
+    {
+      header: "Productos",
+      field: "items",
+      render: (row) => `${row.items} items`,
+      align: "center"
+    },
+    {
+      header: "Estado",
+      field: "status",
+      render: (row) => (
+        <StatusBadge status={row.status}>
+          {translateStatus(row.status)}
+        </StatusBadge>
+      ),
+      align: "center"
+    },
+    {
+      header: "Pago",
+      field: "paymentMethod"
+    }
+  ];
 
-  const handleViewDetails = (orderId) => {
-    // Aquí se navegaría a la página de detalles del pedido
-    console.log(`Ver detalles del pedido: ${orderId}`);
-    // Por ahora solo mostramos un log, pero aquí iría:
-    navigate(`/mis-pedidos/${orderId}`);
-    // alert(`Ver detalles del pedido: ${orderId}`);
+  // Configuración de paginación para el DataTable
+  const paginationConfig = {
+    currentPage,
+    totalPages,
+    onPageChange: setCurrentPage
+  };
+
+  // Función para renderizar acciones por fila
+  const rowActions = (row) => (
+    <Button
+      text="Ver detalle"
+      variant="outlined"
+      size="small"
+      onClick={() => navigate(`/mis-pedidos/${row.id}`)}
+    />
+  );
+
+  const handleViewDetails = (row) => {
+    navigate(`/mis-pedidos/${row.id}`);
   };
 
   return (
@@ -375,93 +365,57 @@ const MisPedidos = () => {
           </FilterSelect>
         </FilterGroup>
 
-        <SearchInput
-          type="text"
-          placeholder="Buscar por número o proveedor"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <div style={{ position: 'relative' }}>
+          <FaSearch style={{ 
+            position: 'absolute', 
+            left: '10px', 
+            top: '50%', 
+            transform: 'translateY(-50%)',
+            color: theme.colors.textLight
+          }} />
+          <SearchInput
+            type="text"
+            placeholder="Buscar por número o proveedor"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ paddingLeft: '32px' }}
+          />
+        </div>
       </FiltersContainer>
 
-      {filteredOrders.length > 0 ? (
-        <>
-          <OrdersContainer>
-            <OrdersTable>
-              <TableHeader>
-                <tr>
-                  <TableHeaderCell>Nº de Pedido</TableHeaderCell>
-                  <TableHeaderCell>Fecha</TableHeaderCell>
-                  <TableHeaderCell>Proveedor</TableHeaderCell>
-                  <TableHeaderCell>Total</TableHeaderCell>
-                  <TableHeaderCell>Productos</TableHeaderCell>
-                  <TableHeaderCell>Estado</TableHeaderCell>
-                  <TableHeaderCell>Pago</TableHeaderCell>
-                  <TableHeaderCell>Acciones</TableHeaderCell>
-                </tr>
-              </TableHeader>
-              <TableBody>
-                {currentOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>{order.id}</TableCell>
-                    <TableCell>
-                      {format(order.date, "d 'de' MMMM, yyyy", { locale: es })}
-                    </TableCell>
-                    <TableCell>{empresasMap[order.empresaId]}</TableCell>
-                    <TableCell>${order.total.toFixed(2)}</TableCell>
-                    <TableCell>{order.items} items</TableCell>
-                    <TableCell>
-                      <StatusBadge status={order.status}>
-                        {translateStatus(order.status)}
-                      </StatusBadge>
-                    </TableCell>
-                    <TableCell>{order.paymentMethod}</TableCell>
-                    <TableCell>
-                      <Button
-                        text="Ver detalle"
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleViewDetails(order.id)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </OrdersTable>
-          </OrdersContainer>
-
-          {totalPages > 1 && (
-            <Pagination>
-              <PageButton
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                Anterior
-              </PageButton>
-
-              {[...Array(totalPages).keys()].map((number) => (
-                <PageButton
-                  key={number + 1}
-                  onClick={() => paginate(number + 1)}
-                  $active={currentPage === number + 1}
-                >
-                  {number + 1}
-                </PageButton>
-              ))}
-
-              <PageButton
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                Siguiente
-              </PageButton>
-            </Pagination>
-          )}
-        </>
+      {loading ? (
+        <NoOrdersContainer>
+          <NoOrdersIcon>⏳</NoOrdersIcon>
+          <NoOrdersText>Cargando pedidos...</NoOrdersText>
+        </NoOrdersContainer>
+      ) : error ? (
+        <NoOrdersContainer>
+          <NoOrdersIcon>⚠️</NoOrdersIcon>
+          <NoOrdersText>{error}</NoOrdersText>
+          <Button
+            text="Intentar nuevamente"
+            variant="outlined"
+            onClick={handleObtainOrders}
+          />
+        </NoOrdersContainer>
+      ) : filteredOrders.length > 0 ? (
+        <DataTable 
+          columns={columns}
+          data={currentOrders}
+          emptyMessage="No se encontraron pedidos con los filtros seleccionados"
+          pagination={paginationConfig}
+          rowActions={rowActions}
+          bordered={false}
+          striped={true}
+          onRowClick={handleViewDetails}
+        />
       ) : (
         <NoOrdersContainer>
           <NoOrdersIcon>📦</NoOrdersIcon>
           <NoOrdersText>
-            No se encontraron pedidos con los filtros seleccionados
+            {searchTerm || statusFilter !== "todos" || dateFilter !== "todos" 
+              ? "No se encontraron pedidos con los filtros seleccionados"
+              : "No tienes pedidos registrados aún"}
           </NoOrdersText>
           {statusFilter !== "todos" || dateFilter !== "todos" || searchTerm ? (
             <Button

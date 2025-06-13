@@ -16,6 +16,7 @@ import {
 import Input from "../../components/ui/Input";
 import { ROUTES } from "../../constants/routes";
 import RenderIcon from "../../components/ui/RenderIcon";
+import { order_createOrder } from "../../services/order/order";
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -130,7 +131,7 @@ const ItemQuantityControl = styled.div`
   margin-top: auto;
 `;
 
-const QuantityButton = styled.button`
+const QuantityButton = styled(Button)`
   width: 28px;
   height: 28px;
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -170,7 +171,7 @@ const QuantityInput = styled.input`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-const RemoveButton = styled.button`
+const RemoveButton = styled(Button)`
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.error};
@@ -179,10 +180,6 @@ const RemoveButton = styled.button`
   padding: 0;
   margin-top: 8px;
   text-align: right;
-
-  &:hover {
-    text-decoration: underline;
-  }
 `;
 
 const OrderSummary = styled.div`
@@ -303,7 +300,7 @@ const AddressActions = styled.div`
   gap: 8px;
 `;
 
-const IconButton = styled.button`
+const IconButton = styled(Button)`
   background: none;
   border: none;
   cursor: pointer;
@@ -318,7 +315,7 @@ const IconButton = styled.button`
   }
 `;
 
-const NewAddressButton = styled.button`
+const NewAddressButton = styled(Button)`
   display: flex;
   align-items: center;
   gap: 8px;
@@ -393,7 +390,7 @@ const CompanyTabs = styled.div`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
-const CompanyTab = styled.button`
+const CompanyTab = styled(Button)`
   padding: 12px 24px;
   background: none;
   border: none;
@@ -404,6 +401,7 @@ const CompanyTab = styled.button`
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   cursor: pointer;
   white-space: nowrap;
+  border-radius: 0;
 
   &:hover {
     color: ${({ theme }) => theme.colors.primary};
@@ -526,9 +524,10 @@ const CartItem = ({ item, handleQuantityChange, removeFromCart }) => {
           <QuantityButton
             onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
             disabled={item.quantity <= 1}
-          >
-            -
-          </QuantityButton>
+            text={"-"}
+            size="small"
+          />
+
           <QuantityInput
             type="number"
             min="1"
@@ -542,9 +541,9 @@ const CartItem = ({ item, handleQuantityChange, removeFromCart }) => {
           <QuantityButton
             onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
             disabled={item.quantity >= maxStock}
-          >
-            +
-          </QuantityButton>
+            text={"+"}
+            size="small"
+          />
         </ItemQuantityControl>
 
         <StockInfo>
@@ -554,9 +553,11 @@ const CartItem = ({ item, handleQuantityChange, removeFromCart }) => {
 
       <ItemPricing>
         <ItemPrice>${itemTotal.toFixed(2)}</ItemPrice>
-        <RemoveButton onClick={() => removeFromCart(item.id)}>
-          Eliminar
-        </RemoveButton>
+        <RemoveButton
+          onClick={() => removeFromCart(item.id)}
+          text="Eliminar"
+          size="small"
+        />
       </ItemPricing>
     </CartItemContainer>
   );
@@ -1022,7 +1023,7 @@ const Carrito = () => {
   };
 
   // Función para procesar el pago de una sola empresa
-  const handleCheckoutSingleCompany = (company) => {
+  const handleCheckoutSingleCompany = async (company) => {
     const companyData = groupedCart[company];
 
     if (!companyData) {
@@ -1050,27 +1051,42 @@ const Carrito = () => {
       (addr) => addr.id === companyData.billingAddressId
     );
 
-    const order = {
-      company,
-      items: companyData.items,
-      total: companyData.total,
-      shippingAddress,
-      billingAddress,
-      date: new Date(),
-      status: "pending",
+    const productsToProcess = companyData.items.map((item) => ({
+      PRODUCT_CODE: item.id,
+      QUANTITY: item.quantity,
+      PRICE: item.price,
+    }));
+
+    const orderToProcess = {
+      ENTERPRISE: company,
+      ACCOUNT_USER: user.ACCOUNT_USER,
+      SHIPPING_ADDRESS_ID: parseInt(shippingAddress.id),
+      BILLING_ADDRESS_ID: parseInt(billingAddress.id),
+      SUBTOTAL: companyData.total,
+      DISCOUNT: null,
+      TOTAL: null,
+      STATUS: "PENDIENTE",
+      PRODUCTOS: productsToProcess,
     };
 
-    console.log(`Procesando pedido para la empresa ${company}:`, order);
+    const responseOrder = await order_createOrder(orderToProcess);
+
+    if (!responseOrder.success) {
+      toast.error("Error al procesar el pedido: " + responseOrder.message);
+      return;
+    }
+
+    toast.success("Pedido procesado correctamente");
 
     // Aquí procesarías este pedido individual con tu API
     // Esta alerta es solo para demostración
-    alert(
-      `Procesando pedido para la empresa ${company}:\n\n` +
-        `Total: $${order.total.toFixed(2)}\n` +
-        `Dirección de envío: ${order.shippingAddress.street}, ${order.shippingAddress.city}\n` +
-        `Dirección de facturación: ${order.billingAddress.street}, ${order.billingAddress.city}\n` +
-        `\n${order.items.length} productos en el pedido`
-    );
+    // alert(
+    //   `Procesando pedido para la empresa ${company}:\n\n` +
+    //     `Total: $${order.total.toFixed(2)}\n` +
+    //     `Dirección de envío: ${order.shippingAddress.street}, ${order.shippingAddress.city}\n` +
+    //     `Dirección de facturación: ${order.billingAddress.street}, ${order.billingAddress.city}\n` +
+    //     `\n${order.items.length} productos en el pedido`
+    // );
 
     // Actualizar el carrito manteniendo solo los elementos de otras empresas
     // const newCart = cart.filter(item =>
@@ -1103,9 +1119,9 @@ const Carrito = () => {
             key={company}
             $active={selectedCompany === company}
             onClick={() => setSelectedCompany(company)}
-          >
-            {company}
-          </CompanyTab>
+            text={company}
+            size="small"
+          />
         ))}
       </CompanyTabs>
 
@@ -1169,7 +1185,7 @@ const Carrito = () => {
                                 color: theme.colors.textLight,
                               }}
                             >
-                              <RenderIcon name="Lock" size={10} />
+                              <RenderIcon name="FaLock" size={10} />
                               <span>Sistema</span>
                             </span>
                           )}
@@ -1199,10 +1215,12 @@ const Carrito = () => {
                                 "Las direcciones sincronizadas con el sistema no se pueden editar. Contacta a soporte para solicitar cambios."
                               );
                             }}
-                            style={{ color: theme.colors.textLight }}
-                          >
-                            <RenderIcon name="Lock" size={14} />
-                          </IconButton>
+                            style={{
+                              color: theme.colors.textLight,
+                            }}
+                            leftIconName={"FaLock"}
+                            size="small"
+                          />
                         ) : (
                           <IconButton
                             onClick={(e) => {
@@ -1216,9 +1234,9 @@ const Carrito = () => {
                                 },
                               });
                             }}
-                          >
-                            <FaPencilAlt size={14} />
-                          </IconButton>
+                            leftIconName={"FaPencilAlt"}
+                            size="small"
+                          />
                         )}
                       </AddressActions>
                     </AddressCard>
@@ -1241,9 +1259,10 @@ const Carrito = () => {
                   },
                 })
               }
-            >
-              <FaPlus /> Ir a Perfil para agregar dirección de envío
-            </NewAddressButton>
+              text={"Ir a Perfil para agregar dirección de envío"}
+              size="small"
+              leftIconName={"FaPlus"}
+            />
           </ShippingSection>
 
           {/* Sección de dirección de facturación similar a la de envío */}
@@ -1291,7 +1310,7 @@ const Carrito = () => {
                                 color: theme.colors.textLight,
                               }}
                             >
-                              <RenderIcon name="Lock" size={10} />
+                              <RenderIcon name="FaLock" size={10} />
                               <span>Sistema</span>
                             </span>
                           )}
@@ -1322,9 +1341,9 @@ const Carrito = () => {
                               );
                             }}
                             style={{ color: theme.colors.textLight }}
-                          >
-                            <RenderIcon name="Lock" size={14} />
-                          </IconButton>
+                            leftIconName={"FaLock"}
+                            size="small"
+                          />
                         ) : (
                           <IconButton
                             onClick={(e) => {
@@ -1337,9 +1356,9 @@ const Carrito = () => {
                                 },
                               });
                             }}
-                          >
-                            <FaPencilAlt size={14} />
-                          </IconButton>
+                            leftIconName={"FaPencilAlt"}
+                            size="small"
+                          />
                         )}
                       </AddressActions>
                     </AddressCard>
@@ -1362,9 +1381,10 @@ const Carrito = () => {
                   },
                 })
               }
-            >
-              <FaPlus /> Ir a Perfil para agregar dirección de facturación
-            </NewAddressButton>
+              text={"Ir a Perfil para agregar dirección de facturación"}
+              leftIconName={"FaPlus"}
+              size="small"
+            />
           </ShippingSection>
 
           {/* Formulario para agregar/editar dirección */}
@@ -1533,7 +1553,7 @@ const Carrito = () => {
                 color={theme.colors.white}
                 variant="outlined"
                 size="small"
-                leftIconName={"ShoppingCart"}
+                leftIconName={"FaShoppingCart"}
                 backgroundColor={theme.colors.primary}
                 style={{ width: "100%" }}
                 onClick={() => handleCheckoutSingleCompany(company)}

@@ -21,6 +21,7 @@ import {
 import { auth_me } from "../../services/auth/auth";
 import { useLocation, useNavigate } from "react-router-dom";
 import Select from "../../components/ui/Select";
+import RenderIcon from "../../components/ui/RenderIcon";
 
 // Estilos para el componente
 const PageContainer = styled.div`
@@ -43,10 +44,11 @@ const TabsContainer = styled.div`
   -webkit-overflow-scrolling: touch;
 `;
 
-const TabButton = styled.button`
+const TabButton = styled(Button)`
   padding: 12px 24px;
   background: none;
   border: none;
+  border-radius: 0;
   border-bottom: 2px solid
     ${({ theme, $active }) => ($active ? theme.colors.primary : "transparent")};
   color: ${({ theme, $active }) =>
@@ -197,7 +199,7 @@ const AddressActions = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button`
+const ActionButton = styled(Button)`
   display: flex;
   align-items: center;
   background: none;
@@ -439,7 +441,7 @@ const CompanyOption = styled.div`
 `;
 
 // Añade esta definición justo después de CompanyFilterSelect o junto a los demás styled-components
-const TypeFilterButton = styled.button`
+const TypeFilterButton = styled(Button)`
   background: ${({ theme, $active }) =>
     $active ? `${theme.colors.primary}15` : "transparent"};
   border: 1px solid
@@ -1239,7 +1241,7 @@ const Perfil = () => {
                 text="Agregar nueva dirección"
                 variant="outlined"
                 size="small"
-                leftIconName={"Plus"}
+                leftIconName={"FaPlus"}
                 onClick={handleAddNewAddress}
               />
             )}
@@ -1259,21 +1261,18 @@ const Perfil = () => {
             <TypeFilterButton
               $active={addressTypeFilter === "all"}
               onClick={() => setAddressTypeFilter("all")}
-            >
-              Todas
-            </TypeFilterButton>
+              text="Todas"
+            />
             <TypeFilterButton
               $active={addressTypeFilter === "B"}
               onClick={() => setAddressTypeFilter("B")}
-            >
-              Facturación
-            </TypeFilterButton>
+              text="Facturación "
+            />
             <TypeFilterButton
               $active={addressTypeFilter === "S"}
               onClick={() => setAddressTypeFilter("S")}
-            >
-              Envío
-            </TypeFilterButton>
+              text="Envío"
+            />
           </div>
 
           {filteredAddresses.length > 0 ? (
@@ -1303,10 +1302,10 @@ const Perfil = () => {
                     {!address.PREDETERMINED && (
                       <ActionButton
                         onClick={() => handleSetDefaultAddress(address.ID)}
-                      >
-                        <FaCheck size={14} style={{ marginRight: "4px" }} />
-                        Establecer predeterminada
-                      </ActionButton>
+                        size="small"
+                        leftIconName="FaCheck"
+                        text="Establecer predeterminada"
+                      />
                     )}
 
                     {/* Acciones según el origen de la dirección */}
@@ -1317,24 +1316,25 @@ const Perfil = () => {
                             "Para modificar esta dirección, contacta a soporte."
                           )
                         }
-                      >
-                        <FaLock size={12} style={{ marginRight: "4px" }} />
-                        Sincronizada con SAP
-                      </ActionButton>
+                        size="small"
+                        leftIconName="FaLock"
+                        text="Sincronizada con sistema"
+                      />
                     ) : (
                       <>
                         <ActionButton
                           onClick={() => handleEditAddress(address)}
-                        >
-                          <FaEdit size={14} style={{ marginRight: "4px" }} />
-                          Editar
-                        </ActionButton>
+                          size="small"
+                          leftIconName="FaEdit"
+                          text="Editar"
+                        />
+
                         <ActionButton
                           onClick={() => handleDeleteAddress(address.ID)}
-                        >
-                          <FaTrash size={14} style={{ marginRight: "4px" }} />
-                          Eliminar
-                        </ActionButton>
+                          size="small"
+                          leftIconName="FaTrash"
+                          text="Eliminar"
+                        />
                       </>
                     )}
 
@@ -1343,10 +1343,10 @@ const Perfil = () => {
                       <ActionButton
                         onClick={() => handleOpenAssignModal(address)}
                         style={{ marginLeft: "8px" }}
-                      >
-                        <FaCopy size={14} style={{ marginRight: "4px" }} />
-                        Asignar a otra empresa
-                      </ActionButton>
+                        size="small"
+                        leftIconName="FaCopy"
+                        text="Asignar a otra empresa"
+                      />
                     )}
                   </AddressActions>
                 </AddressCardHeader>
@@ -1375,7 +1375,10 @@ const Perfil = () => {
       <Modal>
         <ModalHeader>
           <ModalTitle>Asignar dirección a otra empresa</ModalTitle>
-          <CloseButton onClick={() => setShowAssignModal(false)}>×</CloseButton>
+          <RenderIcon
+            name="FaTimes"
+            onClick={() => setShowAssignModal(false)}
+          />
         </ModalHeader>
         <ModalBody>
           <p>Selecciona la empresa a la que deseas asignar esta dirección:</p>
@@ -1464,27 +1467,27 @@ const Perfil = () => {
         <TabButton
           $active={activeTab === "personal"}
           onClick={() => setActiveTab("personal")}
-        >
-          Información Personal
-        </TabButton>
+          text={"Información Personal"}
+          size="small"
+        />
         <TabButton
           $active={activeTab === "security"}
           onClick={() => setActiveTab("security")}
-        >
-          Seguridad
-        </TabButton>
+          text={"Seguridad"}
+          size="small"
+        />
         <TabButton
           $active={activeTab === "addresses"}
           onClick={() => setActiveTab("addresses")}
-        >
-          Direcciones
-        </TabButton>
+          text={"Direcciones"}
+          size="small"
+        />
         <TabButton
           $active={activeTab === "preferences"}
           onClick={() => setActiveTab("preferences")}
-        >
-          Preferencias
-        </TabButton>
+          text={"Preferencias"}
+          size="small"
+        />
       </TabsContainer>
 
       {/* Tab: Información Personal */}
@@ -1567,7 +1570,7 @@ const Perfil = () => {
                 type="password"
                 value={passwordInfo.currentPassword}
                 onChange={handlePasswordChange}
-                leftIconName="Lock"
+                leftIconName="FaLock"
                 required
               />
             </FormField>
@@ -1580,7 +1583,7 @@ const Perfil = () => {
                   type="password"
                   value={passwordInfo.newPassword}
                   onChange={handlePasswordChange}
-                  leftIconName="Lock"
+                  leftIconName="FaLock"
                   required
                 />
               </FormField>
@@ -1591,7 +1594,7 @@ const Perfil = () => {
                   type="password"
                   value={passwordInfo.confirmPassword}
                   onChange={handlePasswordChange}
-                  leftIconName="Lock"
+                  leftIconName="FaLock"
                   required
                 />
               </FormField>

@@ -11,6 +11,7 @@ import {
   PRODUCT_LINE_CONFIG,
   CATEGORY_TYPE_LABELS,
 } from "../../constants/productLineConfig";
+import Button from "./Button";
 
 const SidebarWrapper = styled.div`
   display: flex;
@@ -154,7 +155,7 @@ const PriceInput = styled.input`
   }
 `;
 
-const ClearFiltersButton = styled.button`
+const ClearFiltersButton = styled(Button)`
   display: flex;
   align-items: center;
   gap: 6px;
@@ -352,7 +353,6 @@ const FilterSidebar = ({
     // Actualizar estados con los filtros disponibles
     setAvailableCategoryFilters(Array.from(availableCats));
     setAvailableBrandFilters(Array.from(availableBrands));
-
   }, [
     allProducts,
     selectedCategoriesLocal,
@@ -627,9 +627,11 @@ const FilterSidebar = ({
           selectedBrandsLocal.length > 0 ||
           currentPriceRangeLocal.min !== Math.max(0, defaultPriceRange.min) ||
           currentPriceRangeLocal.max !== defaultPriceRange.max) && (
-          <ClearFiltersButton onClick={clearFilters}>
-            <FaTimes /> Limpiar filtros
-          </ClearFiltersButton>
+          <ClearFiltersButton
+            onClick={clearFilters}
+            leftIconName={"FaTimes"}
+            text={"Limpiar filtros"}
+          />
         )}
 
         {/* Mostrar selector de línea de negocio si hay más de una disponible */}

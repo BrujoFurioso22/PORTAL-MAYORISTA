@@ -312,7 +312,7 @@ const ForgotPassword = () => {
               label="Correo Electrónico"
               type="email"
               placeholder="Ingresa tu correo"
-              leftIconName="Mail"
+              leftIconName="FaEnvelope"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -385,7 +385,7 @@ const ForgotPassword = () => {
               label="Nueva contraseña"
               type={showPassword ? "text" : "password"}
               placeholder="Ingresa tu nueva contraseña"
-              leftIconName="Lock"
+              leftIconName="FaLock"
               rightIconName={showPassword ? "EyeOff" : "Eye"}
               onRightIconClick={() => setShowPassword(!showPassword)}
               value={password}
@@ -398,7 +398,7 @@ const ForgotPassword = () => {
               label="Confirmar contraseña"
               type={showPassword ? "text" : "password"}
               placeholder="Confirma tu nueva contraseña"
-              leftIconName="Lock"
+              leftIconName="FaLock"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required

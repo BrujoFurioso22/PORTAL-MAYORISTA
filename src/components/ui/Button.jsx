@@ -73,12 +73,10 @@ export default function Button({
   disabled = false,
   leftIconName,
   rightIconName,
-  rightIconLibrary = 1,
-  leftIconLibrary = 1,
   color,
   align = "center",
   backgroundColor,
-  iconSize = 18,
+  iconSize = 14,
   fontWeight,
   radius,
   onClick,
@@ -126,7 +124,6 @@ export default function Button({
                 name={leftIconName}
                 size={iconSize}
                 color={color}
-                library={leftIconLibrary}
               />
             </IconContainer>
           )}
@@ -137,7 +134,6 @@ export default function Button({
                 name={rightIconName}
                 size={iconSize}
                 color={color}
-                library={rightIconLibrary}
               />
             </IconContainer>
           )}

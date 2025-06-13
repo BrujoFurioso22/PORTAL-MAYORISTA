@@ -192,7 +192,7 @@ const ActionButtons = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button`
+const ActionButton = styled(Button)`
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.primary};
@@ -267,7 +267,7 @@ const Pagination = styled.div`
   gap: 8px;
 `;
 
-const PageButton = styled.button`
+const PageButton = styled(Button)`
   padding: 6px 12px;
   border: 1px solid
     ${({ theme, $active }) =>
@@ -665,9 +665,8 @@ const CoordinadorHomeComponent = () => {
                       <ActionButton
                         title="Ver detalle"
                         onClick={() => handleViewDetail(order.id)}
-                      >
-                        <FaEye />
-                      </ActionButton>
+                        leftIconName={"FaEye"}
+                      />
                       {order.newAddress && (
                         <AddressIndicator title="Revisar dirección">
                           <FaQuestionCircle size={16} />
@@ -685,26 +684,26 @@ const CoordinadorHomeComponent = () => {
               <PageButton
                 onClick={() => paginate(currentPage - 1)}
                 disabled={currentPage === 1}
-              >
-                Anterior
-              </PageButton>
+                text={"Anterior"}
+                size="small"
+              />
 
               {[...Array(totalPages).keys()].map((number) => (
                 <PageButton
                   key={number + 1}
                   $active={currentPage === number + 1}
                   onClick={() => paginate(number + 1)}
-                >
-                  {number + 1}
-                </PageButton>
+                  text={number + 1}
+                  size="small"
+                />
               ))}
 
               <PageButton
                 onClick={() => paginate(currentPage + 1)}
                 disabled={currentPage === totalPages}
-              >
-                Siguiente
-              </PageButton>
+                text={"Siguiente"}
+                size="small"
+              />
             </Pagination>
           )}
         </>

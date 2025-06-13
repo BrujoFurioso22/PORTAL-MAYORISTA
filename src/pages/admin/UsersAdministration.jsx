@@ -153,17 +153,6 @@ const ModalTitle = styled.h2`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.textLight};
-  font-size: 1.5rem;
-  cursor: pointer;
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.text};
-  }
-`;
 
 const FormGroup = styled.div`
   margin-bottom: 16px;
@@ -520,7 +509,7 @@ const UsersAdministration = () => {
           }}
         >
           <RenderIcon
-            name={row.STATUS_USER ? "CheckCircle" : "MinusCircle"}
+            name={row.STATUS_USER ? "FaCheckCircle" : "FaMinusCircle"}
             size={18}
           />
         </div>
@@ -534,12 +523,12 @@ const UsersAdministration = () => {
       <ActionButton
         title="Editar coordinador"
         onClick={() => handleOpenEditModal(coordinador)}
-        leftIconName={"Edit"}
+        leftIconName={"FaEdit"}
       />
       <ActionButton
         title="Eliminar coordinador"
         onClick={() => handleOpenDeleteModal(coordinador)}
-        leftIconName={"Trash"}
+        leftIconName={"FaTrash"}
       />
     </ActionsGroup>
   );
@@ -552,7 +541,7 @@ const UsersAdministration = () => {
         <div style={{ display: "flex", gap: "16px" }}>
           <SearchContainer>
             <SearchIcon>
-              <RenderIcon name={"Search"} library={4} size={14} />
+              <RenderIcon name={"FaSearch"} size={14} />
             </SearchIcon>
             <SearchInput
               type="text"
@@ -612,7 +601,11 @@ const UsersAdministration = () => {
           <ModalContent>
             <ModalHeader>
               <ModalTitle>Editar Usuario</ModalTitle>
-              <CloseButton onClick={handleCloseModals}>&times;</CloseButton>
+              <RenderIcon
+                name={"FaTimes"}
+                size={20}
+                onClick={handleCloseModals}
+              />
             </ModalHeader>
 
             <form onSubmit={handleUpdateUser}>
@@ -723,7 +716,11 @@ const UsersAdministration = () => {
           <ModalContent>
             <ModalHeader>
               <ModalTitle>Eliminar Usuario</ModalTitle>
-              <CloseButton onClick={handleCloseModals}>&times;</CloseButton>
+              <RenderIcon
+                name={"FaTimes"}
+                size={20}
+                onClick={handleCloseModals}
+              />
             </ModalHeader>
 
             <p>

@@ -86,15 +86,13 @@ const DataTable = ({
           <PageButton
             onClick={() => pagination.onPageChange(1)}
             disabled={pagination.currentPage === 1}
-          >
-            Primera
-          </PageButton>
+            text={"Primera"}
+          />
           <PageButton
             onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
             disabled={pagination.currentPage === 1}
-          >
-            Anterior
-          </PageButton>
+            text={"Anterior"}
+          />
 
           {Array.from({ length: Math.min(pagination.totalPages, 5) }).map(
             (_, i) => {
@@ -115,9 +113,8 @@ const DataTable = ({
                   key={pageNum}
                   $active={pagination.currentPage === pageNum}
                   onClick={() => pagination.onPageChange(pageNum)}
-                >
-                  {pageNum}
-                </PageButton>
+                  text={pageNum}
+                />
               );
             }
           )}
@@ -125,15 +122,13 @@ const DataTable = ({
           <PageButton
             onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
             disabled={pagination.currentPage === pagination.totalPages}
-          >
-            Siguiente
-          </PageButton>
+            text={"Siguiente"}
+          />
           <PageButton
             onClick={() => pagination.onPageChange(pagination.totalPages)}
             disabled={pagination.currentPage === pagination.totalPages}
-          >
-            Última
-          </PageButton>
+            text={"Última"}
+          />
         </Pagination>
       )}
     </>

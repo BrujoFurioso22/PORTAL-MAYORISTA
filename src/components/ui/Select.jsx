@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import { FaSearch, FaChevronDown } from "react-icons/fa";
+import Button from "./Button";
 
 const SelectContainer = styled.div`
   position: relative;
@@ -16,7 +17,7 @@ const Label = styled.label`
   color: ${({ $color, theme }) => $color || theme.colors.text};
 `;
 
-const SelectButton = styled.button`
+const SelectButton = styled(Button)`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -206,14 +207,13 @@ const Select = ({
         onClick={toggleDropdown}
         $isOpen={isOpen}
         disabled={disabled}
-      >
-        <span>
-          {selectedOption
+        text={
+          selectedOption
             ? `${preValue} ${selectedOption[labelKey]} ${postValue}`
-            : placeholder}
-        </span>
-        <FaChevronDown size={12} />
-      </SelectButton>
+            : placeholder
+        }
+        rightIconName={"FaChevronDown"}
+      />
 
       <DropdownMenu $isOpen={isOpen}>
         {withSearch && (
