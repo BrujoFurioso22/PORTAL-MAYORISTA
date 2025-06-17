@@ -186,15 +186,12 @@ const EmptyState = styled.div`
 
 const UsersAdministration = () => {
   const { theme } = useAppTheme();
-  const { user } = useAuth();
 
   // Estados
   const [users, setUsers] = useState(null);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("todos");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [usersPerPage] = useState(10);
   const [roles, setRoles] = useState([]);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -280,14 +277,8 @@ const UsersAdministration = () => {
     }
 
     setFilteredUsers(result);
-    setCurrentPage(1); // Resetear a primera página al filtrar
   }, [users, searchTerm, roleFilter]);
 
-  // Paginación
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
 
   const handleOpenEditModal = (user) => {
     setCurrentUser(user);
@@ -583,15 +574,11 @@ const UsersAdministration = () => {
       ) : (
         <DataTable
           columns={columns}
-          data={currentUsers}
+          data={filteredUsers}
           emptyMessage="No hay usuarios que coincidan con los criterios de búsqueda."
           rowActions={renderRowActions}
           striped={true}
-          pagination={{
-            currentPage,
-            totalPages,
-            onPageChange: setCurrentPage,
-          }}
+         
         />
       )}
 

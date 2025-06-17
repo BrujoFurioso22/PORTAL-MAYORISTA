@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { format } from "date-fns";
+import { format, formatDistance } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAppTheme } from "../../context/AppThemeContext";
 import Button from "../../components/ui/Button";
+import { order_getOrderById } from "../../services/order/order";
+import RenderIcon from "../../components/ui/RenderIcon";
+import { baseLinkImages } from "../../constants/links";
+import ContactModal from "../../components/ui/ContactModal";
 
 // Estilos para el componente
 const PageContainer = styled.div`
@@ -14,7 +18,7 @@ const PageContainer = styled.div`
   background-color: ${({ theme }) => theme.colors.background};
 `;
 
-const BackLink = styled.button`
+const BackLink = styled(Button)`
   background: none;
   border: none;
   color: ${({ theme }) => theme.colors.primary};
@@ -65,15 +69,17 @@ const StatusBadge = styled.span`
   font-weight: 500;
   background-color: ${({ theme, status }) => {
     switch (status) {
-      case "pendiente":
+      case "PENDIENTE":
         return theme.colors.warning + "33";
-      case "en-proceso":
+      case "CONFIRMADO":
         return theme.colors.info + "33";
-      case "enviado":
+      case "PREPARANDO":
         return theme.colors.primary + "33";
-      case "entregado":
+      case "ENVIADO":
         return theme.colors.success + "33";
-      case "cancelado":
+      case "ENTREGADO":
+        return theme.colors.primary + "33";
+      case "CANCELADO":
         return theme.colors.error + "33";
       default:
         return theme.colors.border;
@@ -81,15 +87,17 @@ const StatusBadge = styled.span`
   }};
   color: ${({ theme, status }) => {
     switch (status) {
-      case "pendiente":
+      case "PENDIENTE":
         return theme.colors.warning;
-      case "en-proceso":
+      case "CONFIRMADO":
         return theme.colors.info;
-      case "enviado":
+      case "PREPARANDO":
         return theme.colors.primary;
-      case "entregado":
+      case "ENVIADO":
         return theme.colors.success;
-      case "cancelado":
+      case "ENTREGADO":
+        return theme.colors.primary;
+      case "CANCELADO":
         return theme.colors.error;
       default:
         return theme.colors.textLight;
@@ -236,27 +244,52 @@ const SummaryValue = styled.span`
 
 const TrackingSteps = styled.div`
   display: flex;
-  flex-direction: column;
-  margin-top: 20px;
-`;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 30px;
+  width: 100%;
 
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 20px;
+  }
+`;
 const TrackingStep = styled.div`
   display: flex;
-  margin-bottom: 20px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
   position: relative;
+  padding: 0 10px;
 
-  &::before {
+  // Línea horizontal entre pasos
+  &:not(:last-child)::after {
     content: "";
     position: absolute;
-    left: 15px;
-    top: 35px;
-    bottom: -15px;
-    width: 2px;
+    top: 15px; // Alinear con el centro del ícono
+    right: calc(-50% + 10px);
+    width: 100%;
+    height: 2px;
     background-color: ${({ theme }) => theme.colors.border};
+    z-index: 0;
   }
 
-  &:last-child::before {
-    display: none;
+  // En modo móvil, volver al diseño vertical
+  @media (max-width: 768px) {
+    flex-direction: row;
+    text-align: left;
+
+    &:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 32px;
+      bottom: -20px;
+      width: 2px;
+      height: calc(100% - 10px);
+      right: auto;
+    }
   }
 `;
 
@@ -274,21 +307,34 @@ const StepIconContainer = styled.div`
   justify-content: center;
   color: ${({ theme, $completed }) =>
     $completed ? theme.colors.white : theme.colors.textLight};
-  margin-right: 16px;
+  margin-bottom: 12px;
+  z-index: 1; // Para que aparezca por encima de la línea
+
+  @media (max-width: 768px) {
+    margin-right: 16px;
+    margin-bottom: 0;
+  }
 `;
 
 const StepContent = styled.div`
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    align-items: flex-start;
+  }
 `;
 
 const StepTitle = styled.h4`
   margin: 0 0 4px 0;
   color: ${({ theme }) => theme.colors.text};
+  font-size: 0.9rem;
 `;
 
 const StepDate = styled.p`
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: ${({ theme }) => theme.colors.textLight};
 `;
 
@@ -297,143 +343,206 @@ const EmptyState = styled.div`
   padding: 40px;
 `;
 
-// Datos de prueba para un pedido específico
-const mockOrderDetails = {
-  id: "ORD-2025-1002",
-  date: new Date(2025, 3, 10), // 10 de abril de 2025
-  status: "enviado",
-  customer: {
-    name: "Carlos Rodriguez",
-    email: "carlos@example.com",
-    phone: "555-123-4567",
-  },
-  shipping: {
-    address: "Av. Principal 123",
-    city: "Ciudad de México",
-    state: "CDMX",
-    postalCode: "01234",
-    method: "Envío estándar",
-    cost: 120.0,
-  },
-  payment: {
-    method: "Transferencia bancaria",
-    status: "Pagado",
-    reference: "REF-123456",
-    date: new Date(2025, 3, 10),
-  },
-  items: [
-    {
-      id: 1,
-      name: 'Monitor LED 24"',
-      sku: "MON-24-LED",
-      price: 2500,
-      quantity: 1,
-      discount: 10,
-      total: 2250,
-      image: "https://placehold.co/50x50/png",
-    },
-    {
-      id: 2,
-      name: "Teclado Mecánico RGB",
-      sku: "TEC-MEC-RGB",
-      price: 1200,
-      quantity: 2,
-      discount: 0,
-      total: 2400,
-      image: "https://placehold.co/50x50/png",
-    },
-    {
-      id: 3,
-      name: "Mousepad XL Gamer",
-      sku: "MOU-PAD-XL",
-      price: 350,
-      quantity: 1,
-      discount: 0,
-      total: 350,
-      image: "https://placehold.co/50x50/png",
-    },
-  ],
-  subtotal: 5000,
-  discount: 250,
-  tax: 760,
-  total: 5630,
-  tracking: [
-    {
-      step: "Pedido recibido",
-      date: new Date(2025, 3, 10, 9, 30),
-      completed: true,
-    },
-    {
-      step: "Pago confirmado",
-      date: new Date(2025, 3, 10, 11, 15),
-      completed: true,
-    },
-    {
-      step: "En preparación",
-      date: new Date(2025, 3, 11, 8, 45),
-      completed: true,
-    },
-    {
-      step: "Enviado",
-      date: new Date(2025, 3, 12, 14, 20),
-      completed: true,
-    },
-    {
-      step: "Entregado",
-      date: null,
-      completed: false,
-    },
-  ],
-  empresaInfo: {
-    id: "stox",
-    name: "Stox",
-    logo: "https://placehold.co/100x50/png",
-  },
-};
-
 const DetallePedido = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const { theme } = useAppTheme();
   const [orderDetails, setOrderDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   // Traducir estado a español para mostrar
   const translateStatus = (status) => {
     const statusMap = {
-      pendiente: "Pendiente",
-      "en-proceso": "En Proceso",
-      enviado: "Enviado",
-      entregado: "Entregado",
-      cancelado: "Cancelado",
+      PENDIENTE: "Pendiente",
+      CONFIRMADO: "Confirmado",
+      PREPARANDO: "En preparación",
+      ENVIADO: "Enviado",
+      ENTREGADO: "Entregado",
+      CANCELADO: "Cancelado",
     };
     return statusMap[status] || status;
   };
 
   useEffect(() => {
-    // Simular carga de datos desde una API
     const fetchOrderDetails = async () => {
       setLoading(true);
       try {
-        // En un caso real, aquí harías una llamada a la API
-        // const response = await api.getOrderDetails(orderId);
-        // setOrderDetails(response.data);
+        const response = await order_getOrderById(orderId);
 
-        // Para este ejemplo, usamos datos mock
-        setTimeout(() => {
-          // Verificamos que el ID coincida con nuestros datos mock
-          if (mockOrderDetails.id === orderId) {
-            setOrderDetails(mockOrderDetails);
-          } else {
-            // Si no coincide, podemos mostrar un error o redirigir
-            console.error(`Pedido ${orderId} no encontrado`);
-            // Por ahora usamos el mock de todas formas
-            setOrderDetails(mockOrderDetails);
+        if (response.success && response.data && response.data.length > 0) {
+          // Transformar los datos de la API al formato que necesita nuestro componente
+          const apiOrder = response.data[0];
+          const cabecera = apiOrder.CABECERA;
+          const detalle = apiOrder.DETALLE || [];
+
+          // Calcular el subtotal
+          const subtotal = detalle.reduce(
+            (sum, item) => sum + item.PRICE * item.QUANTITY,
+            0
+          );
+
+          // Crear un objeto con la estructura que espera nuestro componente
+          const formattedOrder = {
+            id: cabecera.ID_CART_HEADER,
+            date: new Date(cabecera.createdAt),
+            // status: cabecera.STATUS.toLowerCase(),
+            status: "ENVIADO", // Para propósitos de demostración, usar un estado fijo
+            customer: {
+              name: cabecera.USER.NAME_USER,
+              email: cabecera.USER.EMAIL,
+              phone: "No disponible", // Este dato no viene en la API
+            },
+            shipping: {
+              address: cabecera.SHIPPING_ADDRESS.STREET,
+              city: cabecera.SHIPPING_ADDRESS.CITY,
+              state: cabecera.SHIPPING_ADDRESS.STATE,
+            },
+            billing: {
+              address: cabecera.BILLING_ADDRESS.STREET,
+              city: cabecera.BILLING_ADDRESS.CITY,
+              state: cabecera.BILLING_ADDRESS.STATE,
+            },
+            payment: {
+              method: "Transferencia bancaria", // Este dato no viene en la API
+              status: "Pendiente",
+              reference: "No disponible", // Este dato no viene en la API
+              date: new Date(cabecera.createdAt),
+            },
+            items: detalle.map((item) => ({
+              id: item.PRODUCT_CODE,
+              name: item.MAESTRO?.DMA_NOMBREITEM || "Producto",
+              sku: item.PRODUCT_CODE,
+              price: item.PRICE,
+              quantity: item.QUANTITY,
+              discount: 0, // Este dato no viene en la API
+              total: item.PRICE * item.QUANTITY,
+              image: item.MAESTRO?.DMA_RUTAIMAGEN
+                ? `${baseLinkImages}${item.MAESTRO.DMA_RUTAIMAGEN}`
+                : "https://placehold.co/50x50/png",
+            })),
+            subtotal: subtotal,
+            discount: cabecera.DISCOUNT || 0,
+            total: cabecera.TOTAL || subtotal, // Si no hay total, usar subtotal
+            tracking: [
+              {
+                step: "Pedido recibido",
+                date: new Date(cabecera.createdAt),
+                completed: true,
+              },
+              {
+                step: "Pedido confirmado",
+                date: null,
+                completed: false,
+              },
+              {
+                step: "En preparación",
+                date: null,
+                completed: false,
+              },
+              {
+                step: "Enviado",
+                date: null,
+                completed: false,
+              },
+              {
+                step: "Entregado",
+                date: null,
+                completed: false,
+              },
+            ],
+            empresaInfo: {
+              id: cabecera.ENTERPRISE,
+              name: cabecera.ENTERPRISE,
+            },
+          };
+
+          // Actualizar el estado de tracking según el status del pedido
+          if (formattedOrder.status === "PENDIENTE") {
+            // Solo el primer paso está completo - fecha de creación del pedido
+          } else if (formattedOrder.status === "CONFIRMADO") {
+            // Calcular fechas progresivas basadas en la fecha de creación
+            const creationDate = new Date(cabecera.createdAt);
+
+            // Pedido confirmado: 1 día después de la creación
+            formattedOrder.tracking[1].completed = true;
+            const confirmDate = new Date(creationDate);
+            confirmDate.setDate(creationDate.getDate() + 1);
+            formattedOrder.tracking[1].date = confirmDate;
+          } else if (formattedOrder.status === "PREPARANDO") {
+            // Calcular fechas progresivas basadas en la fecha de creación
+            const creationDate = new Date(cabecera.createdAt);
+
+            // Pedido confirmado: 1 día después de la creación
+            formattedOrder.tracking[1].completed = true;
+            const confirmDate = new Date(creationDate);
+            confirmDate.setDate(creationDate.getDate() + 1);
+            formattedOrder.tracking[1].date = confirmDate;
+
+            // En preparación: 2 días después de la creación
+            formattedOrder.tracking[2].completed = true;
+            const preparationDate = new Date(creationDate);
+            preparationDate.setDate(creationDate.getDate() + 2);
+            formattedOrder.tracking[2].date = preparationDate;
+          } else if (formattedOrder.status === "ENVIADO") {
+            // Calcular fechas progresivas basadas en la fecha de creación
+            const creationDate = new Date(cabecera.createdAt);
+
+            // Establecer fechas para los primeros 4 pasos
+            formattedOrder.tracking[1].completed = true;
+            formattedOrder.tracking[1].date = new Date(
+              creationDate.getTime() + 24 * 60 * 60 * 1000
+            ); // +1 día
+
+            formattedOrder.tracking[2].completed = true;
+            formattedOrder.tracking[2].date = new Date(
+              creationDate.getTime() + 2 * 24 * 60 * 60 * 1000
+            ); // +2 días
+
+            formattedOrder.tracking[3].completed = true;
+            formattedOrder.tracking[3].date = new Date(
+              creationDate.getTime() + 3 * 24 * 60 * 60 * 1000
+            ); // +3 días
+          } else if (formattedOrder.status === "ENTREGADO") {
+            // Todos los pasos están completos
+            const creationDate = new Date(cabecera.createdAt);
+
+            // Establecer fechas para cada paso del proceso
+            const dates = [
+              creationDate, // Pedido recibido: fecha de creación
+              new Date(creationDate.getTime() + 24 * 60 * 60 * 1000), // Pedido confirmado: +1 día
+              new Date(creationDate.getTime() + 2 * 24 * 60 * 60 * 1000), // En preparación: +2 días
+              new Date(creationDate.getTime() + 3 * 24 * 60 * 60 * 1000), // Enviado: +3 días
+              new Date(creationDate.getTime() + 5 * 24 * 60 * 60 * 1000), // Entregado: +5 días
+            ];
+
+            // Aplicar las fechas al tracking
+            formattedOrder.tracking.forEach((step, index) => {
+              step.completed = true;
+              step.date = dates[index];
+            });
+          } else if (formattedOrder.status === "CANCELADO") {
+            // Si el pedido está cancelado, solo el primer paso está completo
+            // y se añade un paso adicional de cancelación con la fecha actual
+            formattedOrder.tracking = [
+              formattedOrder.tracking[0], // Mantener "Pedido recibido"
+              {
+                step: "Pedido cancelado",
+                date: new Date(),
+                completed: true,
+              },
+            ];
           }
-          setLoading(false);
-        }, 800); // Simulamos un pequeño delay de carga
+          setOrderDetails(formattedOrder);
+          setError(null);
+        } else {
+          setError("No se encontraron detalles del pedido");
+        }
       } catch (error) {
         console.error("Error al cargar detalles del pedido:", error);
+        setError(`Error al cargar detalles: ${error.message}`);
+      } finally {
         setLoading(false);
       }
     };
@@ -442,35 +551,48 @@ const DetallePedido = () => {
   }, [orderId]);
 
   const handleCancelOrder = () => {
-    // Aquí iría la lógica para cancelar el pedido
-    alert("Función para cancelar pedido - No implementada");
+    const canCancel = orderDetails.status.toUpperCase() === "PENDIENTE";
+    if (canCancel) {
+      // Implementar la lógica de cancelación
+      alert("Pedido cancelado correctamente");
+    } else {
+      // Mostrar mensaje de error
+      alert(
+        "Lo sentimos, no es posible cancelar este pedido ya que ha sido confirmado para su procesamiento."
+      );
+    }
   };
 
   const handleContactSupport = () => {
-    // Aquí iría la lógica para contactar a soporte
-    alert("Función para contactar soporte - No implementada");
+    setShowContactModal(true);
   };
 
   if (loading) {
     return (
       <PageContainer>
-        <BackLink onClick={() => navigate("/mis-pedidos")}>
-          ← Volver a mis pedidos
-        </BackLink>
+        <BackLink
+          onClick={() => navigate("/mis-pedidos")}
+          text="← Volver a mis pedidos"
+        />
+
         <EmptyState>Cargando detalles del pedido...</EmptyState>
       </PageContainer>
     );
   }
 
-  if (!orderDetails) {
+  if (error || !orderDetails) {
     return (
       <PageContainer>
-        <BackLink onClick={() => navigate("/mis-pedidos")}>
-          ← Volver a mis pedidos
-        </BackLink>
+        <BackLink
+          onClick={() => navigate("/mis-pedidos")}
+          text="← Volver a mis pedidos"
+        />
         <EmptyState>
           <h2>Pedido no encontrado</h2>
-          <p>No pudimos encontrar la información del pedido solicitado.</p>
+          <p>
+            {error ||
+              "No pudimos encontrar la información del pedido solicitado."}
+          </p>
           <Button
             text="Volver a mis pedidos"
             variant="solid"
@@ -481,18 +603,20 @@ const DetallePedido = () => {
     );
   }
 
-  const canCancel =
-    orderDetails.status === "pendiente" || orderDetails.status === "en-proceso";
+  const canCancel = orderDetails.status === "PENDIENTE";
 
   return (
     <PageContainer>
-      <BackLink onClick={() => navigate("/mis-pedidos")}>
-        ← Volver a mis pedidos
-      </BackLink>
+      <BackLink
+        onClick={() => navigate("/mis-pedidos")}
+        text="← Volver a mis pedidos"
+      />
 
       <PageHeader>
         <OrderTitle>
-          <OrderNumber>{orderDetails.id}</OrderNumber>
+          <OrderNumber>
+            Pedido #{orderDetails.id.substring(0, 12)}...
+          </OrderNumber>
           <OrderDate>
             Realizado el{" "}
             {format(orderDetails.date, "d 'de' MMMM, yyyy", { locale: es })}
@@ -500,18 +624,33 @@ const DetallePedido = () => {
         </OrderTitle>
 
         <OrderActions>
-          {canCancel && (
+          {canCancel ? (
             <Button
               text="Cancelar pedido"
               variant="outlined"
+              leftIconName="FaTimesCircle"
               onClick={handleCancelOrder}
+            />
+          ) : (
+            <Button
+              text="No se puede cancelar"
+              variant="outlined"
+              leftIconName="FaTimesCircle"
+              onClick={() =>
+                alert(
+                  "Lo sentimos, no es posible cancelar este pedido ya que ha sido confirmado para su procesamiento."
+                )
+              }
+              disabled={true}
             />
           )}
           <Button
             text="Contactar soporte"
             variant="solid"
             backgroundColor={theme.colors.primary}
+            leftIconName="FaHeadset"
             onClick={handleContactSupport}
+            disabled={orderDetails.status === "CANCELADO"}
           />
         </OrderActions>
       </PageHeader>
@@ -520,34 +659,61 @@ const DetallePedido = () => {
         <SectionTitle>
           Estado del pedido:{" "}
           <StatusBadge status={orderDetails.status}>
-            {translateStatus(orderDetails.status)}
+            {translateStatus(orderDetails.status.toUpperCase())}
           </StatusBadge>
         </SectionTitle>
 
-        <TrackingSteps>
-          {orderDetails.tracking.map((step, index) => (
-            <TrackingStep key={index}>
-              <StepIconContainer $completed={step.completed}>
-                {step.completed ? "✓" : index + 1}
-              </StepIconContainer>
-              <StepContent>
-                <StepTitle>{step.step}</StepTitle>
-                <StepDate>
-                  {step.date
-                    ? format(step.date, "d 'de' MMMM, yyyy 'a las' HH:mm", {
-                        locale: es,
-                      })
-                    : "Pendiente"}
-                </StepDate>
-              </StepContent>
-            </TrackingStep>
-          ))}
-        </TrackingSteps>
+        {orderDetails.status !== "CANCELADO" && (
+          <TrackingSteps>
+            {orderDetails.tracking.map((step, index) => (
+              <TrackingStep key={index}>
+                <StepIconContainer $completed={step.completed}>
+                  {step.completed ? "✓" : index + 1}
+                </StepIconContainer>
+                <StepContent>
+                  <StepTitle>{step.step}</StepTitle>
+                  <StepDate>
+                    {step.date
+                      ? format(step.date, "d 'de' MMMM, yyyy 'a las' HH:mm", {
+                          locale: es,
+                        })
+                      : "Pendiente"}
+                  </StepDate>
+                </StepContent>
+              </TrackingStep>
+            ))}
+          </TrackingSteps>
+        )}
       </Section>
 
       <TwoColumns>
         <Section>
-          <SectionTitle>Datos del cliente</SectionTitle>
+          <SectionTitle>
+            <RenderIcon name="FaInfoCircle" size={18} /> Información Adicional
+          </SectionTitle>
+
+          <InfoItem>
+            <Label>N° Pedido:</Label>
+            <Value>{orderDetails.id}</Value>
+          </InfoItem>
+          <InfoItem>
+            <Label>Empresa:</Label>
+            <Value>{orderDetails.empresaInfo.name}</Value>
+          </InfoItem>
+
+          <InfoItem>
+            <Label>Fecha de pedido:</Label>
+            <Value>
+              {format(orderDetails.date, "d 'de' MMMM, yyyy", {
+                locale: es,
+              })}
+            </Value>
+          </InfoItem>
+        </Section>
+        <Section>
+          <SectionTitle>
+            <RenderIcon name="FaUser" size={18} /> Datos del cliente
+          </SectionTitle>
 
           <InfoItem>
             <Label>Nombre:</Label>
@@ -558,73 +724,56 @@ const DetallePedido = () => {
             <Label>Email:</Label>
             <Value>{orderDetails.customer.email}</Value>
           </InfoItem>
+        </Section>
+      </TwoColumns>
+
+      <TwoColumns>
+        <Section>
+          <SectionTitle>
+            <RenderIcon name="FaShippingFast" size={18} /> Información de envío
+          </SectionTitle>
 
           <InfoItem>
-            <Label>Teléfono:</Label>
-            <Value>{orderDetails.customer.phone}</Value>
+            <Label>Dirección:</Label>
+            <Value>{orderDetails.shipping.address}</Value>
+          </InfoItem>
+
+          <InfoItem>
+            <Label>Ciudad:</Label>
+            <Value>{orderDetails.shipping.city}</Value>
+          </InfoItem>
+
+          <InfoItem>
+            <Label>Estado/Provincia:</Label>
+            <Value>{orderDetails.shipping.state}</Value>
           </InfoItem>
         </Section>
-
         <Section>
-          <SectionTitle>Información de pago</SectionTitle>
-
+          <SectionTitle>
+            <RenderIcon name="FaFileInvoiceDollar" size={18} /> Información de
+            Facturación
+          </SectionTitle>
           <InfoItem>
-            <Label>Método de pago:</Label>
-            <Value>{orderDetails.payment.method}</Value>
+            <Label>Dirección:</Label>
+            <Value>{orderDetails.billing.address}</Value>
           </InfoItem>
 
           <InfoItem>
-            <Label>Estado:</Label>
-            <Value>{orderDetails.payment.status}</Value>
+            <Label>Ciudad:</Label>
+            <Value>{orderDetails.billing.city}</Value>
           </InfoItem>
 
           <InfoItem>
-            <Label>Referencia:</Label>
-            <Value>{orderDetails.payment.reference}</Value>
-          </InfoItem>
-
-          <InfoItem>
-            <Label>Fecha de pago:</Label>
-            <Value>
-              {format(orderDetails.payment.date, "d 'de' MMMM, yyyy", {
-                locale: es,
-              })}
-            </Value>
+            <Label>Estado/Provincia:</Label>
+            <Value>{orderDetails.billing.state}</Value>
           </InfoItem>
         </Section>
       </TwoColumns>
 
       <Section>
-        <SectionTitle>Información de envío</SectionTitle>
-
-        <InfoItem>
-          <Label>Dirección:</Label>
-          <Value>{orderDetails.shipping.address}</Value>
-        </InfoItem>
-
-        <InfoItem>
-          <Label>Ciudad:</Label>
-          <Value>{orderDetails.shipping.city}</Value>
-        </InfoItem>
-
-        <InfoItem>
-          <Label>Estado:</Label>
-          <Value>{orderDetails.shipping.state}</Value>
-        </InfoItem>
-
-        <InfoItem>
-          <Label>Código postal:</Label>
-          <Value>{orderDetails.shipping.postalCode}</Value>
-        </InfoItem>
-
-        <InfoItem>
-          <Label>Método de envío:</Label>
-          <Value>{orderDetails.shipping.method}</Value>
-        </InfoItem>
-      </Section>
-
-      <Section>
-        <SectionTitle>Productos</SectionTitle>
+        <SectionTitle>
+          <RenderIcon name="FaBoxOpen" size={18} /> Productos
+        </SectionTitle>
 
         <ProductsTable>
           <ProductsHead>
@@ -632,7 +781,6 @@ const DetallePedido = () => {
               <ProductsHeadCell>Producto</ProductsHeadCell>
               <ProductsHeadCell>Precio unitario</ProductsHeadCell>
               <ProductsHeadCell>Cantidad</ProductsHeadCell>
-              <ProductsHeadCell>Descuento</ProductsHeadCell>
               <ProductsHeadCell>Total</ProductsHeadCell>
             </tr>
           </ProductsHead>
@@ -657,9 +805,6 @@ const DetallePedido = () => {
                 </ProductCell>
                 <ProductCell>${item.price.toFixed(2)}</ProductCell>
                 <ProductCell>{item.quantity}</ProductCell>
-                <ProductCell>
-                  {item.discount > 0 ? `${item.discount}%` : "-"}
-                </ProductCell>
                 <ProductCell>${item.total.toFixed(2)}</ProductCell>
               </ProductRow>
             ))}
@@ -672,22 +817,12 @@ const DetallePedido = () => {
             <SummaryValue>${orderDetails.subtotal.toFixed(2)}</SummaryValue>
           </SummaryRow>
 
-          <SummaryRow>
-            <SummaryLabel>Descuento:</SummaryLabel>
-            <SummaryValue>-${orderDetails.discount.toFixed(2)}</SummaryValue>
-          </SummaryRow>
-
-          <SummaryRow>
-            <SummaryLabel>IVA (16%):</SummaryLabel>
-            <SummaryValue>${orderDetails.tax.toFixed(2)}</SummaryValue>
-          </SummaryRow>
-
-          <SummaryRow>
-            <SummaryLabel>Envío:</SummaryLabel>
-            <SummaryValue>
-              ${orderDetails.shipping.cost.toFixed(2)}
-            </SummaryValue>
-          </SummaryRow>
+          {orderDetails.discount > 0 && (
+            <SummaryRow>
+              <SummaryLabel>Descuento:</SummaryLabel>
+              <SummaryValue>-${orderDetails.discount.toFixed(2)}</SummaryValue>
+            </SummaryRow>
+          )}
 
           <SummaryRow>
             <SummaryLabel>Total:</SummaryLabel>
@@ -695,6 +830,13 @@ const DetallePedido = () => {
           </SummaryRow>
         </OrderSummary>
       </Section>
+
+      <ContactModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        selectedCompany={orderDetails?.empresaInfo?.id} // Filtrar por la empresa del pedido actual
+        selectedOrderId={orderDetails?.id}
+      />
     </PageContainer>
   );
 };

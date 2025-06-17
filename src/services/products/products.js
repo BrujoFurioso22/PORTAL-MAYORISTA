@@ -28,3 +28,31 @@ export const products_getProductByField = async ({ field, value }) => {
     };
   }
 };
+
+/**
+ * Obtiene los productos por cadena de búsqueda
+ * @param {string} search - Cadena de búsqueda
+ * @return {Promise<Object>} - Respuesta de la API
+ */
+export const products_searchProducts = async (search) => {
+  try {
+    const response = await api.get(`/productos/search/${search}`);
+    // console.log(response);
+
+    return {
+      success: true,
+      message: response.data.message || "Productos obtenidos correctamente",
+      data: response.data.data || [],
+    };
+  } catch (error) {
+    const message =
+      error.response?.data?.message ||
+      "Ocurrió un error al buscar los productos";
+
+    return {
+      success: false,
+      message,
+      error: error.response?.data || null,
+    };
+  }
+};

@@ -10,6 +10,7 @@ import { order_getOrdersByAccount } from "../../services/order/order";
 import { useAuth } from "../../context/AuthContext";
 import { FaSearch } from "react-icons/fa";
 import Select from "../../components/ui/Select";
+import SearchBar from "../../components/ui/SearchBar";
 
 // Mantener los estilos existentes para la página
 const PageContainer = styled.div`
@@ -25,6 +26,7 @@ const PageTitle = styled.h1`
 
 const FiltersContainer = styled.div`
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
@@ -130,8 +132,6 @@ const MisPedidos = () => {
   const [statusFilter, setStatusFilter] = useState("todos");
   const [dateFilter, setDateFilter] = useState("todos");
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 8;
 
   // Estado para los pedidos
   const [orders, setOrders] = useState([]);
@@ -172,7 +172,6 @@ const MisPedidos = () => {
     try {
       setLoading(true);
       const response = await order_getOrdersByAccount(user.ACCOUNT_USER);
-      console.log(response);
 
       if (response.success && response.data) {
         // Transformar los datos de la API al formato que espera nuestro componente
@@ -220,59 +219,61 @@ const MisPedidos = () => {
 
   // Aplicar filtros a los pedidos
   const filteredOrders = orders.filter((order) => {
-    // Filtro de estado
+    // 1. Filtro de estado
     if (statusFilter !== "todos" && order.status !== statusFilter) {
       return false;
     }
 
-    // Filtro de fecha
-    if (dateFilter === "este-mes") {
+    // 2. Filtro de fecha
+    if (dateFilter !== "todos") {
+      const orderDate = new Date(order.date);
       const today = new Date();
-      const firstDayOfMonth = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        1
-      );
-      if (order.date < firstDayOfMonth) {
-        return false;
+
+      if (dateFilter === "ultimos-30") {
+        // Últimos 30 días
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        if (orderDate < thirtyDaysAgo) {
+          return false;
+        }
+      } else if (dateFilter === "ultimos-90") {
+        // Últimos 90 días
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(today.getDate() - 90);
+        if (orderDate < ninetyDaysAgo) {
+          return false;
+        }
+      } else if (dateFilter === "este-anio") {
+        // Este año
+        const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+        if (orderDate < firstDayOfYear) {
+          return false;
+        }
+      } else if (dateFilter === "anio-anterior") {
+        // Año anterior
+        const firstDayLastYear = new Date(today.getFullYear() - 1, 0, 1);
+        const firstDayThisYear = new Date(today.getFullYear(), 0, 1);
+        if (orderDate < firstDayLastYear || orderDate >= firstDayThisYear) {
+          return false;
+        }
       }
-    } else if (dateFilter === "ultimo-mes") {
-      const today = new Date();
-      const firstDayLastMonth = new Date(
-        today.getFullYear(),
-        today.getMonth() - 1,
-        1
-      );
-      const firstDayThisMonth = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        1
-      );
-      if (order.date < firstDayLastMonth || order.date >= firstDayThisMonth) {
+    }
+
+    // 3. Filtro de búsqueda
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase().trim();
+      // Buscar en ID y empresaId
+      const matchesId = order.id.toLowerCase().includes(term);
+      const matchesEmpresa = order.empresaId.toLowerCase().includes(term);
+
+      if (!matchesId && !matchesEmpresa) {
         return false;
       }
     }
 
-    // Filtro de búsqueda
-    if (
-      searchTerm &&
-      !order.id.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      !order.empresaId.toLowerCase().includes(searchTerm.toLowerCase())
-    ) {
-      return false;
-    }
-
+    // Si pasó todos los filtros, mostrar el pedido
     return true;
   });
-
-  // Paginación
-  const indexOfLastOrder = currentPage * ordersPerPage;
-  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = filteredOrders.slice(
-    indexOfFirstOrder,
-    indexOfLastOrder
-  );
-  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
 
   // Definición de columnas para el DataTable
   const columns = [
@@ -301,7 +302,7 @@ const MisPedidos = () => {
           });
         }
       },
-      sortValue: (row) => new Date(row.date).getTime()
+      sortValue: (row) => new Date(row.date).getTime(),
     },
     {
       header: "Proveedor",
@@ -334,16 +335,9 @@ const MisPedidos = () => {
     {
       header: "Pago",
       field: "paymentMethod",
-      sortable: false
+      sortable: false,
     },
   ];
-
-  // Configuración de paginación para el DataTable
-  const paginationConfig = {
-    currentPage,
-    totalPages,
-    onPageChange: setCurrentPage,
-  };
 
   // Función para renderizar acciones por fila
   const rowActions = (row) => (
@@ -369,20 +363,20 @@ const MisPedidos = () => {
   ];
 
   const dateOptions = [
-    { value: "todos", label: "Todos" },
-    { value: "este-mes", label: "Este mes" },
-    { value: "ultimo-mes", label: "Último mes" },
+    { value: "todos", label: "Todos los períodos" },
+    { value: "ultimos-30", label: "Últimos 30 días" },
+    { value: "ultimos-90", label: "Últimos 90 días" },
+    { value: "este-anio", label: "Este año" },
+    { value: "anio-anterior", label: "Año anterior" },
   ];
 
   const handleStatusChange = (e) => {
     setStatusFilter(e.target.value);
-    setCurrentPage(1); // Resetear a primera página al cambiar filtro
   };
 
   // Handler para cambio en select de fecha
   const handleDateChange = (e) => {
     setDateFilter(e.target.value);
-    setCurrentPage(1); // Resetear a primera página al cambiar filtro
   };
 
   return (
@@ -391,7 +385,6 @@ const MisPedidos = () => {
 
       <FiltersContainer>
         <FilterGroup>
-          <FilterLabel>Estado:</FilterLabel>
           <Select
             options={statusOptions}
             value={statusFilter}
@@ -399,9 +392,9 @@ const MisPedidos = () => {
             placeholder="Seleccionar estado"
             width="180px"
             name="statusFilter"
+            label={"Estado"}
           />
 
-          <FilterLabel>Fecha:</FilterLabel>
           <Select
             options={dateOptions}
             value={dateFilter}
@@ -409,27 +402,17 @@ const MisPedidos = () => {
             placeholder="Seleccionar período"
             width="180px"
             name="dateFilter"
+            label={"Período"}
           />
         </FilterGroup>
 
-        <div style={{ position: "relative" }}>
-          <FaSearch
-            style={{
-              position: "absolute",
-              left: "10px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: theme.colors.textLight,
-            }}
-          />
-          <SearchInput
-            type="text"
-            placeholder="Buscar por número o proveedor"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: "32px" }}
-          />
-        </div>
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Buscar por número o empresa"
+          debounceTime={300}
+          width="auto"
+        />
       </FiltersContainer>
 
       {loading ? (
@@ -450,9 +433,9 @@ const MisPedidos = () => {
       ) : filteredOrders.length > 0 ? (
         <DataTable
           columns={columns}
-          data={currentOrders}
+          data={filteredOrders}
           emptyMessage="No se encontraron pedidos con los filtros seleccionados"
-          pagination={paginationConfig}
+          itemsPerPage={7}
           rowActions={rowActions}
           bordered={false}
           striped={true}

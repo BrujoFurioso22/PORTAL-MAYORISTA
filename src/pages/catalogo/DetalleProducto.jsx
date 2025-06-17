@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useCart } from "../../context/CartContext";
@@ -27,21 +27,6 @@ const ProductLayout = styled.div`
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
-`;
-
-const ImageSection = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const MainImage = styled.img`
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  border-radius: 8px;
-  background-color: ${({ theme }) =>
-    theme.colors.white}; // Fondo blanco para imágenes
-  box-shadow: 0 4px 10px ${({ theme }) => theme.colors.shadow}; // Usar shadow del tema
 `;
 
 const InfoSection = styled.div`
@@ -198,8 +183,6 @@ const BackLink = styled(Button)`
   padding: 0;
   margin-bottom: 24px;
   font-size: 0.9rem;
-
-  
 `;
 
 // Agregar este nuevo componente para las especificaciones
@@ -238,6 +221,60 @@ const SpecLabel = styled.td`
 const SpecValue = styled.td`
   padding: 8px 0;
   color: ${({ theme }) => theme.colors.text};
+`;
+
+// Estilos adicionales para el zoom de la imagen
+const ImageSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  position: relative;
+`;
+
+const MainImageContainer = styled.div`
+  position: relative;
+  width: 100%;
+  cursor: crosshair;
+  overflow: visible;
+  border-radius: 8px;
+  background-color: ${({ theme }) => theme.colors.white};
+  box-shadow: 0 4px 10px ${({ theme }) => theme.colors.shadow};
+`;
+
+const MainImage = styled.img`
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+`;
+
+const ZoomWindow = styled.div`
+  position: fixed;
+  /* Eliminar right: -100% para que no esté fijo */
+  width: 300px;
+  height: 300px;
+  background-color: ${({ theme }) => theme.colors.white};
+  border-radius: 8px;
+  box-shadow: 0 4px 10px ${({ theme }) => theme.colors.shadow};
+  overflow: hidden;
+  opacity: ${({ visible }) => (visible ? 1 : 0)};
+  transition: opacity 0.3s;
+  pointer-events: none;
+  z-index: 5000;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+
+  @media (max-width: 992px) {
+    display: none; // Ocultar en dispositivos móviles/tablets
+  }
+`;
+
+const ZoomedImage = styled.div`
+  position: absolute;
+  background-image: url(${({ src }) => src});
+  background-repeat: no-repeat;
+  width: 400%; // Imagen ampliada a 3x
+  height: 400%;
+  background-size: cover;
+  transform-origin: 0 0;
 `;
 
 // En el componente DetalleProducto, agregar esta función para renderizar especificaciones
@@ -286,6 +323,65 @@ const DetalleProducto = () => {
   const [empresaId, setEmpresaId] = useState(
     location.state?.product?.empresaId || null
   );
+
+  const [isHovering, setIsHovering] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const imageContainerRef = useRef(null);
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+
+  const prevUrl = location.state?.prevUrl;
+
+  // Funciones para manejar el zoom
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
+  };
+
+  const handleMouseMove = (e) => {
+    if (imageContainerRef.current) {
+      const { left, top, width, height } =
+        imageContainerRef.current.getBoundingClientRect();
+
+      // Calcular la posición relativa del cursor dentro de la imagen (0-1)
+      const x = Math.min(Math.max((e.clientX - left) / width, 0), 1);
+      const y = Math.min(Math.max((e.clientY - top) / height, 0), 1);
+
+      setMousePosition({ x, y });
+
+      // Posicionar la ventana de zoom cerca del cursor, pero no exactamente encima
+      // para que no tape lo que estamos viendo
+      const zoomSize = 300;
+
+      // Determinar si colocamos la ventana a la derecha o izquierda del cursor
+      // basado en la posición del cursor en la pantalla
+      let zoomX;
+      if (e.clientX < window.innerWidth / 2) {
+        // Si el cursor está en la mitad izquierda, mostrar a la derecha
+        zoomX = e.clientX + 50; // 50px de offset
+      } else {
+        // Si el cursor está en la mitad derecha, mostrar a la izquierda
+        zoomX = e.clientX - zoomSize - 50; // 50px de offset
+      }
+
+      // Para Y, simplemente alinear con el cursor verticalmente
+      const zoomY = e.clientY - zoomSize / 2;
+
+      // Asegurar que la ventana no se salga de la pantalla
+      const adjustedZoomX = Math.min(
+        Math.max(zoomX, 10),
+        window.innerWidth - zoomSize - 10
+      );
+      const adjustedZoomY = Math.min(
+        Math.max(zoomY, 10),
+        window.innerHeight - zoomSize - 10
+      );
+
+      setZoomPosition({ x: adjustedZoomX, y: adjustedZoomY });
+    }
+  };
 
   const handleNavigate = () => {
     navigateToHomeByRole();
@@ -360,12 +456,17 @@ const DetalleProducto = () => {
   if (!product) {
     return <div>Cargando...</div>;
   }
-  // El resto del código permanece igual, pero actualiza el navegateBack
+
   const navigateBack = () => {
-    if (empresaId) {
-      navigate(`/catalogo/${empresaId}`);
+    if (prevUrl) {
+      // Si tenemos una URL anterior guardada, navegar a ella
+      navigate(prevUrl);
+    } else if (product?.empresaId) {
+      // Fallback: navegar al catálogo de la empresa
+      navigate(`/catalogo/${product.empresaId}`);
     } else {
-      handleNavigate();
+      // Si no hay información suficiente, ir al inicio
+      navigateToHomeByRole();
     }
   };
 
@@ -413,17 +514,43 @@ const DetalleProducto = () => {
 
       <ProductLayout>
         <ImageSection>
-          <MainImage src={product.image} alt={product.name} />
+          {/* Contenedor principal de la imagen con eventos de mouse */}
+          <MainImageContainer
+            ref={imageContainerRef}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onMouseMove={handleMouseMove}
+          >
+            <MainImage src={product.image} alt={product.name} />
+
+            {/* Ventana de zoom */}
+            <ZoomWindow
+              visible={isHovering}
+              style={{
+                left: `${zoomPosition.x}px`,
+                top: `${zoomPosition.y}px`,
+                transform: "none", // Eliminar cualquier transformación predeterminada
+              }}
+            >
+              <ZoomedImage
+                src={product.image}
+                style={{
+                  transform: `translate(-${mousePosition.x * 80}%, -${
+                    mousePosition.y * 75
+                  }%)`,
+                }}
+              />
+            </ZoomWindow>
+          </MainImageContainer>
         </ImageSection>
 
-        <InfoSection>
-          {/* Mostrar categoría formateada más amigable */}
+        <InfoSection>          {/* Mostrar categorías desde filtersByType de forma amigable */}
           <Category>
-            {product.categories
-              .map((cat) =>
-                cat.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
-              )
-              .join(", ")}
+            {product.filtersByType && Object.keys(product.filtersByType).length > 0
+              ? Object.values(product.filtersByType)
+                  .flat() // Aplanar el array de arrays
+                  .join(", ")
+              : "Producto sin categoría"}
           </Category>
           <ProductTitle>{product.name}</ProductTitle>
           <Brand>Marca: {product.brand}</Brand>

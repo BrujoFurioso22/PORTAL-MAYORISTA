@@ -51,3 +51,28 @@ export const order_createOrder = async (orderData) => {
     };
   }
 };
+
+/**
+ * Obtener un pedido por ID
+ * @param {string} orderId - ID del pedido
+ * @return {Promise<Object>} Respuesta de la API
+ */
+export const order_getOrderById = async (orderId) => {
+  try {
+    const response = await api.get(`/pedidos/getPedidosByOrder/${orderId}`);
+    return {
+      success: true,
+      message: response.data.message || "Pedido obtenido correctamente",
+      data: response.data.data || {},
+    };
+  } catch (error) {
+    const message =
+      error.response?.data?.message || "Ocurrió un error al obtener el pedido";
+
+    return {
+      success: false,
+      message,
+      error: error.response?.data || null,
+    };
+  }
+};

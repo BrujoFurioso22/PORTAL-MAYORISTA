@@ -818,7 +818,7 @@ const Carrito = () => {
       BILLING_ADDRESS_ID: parseInt(billingAddress.id),
       SUBTOTAL: companyData.total,
       DISCOUNT: null,
-      TOTAL: null,
+      TOTAL: companyData.total,
       STATUS: "PENDIENTE",
       PRODUCTOS: productsToProcess,
     };

@@ -315,8 +315,6 @@ const CoordinadorAdminComponent = () => {
   const [coordinadores, setCoordinadores] = useState(null);
   const [filteredCoordinadores, setFilteredCoordinadores] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
   const [roles, setRoles] = useState([]);
   const [rolCoordinador, setRolCoordinador] = useState(null);
 
@@ -396,17 +394,7 @@ const CoordinadorAdminComponent = () => {
     }
 
     setFilteredCoordinadores(result);
-    setCurrentPage(1); // Resetear a primera página al filtrar
   }, [coordinadores, searchTerm]);
-
-  // Paginación
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredCoordinadores.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
-  const totalPages = Math.ceil(filteredCoordinadores.length / itemsPerPage);
 
   // Manejadores de modales
   const handleOpenCreateModal = () => {
@@ -811,15 +799,10 @@ const CoordinadorAdminComponent = () => {
       ) : (
         <DataTable
           columns={columns}
-          data={currentItems}
+          data={filteredCoordinadores}
           emptyMessage="No hay coordinadores que coincidan con los criterios de búsqueda."
           rowActions={renderRowActions}
           striped={true}
-          pagination={{
-            currentPage,
-            totalPages,
-            onPageChange: setCurrentPage,
-          }}
         />
       )}
 

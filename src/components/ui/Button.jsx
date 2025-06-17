@@ -29,33 +29,42 @@ const ButtonStyled = styled.button`
   transition: 0.3s ease-in-out;
   width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "auto")};
   height: max-content;
-  border: ${({ $variant, theme }) =>
-    $variant === "outlined" ? `solid 1px ${theme.colors.primary}` : "none"};
+  border: ${({ $variant, theme, disabled }) =>
+    disabled
+      ? "solid 1px #b3b3b3" // Borde gris para todos los botones deshabilitados
+      : $variant === "outlined"
+      ? `solid 1px ${theme.colors.primary}`
+      : "none"};
   outline: none;
 
-  background: ${({ $backgroundColor, $variant, theme }) =>
-    $backgroundColor ||
-    ($variant === "solid"
-      ? theme.colors.primary
-      : $variant === "outlined"
-      ? "transparent"
-      : theme.colors.secondary)};
+  background: ${({ $backgroundColor, $variant, theme, disabled }) =>
+    disabled
+      ? $variant === "outlined"
+        ? "transparent" // Fondo transparente para outlined deshabilitado
+        : "#e0e0e0" // Fondo gris para solid deshabilitado
+      : $backgroundColor ||
+        ($variant === "solid"
+          ? theme.colors.primary
+          : $variant === "outlined"
+          ? "transparent"
+          : theme.colors.secondary)};
 
-  color: ${({ $color, $variant, theme }) =>
-    $color || ($variant === "solid" ? "#fff" : theme.colors.primary)};
+  color: ${({ $color, $variant, theme, disabled }) =>
+    disabled
+      ? $variant === "outlined"
+        ? "#9e9e9e" // Color de texto más visible para outlined deshabilitado
+        : "#757575" // Color de texto para solid deshabilitado
+      : $color || ($variant === "solid" ? "#fff" : theme.colors.primary)};
 
   &:hover {
-    filter: brightness(0.9);
-    transform: scale(1.02);
-    /* color: ${({ $color, $variant, theme }) =>
-      $color ||
-      ($variant === "solid" ? theme.colors.primary : theme.colors.white)}; */
+    filter: ${({ disabled }) => (disabled ? "none" : "brightness(0.9)")};
+    transform: ${({ disabled }) => (disabled ? "none" : "scale(1.02)")};
   }
 
   &:disabled {
-    background: gray;
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: ${({ $variant }) => ($variant === "outlined" ? 0.7 : 0.6)};
+    box-shadow: none;
   }
 `;
 
@@ -120,21 +129,13 @@ export default function Button({
         <>
           {leftIconName && (
             <IconContainer>
-              <RenderIcon
-                name={leftIconName}
-                size={iconSize}
-                color={color}
-              />
+              <RenderIcon name={leftIconName} size={iconSize} color={color} />
             </IconContainer>
           )}
           {text}
           {rightIconName && (
             <IconContainer>
-              <RenderIcon
-                name={rightIconName}
-                size={iconSize}
-                color={color}
-              />
+              <RenderIcon name={rightIconName} size={iconSize} color={color} />
             </IconContainer>
           )}
         </>

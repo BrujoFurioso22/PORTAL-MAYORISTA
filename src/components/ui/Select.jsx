@@ -22,7 +22,7 @@ const SelectButton = styled(Button)`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 10px 12px;
+  padding: 6px 10px;
   border-radius: 4px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background-color: ${({ theme }) => theme.colors.surface};

@@ -13,6 +13,10 @@ import {
   FaLock,
 } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
+import RenderIcon from "../../components/ui/RenderIcon";
+import { products_searchProducts } from "../../services/products/products";
+import Select from "../../components/ui/Select";
+import { baseLinkImages } from "../../constants/links";
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -34,11 +38,11 @@ const BackButton = styled(Button)`
   color: ${({ theme }) => theme.colors.primary};
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   padding: 0;
   cursor: pointer;
   font-size: 0.9rem;
-  margin-bottom: 8px;
 
   &:hover {
     text-decoration: underline;
@@ -60,7 +64,7 @@ const FiltersBar = styled.div`
   background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   padding: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   box-shadow: 0 2px 4px ${({ theme }) => theme.colors.shadow};
   display: flex;
   justify-content: space-between;
@@ -235,16 +239,79 @@ const RestrictedBrand = styled.p`
   color: ${({ theme }) => theme.colors.textLight};
 `;
 
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+  margin-bottom: 16px;
+  gap: 8px;
+`;
+
+const PageButton = styled(Button)`
+  width: 35px;
+  height: 35px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+
+  background-color: ${({ active, theme }) =>
+    active ? theme.colors.primary : theme.colors.surface};
+  color: ${({ active, theme }) =>
+    active ? theme.colors.white : theme.colors.text};
+  border: 1px solid
+    ${({ active, theme }) =>
+      active ? theme.colors.primary : theme.colors.border};
+
+  &:hover {
+    background-color: ${({ active, theme }) =>
+      active ? theme.colors.primary : theme.colors.primaryLight};
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:hover {
+      background-color: ${({ active, theme }) =>
+        active ? theme.colors.primary : theme.colors.surface};
+      border-color: ${({ active, theme }) =>
+        active ? theme.colors.primary : theme.colors.border};
+    }
+  }
+`;
+
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get("q") || "";
   const { user, navigateToHomeByRole } = useAuth();
 
-  const [results, setResults] = useState([]);
+  // Cambiar el estado inicial a null para diferenciar entre "sin búsqueda" y "búsqueda sin resultados"
+  const [results, setResults] = useState(null);
   const [filteredResults, setFilteredResults] = useState([]);
   const [sortOption, setSortOption] = useState("relevance");
   const [priceRange, setPriceRange] = useState("all");
+  // Añadir estado de carga
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 12; // Mostrar 12 productos por página
+
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = filteredResults.slice(
+    indexOfFirstProduct,
+    indexOfLastProduct
+  );
+  const totalPages = Math.ceil(filteredResults.length / productsPerPage);
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    // Hacer scroll hacia arriba cuando cambia de página
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const userAccess = user?.EMPRESAS || [];
 
@@ -254,61 +321,97 @@ const SearchResults = () => {
 
   // Buscar productos cuando cambia la query
   useEffect(() => {
-    if (!query) {
-      handleNavigate();
-      return;
-    }
+    const fetchSearchResults = async () => {
+      // Si no hay consulta, no hacemos nada
+      if (!query) {
+        setResults(null);
+        setFilteredResults([]);
+        return;
+      }
 
-    const searchResults = [];
-    const queryLower = query.toLowerCase();
+      // Indicar que estamos cargando
+      setLoading(true);
 
-    // Buscar en todos los productos de todas las empresas
-    Object.entries(productosPorEmpresa).forEach(([empresaId, productos]) => {
-      productos.forEach((product) => {
-        const nameMatch = product.name.toLowerCase().includes(queryLower);
-        const brandMatch = product.brand.toLowerCase().includes(queryLower);
-        const descMatch =
-          product.description &&
-          product.description.toLowerCase().includes(queryLower);
-        const catMatch =
-          product.categories &&
-          product.categories.some(
-            (cat) =>
-              typeof cat === "string" && cat.toLowerCase().includes(queryLower)
-          );
+      try {
+        // Llamar a la API de búsqueda
+        const response = await products_searchProducts(query);
 
-        if (nameMatch || brandMatch || descMatch || catMatch) {
-          // Calcular puntuación de relevancia
-          let relevanceScore = 0;
-          if (nameMatch) relevanceScore += 10;
-          if (product.name.toLowerCase().startsWith(queryLower))
-            relevanceScore += 5;
-          if (brandMatch) relevanceScore += 3;
-          if (descMatch) relevanceScore += 1;
+        console.log(response);
 
-          // Verificar si el usuario tiene acceso a esta empresa
-          const hasAccess = userAccess.includes(empresaId);
+        if (response.success && response.data) {
+          // Transformar los resultados de la API
+          const apiResults = response.data.map((product) => {
+            // Calcular puntuación de relevancia (similar a la lógica anterior)
+            let relevanceScore = 0;
+            const queryLower = query.toLowerCase();
 
-          // Buscar información adicional de la empresa
-          const empresaInfo = empresas.find((e) => e.id === empresaId);
+            if (product.DMA_NOMBREITEM.toLowerCase().includes(queryLower))
+              relevanceScore += 10;
+            if (product.DMA_NOMBREITEM.toLowerCase().startsWith(queryLower))
+              relevanceScore += 5;
+            if (
+              product.DMA_MARCA &&
+              product.DMA_MARCA.toLowerCase().includes(queryLower)
+            )
+              relevanceScore += 3;
+            if (
+              product.DMA_DISENIO &&
+              product.DMA_DISENIO.toLowerCase().includes(queryLower)
+            )
+              relevanceScore += 2;
 
-          searchResults.push({
-            ...product,
-            empresaId,
-            empresaNombre: empresaInfo?.nombre || empresaId,
-            relevanceScore,
-            hasAccess, // Agregar flag de acceso
+            // Verificar si el usuario tiene acceso a esta empresa
+            const hasAccess = userAccess.includes(product.DMA_EMPRESA);
+
+            // Formatear el producto según la estructura que espera el componente
+            return {
+              id: product.DMA_CODIGO,
+              name: product.DMA_NOMBREITEM,
+              brand: product.DMA_MARCA || "Sin marca",
+              price: product.DMA_COSTO || 0,
+              discount: product.DESCUENTO || 0,
+              image: product.DMA_RUTAIMAGEN
+                ? `${baseLinkImages}${product.DMA_RUTAIMAGEN}`
+                : "https://placehold.co/300x200/png",
+              stock: product.DMA_STOCK || 0,
+              description: `${product.DMA_MARCA || ""} ${
+                product.DMA_DISENIO || ""
+              } ${product.DMA_ANCHO || ""}`,
+              categories: [
+                product.DMA_CATEGORIA,
+                product.DMA_LINEANEGOCIO,
+                product.DMA_SEGMENTO,
+              ].filter(Boolean),
+              empresaId: product.DMA_EMPRESA,
+              empresaNombre: product.DMA_EMPRESA,
+              relevanceScore,
+              hasAccess,
+            };
           });
-        }
-      });
-    });
 
-    setResults(searchResults);
-    setFilteredResults(searchResults);
-  }, [query, navigate]);
+          setResults(apiResults);
+          setFilteredResults(apiResults);
+        } else {
+          console.error("Error en la búsqueda:", response.message);
+          setResults([]);
+          setFilteredResults([]);
+        }
+      } catch (error) {
+        console.error("Error al buscar productos:", error);
+        setResults([]);
+        setFilteredResults([]);
+      } finally {
+        // Finalizar carga independientemente del resultado
+        setLoading(false);
+      }
+    };
+
+    fetchSearchResults();
+  }, [query, navigate, userAccess]);
 
   // Aplicar filtros y ordenamiento
   useEffect(() => {
+    if (results === null) return; // No hacer nada si no hay resultados
     let filtered = [...results];
 
     // Filtrar por rango de precio
@@ -376,57 +479,123 @@ const SearchResults = () => {
       <PageHeader>
         <BackButton
           onClick={handleNavigate}
-          leftIconName={"FaArrowLeft"}
+          leftIconName={"FaChevronLeft"}
           text={"Volver al inicio"}
         />
 
-        <PageTitle>Resultados de búsqueda</PageTitle>
-        <SearchInfo>
-          Se encontraron {filteredResults.length} resultados para "{query}"
-        </SearchInfo>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: "8px",
+            alignItems: "center",
+          }}
+        >
+          <PageTitle>Resultados de búsqueda</PageTitle>
+          {results && (
+            <SearchInfo>
+              - Se encontraron {filteredResults.length} resultados para "{query}
+              "
+            </SearchInfo>
+          )}
+        </div>
       </PageHeader>
 
-      {results.length > 0 ? (
+      {/* Estado: Cargando resultados */}
+      {loading && (
+        <NoResultsContainer>
+          <RenderIcon
+            name="FaSpinner"
+            size={30}
+            style={{ animation: "spin 1s linear infinite" }}
+          />
+          <NoResultsTitle>Buscando productos...</NoResultsTitle>
+          <NoResultsText>
+            Estamos buscando los mejores resultados para "{query}".
+          </NoResultsText>
+        </NoResultsContainer>
+      )}
+
+      {/* Estado: No hay consulta de búsqueda */}
+      {!loading && results === null && (
+        <NoResultsContainer>
+          <RenderIcon name="FaSearch" size={30} />
+          <NoResultsTitle>Ingresa una búsqueda</NoResultsTitle>
+          <NoResultsText>
+            Escribe en el buscador para encontrar los productos que necesitas.
+          </NoResultsText>
+          <Button
+            text="Ir al catálogo"
+            variant="solid"
+            backgroundColor={({ theme }) => theme.colors.primary}
+            onClick={handleNavigate}
+          />
+        </NoResultsContainer>
+      )}
+
+      {/* Estado: Hay resultados de búsqueda */}
+      {!loading && results && results.length > 0 && (
         <>
           <FiltersBar>
             <FilterGroup>
               <FilterLabel>
                 <FaFilter /> Filtrar por:
               </FilterLabel>
-              <SelectWrapper>
-                <FilterSelect
-                  value={priceRange}
-                  onChange={handlePriceRangeChange}
-                >
-                  <option value="all">Todos los precios</option>
-                  <option value="under-500">Menos de $500</option>
-                  <option value="500-1000">$500 - $1,000</option>
-                  <option value="1000-2000">$1,000 - $2,000</option>
-                  <option value="over-2000">Más de $2,000</option>
-                </FilterSelect>
-                <SelectIcon>▼</SelectIcon>
-              </SelectWrapper>
+              <Select
+                options={[
+                  { value: "all", label: "Todos los precios" },
+                  { value: "under-500", label: "Menos de $500" },
+                  { value: "500-1000", label: "$500 - $1,000" },
+                  { value: "1000-2000", label: "$1,000 - $2,000" },
+                  { value: "over-2000", label: "Más de $2,000" },
+                ]}
+                value={priceRange}
+                onChange={handlePriceRangeChange}
+                placeholder="Seleccionar precio"
+                width="200px"
+                name="priceRange"
+              />
             </FilterGroup>
 
             <FilterGroup>
               <FilterLabel>
                 <FaSort /> Ordenar por:
               </FilterLabel>
-              <SelectWrapper>
-                <FilterSelect value={sortOption} onChange={handleSortChange}>
-                  <option value="relevance">Relevancia</option>
-                  <option value="price-low">Precio: Menor a Mayor</option>
-                  <option value="price-high">Precio: Mayor a Menor</option>
-                  <option value="name">Nombre</option>
-                  <option value="discount">Mayor descuento</option>
-                </FilterSelect>
-                <SelectIcon>▼</SelectIcon>
-              </SelectWrapper>
+              <Select
+                options={[
+                  { value: "relevance", label: "Relevancia" },
+                  { value: "price-low", label: "Precio: Menor a Mayor" },
+                  { value: "price-high", label: "Precio: Mayor a Menor" },
+                  { value: "name", label: "Nombre" },
+                  { value: "discount", label: "Mayor descuento" },
+                ]}
+                value={sortOption}
+                onChange={handleSortChange}
+                placeholder="Ordenar por..."
+                width="200px"
+                name="sortOption"
+              />
             </FilterGroup>
           </FiltersBar>
 
+          {filteredResults.length > 0 && (
+            <div
+              style={{
+                textAlign: "right",
+                color: ({ theme }) => theme.colors.textLight,
+                marginBottom: "10px",
+                fontSize: "0.9rem",
+                
+              }}
+            >
+              Mostrando {indexOfFirstProduct + 1}-
+              {Math.min(indexOfLastProduct, filteredResults.length)} de{" "}
+              {filteredResults.length} productos
+            </div>
+          )}
+
           <ProductsGrid>
-            {filteredResults.map((product) =>
+            {currentProducts.map((product) =>
               product.hasAccess ? (
                 <ProductCard
                   key={`${product.empresaId}-${product.id}`}
@@ -464,6 +633,65 @@ const SearchResults = () => {
             )}
           </ProductsGrid>
 
+          {/* Agregar el componente de paginación */}
+          {filteredResults.length > productsPerPage && (
+            <PaginationContainer>
+              <PageButton
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                leftIconName={"FaAngleDoubleLeft"}
+                size="small"
+              />
+
+              <PageButton
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                leftIconName={"FaAngleLeft"}
+                size="small"
+              />
+
+              {/* Generar botones de página */}
+              {[...Array(totalPages)].map((_, index) => {
+                // Mostrar máximo 5 botones de página
+                if (
+                  index === 0 || // Primera página
+                  index === totalPages - 1 || // Última página
+                  (index >= currentPage - 2 && index <= currentPage + 0) // Páginas cercanas a la actual
+                ) {
+                  return (
+                    <PageButton
+                      key={index + 1}
+                      active={currentPage === index + 1}
+                      onClick={() => handlePageChange(index + 1)}
+                      text={index + 1}
+                      size="small"
+                    />
+                  );
+                } else if (
+                  (index === 1 && currentPage > 3) || // Mostrar puntos suspensivos después de la primera página
+                  (index === totalPages - 2 && currentPage < totalPages - 2) // Mostrar puntos suspensivos antes de la última página
+                ) {
+                  return <span key={index}>...</span>;
+                }
+                return null;
+              })}
+
+              <PageButton
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                leftIconName={"FaAngleRight"}
+                size="small"
+              />
+
+              <PageButton
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                leftIconName={"FaAngleDoubleRight"}
+                size="small"
+              />
+            </PaginationContainer>
+          )}
+
           {filteredResults.length === 0 && (
             <NoResultsContainer>
               <NoResultsIcon>🔍</NoResultsIcon>
@@ -484,9 +712,12 @@ const SearchResults = () => {
             </NoResultsContainer>
           )}
         </>
-      ) : (
+      )}
+
+      {/* Estado: No hay resultados para la búsqueda */}
+      {!loading && results && results.length === 0 && (
         <NoResultsContainer>
-          <NoResultsIcon>🔍</NoResultsIcon>
+          <RenderIcon name="FaSearch" size={30} />
           <NoResultsTitle>No se encontraron resultados</NoResultsTitle>
           <NoResultsText>
             No pudimos encontrar productos que coincidan con "{query}". Intenta

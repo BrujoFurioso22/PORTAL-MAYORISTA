@@ -1,22 +1,25 @@
-import React, { useState, useEffect, use, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../../context/AuthContext";
 import { productosPorEmpresa, empresas } from "../../mock/products";
 import ProductCard from "../../components/ui/ProductCard";
 import FilterSidebar from "../../components/ui/FilterSidebar";
 import { toast } from "react-toastify";
-import {
-  categories as allCategories,
-  brands as allBrands,
-} from "../../mock/products";
+
 import { products_getProductByField } from "../../services/products/products";
 import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
 import { useProductCache } from "../../context/ProductCacheContext";
 import RenderLoader from "../../components/ui/RenderLoader"; // Importar RenderLoader
-import { FaSearch } from "react-icons/fa"; // Importar ícono de búsqueda
 import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
+import SearchBar from "../../components/ui/SearchBar";
 
 const PageContainer = styled.div`
   padding: 20px;
@@ -100,69 +103,6 @@ const SortContainer = styled.div`
   box-shadow: 0 1px 3px ${({ theme }) => theme.colors.shadow};
 `;
 
-// Estilo mejorado para el selector de ordenación
-const SortSelect = styled.select`
-  padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.9rem;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 10px;
-  padding-right: 28px;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.primary};
-  }
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primaryLight};
-  }
-`;
-
-// Nuevo estilo para el contenedor de "Mostrar X por página"
-const PerPageContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-`;
-
-// Estilo para el selector de elementos por página
-const PerPageSelect = styled.select`
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.9rem;
-  cursor: pointer;
-  width: 60px;
-  text-align: center;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  background-size: 8px;
-  padding-right: 24px;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.primary};
-  }
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primaryLight};
-  }
-`;
 const FormContainer = styled.div`
   width: 100%;
   max-width: 500px;
@@ -246,47 +186,6 @@ const PageButton = styled(Button)`
   }
 `;
 
-// Luego, agregamos estos estilos para el campo de búsqueda
-const SearchContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  margin-bottom: 16px;
-`;
-
-const SearchInput = styled.input`
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.9rem;
-  width: 100%;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primaryLight};
-  }
-
-  &::placeholder {
-    color: ${({ theme }) => theme.colors.textLight};
-  }
-`;
-
-const SearchInputWrapper = styled.div`
-  position: relative;
-  width: 100%;
-
-  svg {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: ${({ theme }) => theme.colors.textLight};
-  }
-`;
-
 const mapApiProductToAppFormat = (item) => {
   try {
     // Verificar que item no sea null o undefined
@@ -303,32 +202,21 @@ const mapApiProductToAppFormat = (item) => {
 
     // Determinar qué configuración usar según la línea de negocio
     const lineConfig =
-      PRODUCT_LINE_CONFIG[item.DMA_LINEANEGOCIO] || PRODUCT_LINE_CONFIG.DEFAULT;
-
-    // Construir categorías con prefijos para identificar el tipo
-    const categories = [];
+      PRODUCT_LINE_CONFIG[item.DMA_LINEANEGOCIO] || PRODUCT_LINE_CONFIG.DEFAULT; // Construir filtros manteniendo valores originales
     const categoriesByType = {}; // Nuevo objeto para separar por tipo
 
     lineConfig.categories.forEach((cat) => {
       if (item[cat.field]) {
+        const originalValue = item[cat.field]; // Valor original sin transformar
+
         // Obtener el nombre del campo sin el prefijo DMA_
         const fieldType = cat.field.replace("DMA_", "").toLowerCase();
 
-        // Crear la categoría con prefijo para poder filtrarla después
-        const categoryValue = `${fieldType}_${item[cat.field]
-          .toLowerCase()
-          .replace(/ /g, "_")}`;
-
-        if (categoryValue) {
-          // Añadir al array plano para compatibilidad
-          categories.push(categoryValue);
-
-          // Añadir al objeto separado por tipo
-          if (!categoriesByType[fieldType]) {
-            categoriesByType[fieldType] = [];
-          }
-          categoriesByType[fieldType].push(categoryValue);
+        // Añadir al objeto separado por tipo con valor original
+        if (!categoriesByType[fieldType]) {
+          categoriesByType[fieldType] = [];
         }
+        categoriesByType[fieldType].push(originalValue);
       }
     });
 
@@ -386,7 +274,9 @@ const mapApiProductToAppFormat = (item) => {
       ? parseInt(item.DMA_STOCK)
       : 0;
 
-    // Crear objeto de producto adaptado al formato esperado usando la plantilla correspondiente
+      console.log("[MAPEO] Mapeando producto:");
+      console.log("CATEGORIESBYTYPE", categoriesByType)
+      // Crear objeto de producto adaptado al formato esperado usando la plantilla correspondiente
     return {
       id: item.DMA_CODIGO,
       name: name,
@@ -394,8 +284,7 @@ const mapApiProductToAppFormat = (item) => {
       price: price,
       discount: 0,
       image: imageUrl,
-      categories: categories, // Mantenemos el array plano para compatibilidad
-      categoriesByType: categoriesByType, // Nuevo objeto organizado por tipo
+      filtersByType: categoriesByType, // Objeto organizado por tipo
       brand: item.DMA_MARCA || "Sin marca",
       rating: 0,
       stock: stock,
@@ -418,48 +307,259 @@ const mapApiProductToAppFormat = (item) => {
 
 const Catalogo = () => {
   // Hooks existentes
+  const navigate = useNavigate();
   const { empresaName } = useParams();
   const { user, navigateToHomeByRole } = useAuth();
+  const [allProducts, setAllProducts] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [availableBusinessLines, setAvailableBusinessLines] = useState([
+    "DEFAULT",
+  ]);
+  const [hasAccess, setHasAccess] = useState(false);
 
+  /**
+   * Revisar esto para ver si es necesario ------------------------------------------------------------------------
+   */
   // Hook del caché
   const { isCacheValid, getCachedProducts, cacheProducts } = useProductCache();
-
   // Inicializar filteredProducts como null para indicar que los datos están en carga
-  const [filteredProducts, setFilteredProducts] = useState(null);
-  const [sortOption, setSortOption] = useState("default");
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [formData, setFormData] = useState({
     nombre: user?.NAME_USER || "",
     email: user?.EMAIL || "",
     mensaje: "",
   });
 
-  // Nuevos estados para información específica de la empresa
-  const [availableCategories, setAvailableCategories] = useState([]);
-  const [availableBrands, setAvailableBrands] = useState([]);
-  const [priceRange, setPriceRange] = useState({ min: 0, max: 100 });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [productsPerPage, setProductsPerPage] = useState(12);
-  const [totalPages, setTotalPages] = useState(1);
-  const [hasAccess, setHasAccess] = useState(false);
-  const [lineaNegocio, setLineaNegocio] = useState("DEFAULT");
-  const [allProducts, setAllProducts] = useState(null);
-
-  // Nuevo estado para controlar si está cargando
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Primero agregamos un nuevo estado para el término de búsqueda
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPriceRange, setCurrentPriceRange] = useState({
-    min: 0,
-    max: 100,
-  });
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [availableBusinessLines, setAvailableBusinessLines] = useState([
-    "DEFAULT",
-  ]);
-
   const searchTimeoutRef = useRef(null);
+
+  /**
+   * fin de bloque ------------------------------------------------------------------------
+   */
+  const searchParamsValues = useMemo(
+    () => ({
+      page: parseInt(searchParams.get("page") || "1"),
+      limit: parseInt(searchParams.get("limit") || "12"),
+      sort: searchParams.get("sort") || "default",
+      search: searchParams.get("search") || "",
+      categories: searchParams.get("cat")?.split(",") || [],
+      brands: searchParams.get("brands")?.split(",") || [],
+      line: searchParams.get("line") || "DEFAULT",
+      price: searchParams.get("price")
+        ? (() => {
+            const [min, max] = searchParams.get("price").split("-").map(Number);
+            return { min, max };
+          })()
+        : { min: 0, max: 100000 }, // Valor por defecto alto
+    }),
+    [searchParams]
+  );
+
+  // Reemplazar el procesamiento de productos actual con esta versión optimizada
+  const processedProducts = useMemo(() => {
+    if (!allProducts || allProducts.length === 0)
+      return {
+        items: [],
+        totalItems: 0,
+        totalPages: 0,
+        currentPage: 1,
+        itemsPerPage: 12,
+      };
+
+    // Extraer todos los parámetros de la URL
+    const params = searchParamsValues;
+
+    // Preparar valores usados en comparaciones para evitar recalcularlos en cada iteración
+    const searchValue = params.search
+      ? params.search.toLowerCase().trim()
+      : null;
+    const lineToMatch =
+      params.line !== "DEFAULT" ? params.line.toLowerCase() : null;
+    const hasCategories = params.categories.length > 0;
+    const hasBrands = params.brands.length > 0;
+    const hasPrice =
+      params.price && (params.price.min > 0 || params.price.max < 100000);
+
+    // Aplicar todos los filtros en una sola pasada
+    let result = allProducts.filter((product) => {
+      // Si el producto no tiene datos básicos, excluirlo
+      if (!product || !product.id) return false;
+
+      // 1. Filtro de búsqueda
+      if (searchValue) {
+        const nameMatch =
+          product.name && product.name.toLowerCase().includes(searchValue);
+        const descMatch =
+          product.description &&
+          product.description.toLowerCase().includes(searchValue);
+        const idMatch =
+          product.id && product.id.toString().includes(searchValue);
+        const barcodeMatch =
+          product.codigoBarras &&
+          product.codigoBarras.toLowerCase().includes(searchValue);
+
+        if (!(nameMatch || descMatch || idMatch || barcodeMatch)) {
+          return false;
+        }
+      }
+
+      // 2. Filtro de línea de negocio
+      if (
+        lineToMatch &&
+        (!product.lineaNegocio ||
+          product.lineaNegocio.toLowerCase() !== lineToMatch)
+      ) {
+        return false;
+      }      // 3. Filtro de categorías usando filtersByType con lógica AND
+      if (hasCategories) {
+        // Verificar que el producto tiene TODAS las categorías seleccionadas
+        const hasAllCategories = params.categories.every(selectedCategory => {
+          if (!product.filtersByType || typeof product.filtersByType !== 'object') {
+            return false;
+          }
+          
+          // Buscar la categoría en cualquier tipo de filtro del producto
+          return Object.values(product.filtersByType).some(filterArray => 
+            Array.isArray(filterArray) && filterArray.includes(selectedCategory)
+          );
+        });
+        
+        if (!hasAllCategories) {
+          return false;
+        }
+      }
+
+      // 4. Filtro de marcas
+      if (hasBrands && !params.brands.includes(product.brand)) {
+        return false;
+      }
+
+      // 5. Filtro de precio
+      if (
+        hasPrice &&
+        product.price !== 0 &&
+        (product.price < params.price.min || product.price > params.price.max)
+      ) {
+        return false;
+      }
+
+      // Si pasó todos los filtros, incluir el producto
+      return true;
+    });
+
+    // Aplicar ordenamiento
+    if (params.sort && params.sort !== "default") {
+      switch (params.sort) {
+        case "price_asc":
+          result.sort((a, b) => a.price - b.price);
+          break;
+        case "price_desc":
+          result.sort((a, b) => b.price - a.price);
+          break;
+        case "name_asc":
+          result.sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        case "rating":
+          result.sort((a, b) => b.rating - a.rating);
+          break;
+      }
+    }
+
+    // Calcular paginación
+    const totalItems = result.length;
+    const totalPages = Math.ceil(totalItems / params.limit);
+
+    // Obtener productos para la página actual
+    const startIndex = (params.page - 1) * params.limit;
+    const endIndex = startIndex + params.limit;
+    const paginatedResults = result.slice(startIndex, endIndex);
+
+    return {
+      items: paginatedResults,
+      totalItems,
+      totalPages,
+      currentPage: params.page,
+      itemsPerPage: params.limit,
+    };
+  }, [allProducts, searchParamsValues]);
+
+  // Modificar la función que actualiza los parámetros de URL
+  const updateUrlParams = useCallback(
+    (updates) => {
+      // Crear una copia de los parámetros actuales para comparar después
+      const prevParams = new URLSearchParams(searchParams);
+      const params = new URLSearchParams(searchParams);
+
+      // Variable para detectar si sólo cambió la página
+      let onlyPageChanged = true;
+      let oldPage = prevParams.get("page") || "1";
+
+      // Procesar cada actualización
+      Object.entries(updates).forEach(([key, value]) => {
+        switch (key) {
+          case "page":
+            if (value > 1) params.set("page", value.toString());
+            else params.delete("page");
+            break;
+          case "limit":
+            if (value !== 12) params.set("limit", value.toString());
+            else params.delete("limit");
+            break;
+          case "sort":
+            if (value !== "default") params.set("sort", value);
+            else params.delete("sort");
+            break;
+          case "search":
+            if (value) params.set("search", value);
+            else params.delete("search");
+            break;
+          case "categories":
+            if (value.length > 0) params.set("cat", value.join(","));
+            else params.delete("cat");
+            break;
+          case "brands":
+            if (value.length > 0) params.set("brands", value.join(","));
+            else params.delete("brands");
+            break;
+          case "line":
+            if (value !== "DEFAULT") params.set("line", value);
+            else params.delete("line");
+            break;
+          case "price":
+            if (value.min !== 0 || value.max !== 100000) {
+              params.set("price", `${value.min}-${value.max}`);
+            } else {
+              params.delete("price");
+            }
+            break;
+          default:
+            onlyPageChanged = false; // Si hay alguna otra actualización, no es sólo cambio de página
+        }
+      });
+
+      if (onlyPageChanged && updates.page) {
+        // Usar history.replaceState para no activar efectos
+        const url = new URL(window.location);
+        if (updates.page > 1) {
+          url.searchParams.set("page", updates.page.toString());
+        } else {
+          url.searchParams.delete("page");
+        }
+
+        // Esto evita ciclos al cambiar sólo la página
+        window.history.replaceState({}, "", url);
+
+        // También actualizar el estado local para el componente
+        setTimeout(() => {
+          setSearchParams(params);
+        }, 0);
+      } else {
+        // Para otros cambios, actualizar normalmente
+        setSearchParams(params);
+      }
+    },
+    [searchParams, setSearchParams]
+  );
 
   // Obtener información de la empresa
   const empresaInfo = empresas.find(
@@ -471,54 +571,33 @@ const Catalogo = () => {
   };
 
   const handleSearch = (value) => {
-    setSearchTerm(value);
+    updateUrlParams({ search: value, page: 1 });
+  };
 
-    // Cancelar el timeout anterior si existe
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
+  const handleSort = (e) => {
+    updateUrlParams({ sort: e.target.value, page: 1 });
+  };
 
-    // Crear un nuevo timeout para aplicar la búsqueda después de un breve retraso
-    searchTimeoutRef.current = setTimeout(() => {
-      if (!allProducts) return;
+  const handleFilters = (filters) => {
+    updateUrlParams({
+      categories: filters.categories || [],
+      brands: filters.brands || [],
+      price: filters.price || { min: 0, max: 100000 },
+      line: filters.businessLine || "DEFAULT",
+      page: 1,
+    });
+  };
 
-      // Si el campo de búsqueda está vacío, aplicar solo los filtros actuales
-      if (!value.trim()) {
-        // Llamar directamente a applyFilters con los filtros actuales
-        const currentFilters = {
-          categories: selectedCategories || [], // Necesitarás añadir estos estados
-          brands: selectedBrands || [], // si no los tienes ya
-          price: currentPriceRange,
-        };
-        applyFilters(allProducts, currentFilters);
-        return;
-      }
+  const handlePageChange = (pageNumber) => {
+    updateUrlParams({ page: pageNumber });
+    window.scrollTo(
+      0,
+      document.getElementById("productos-grid").offsetTop - 80
+    );
+  };
 
-      // Filtrar productos por término de búsqueda directamente desde allProducts
-      const searchValue = value.toLowerCase().trim();
-      const searchResults = allProducts.filter((product) => {
-        // Solo incluir productos válidos
-        if (!product || !product.id) return false;
-
-        return (
-          (product.name && product.name.toLowerCase().includes(searchValue)) ||
-          (product.description &&
-            product.description.toLowerCase().includes(searchValue)) ||
-          (product.id && product.id.toString().includes(searchValue)) ||
-          (product.codigoBarras &&
-            product.codigoBarras.toLowerCase().includes(searchValue))
-        );
-      });
-
-      // Aplicar otros filtros sobre los resultados de búsqueda
-      const currentFilters = {
-        categories: selectedCategories || [],
-        brands: selectedBrands || [],
-        price: currentPriceRange,
-      };
-
-      applyFilters(searchResults, currentFilters);
-    }, 300); // 300ms de debounce
+  const handleItemsPerPageChange = (e) => {
+    updateUrlParams({ limit: Number(e.target.value), page: 1 });
   };
 
   // Luego, añade este useEffect para detectar las líneas de negocio disponibles
@@ -543,10 +622,6 @@ const Catalogo = () => {
       // console.log("[DEBUG] Líneas de negocio detectadas:", lines);
     }
   }, [allProducts]);
-
-  useEffect(() => {
-    setCurrentPriceRange(priceRange);
-  }, [priceRange]);
 
   // Función para obtener productos desde la API
   const fetchProductsFromAPI = async () => {
@@ -613,144 +688,31 @@ const Catalogo = () => {
         }
 
         // Guardar productos en caché
-        cacheProducts(empresaName, mappedProducts);
-
-        // Guardar todos los productos originales
+        cacheProducts(empresaName, mappedProducts); // Guardar todos los productos originales
         setAllProducts(mappedProducts);
-
-        // Actualizar estados locales
-        setFilteredProducts(mappedProducts);
-        extractCategoriesAndBrands(mappedProducts);
       } else {
         console.error("Error al cargar productos:", respProductos.message);
         toast.error("No se pudieron cargar los productos");
         // En caso de error, establecer una lista vacía para evitar loader infinito
-        setFilteredProducts([]);
       }
     } catch (error) {
       console.error("Error en fetchProducts:", error);
       toast.error("Error al obtener los productos");
       // En caso de error, establecer una lista vacía para evitar loader infinito
-      setFilteredProducts([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Función para extraer categorías y marcas de los productos
-  const extractCategoriesAndBrands = (products) => {
-    // Crear categorías por tipo
-    const categoriesByType = {};
-    // Crear objeto para almacenar marcas por línea de negocio
-    const brandsByBusinessLine = {};
-
-    // Recorrer todos los productos
-    products.forEach((product) => {
-      // Procesar categorías
-      if (product.categoriesByType) {
-        Object.entries(product.categoriesByType).forEach(
-          ([type, typeCategories]) => {
-            if (!categoriesByType[type]) {
-              categoriesByType[type] = new Set();
-            }
-
-            typeCategories.forEach((cat) => categoriesByType[type].add(cat));
-          }
-        );
-      }
-
-      // Procesar marcas y asociarlas con líneas de negocio
-      if (product.brand) {
-        const line = product.lineaNegocio || "DEFAULT";
-
-        if (!brandsByBusinessLine[line]) {
-          brandsByBusinessLine[line] = new Set();
-        }
-
-        brandsByBusinessLine[line].add(product.brand);
-      }
-    });
-
-    // Preparar categorías formateadas como antes
-    const formattedCategories = [];
-    Object.entries(categoriesByType).forEach(([type, categorySet]) => {
-      Array.from(categorySet).forEach((categoryName) => {
-        const displayName = categoryName
-          .replace(`${type}_`, "")
-          .replace(/_/g, " ")
-          .replace(/\b\w/g, (l) => l.toUpperCase());
-
-        formattedCategories.push({
-          id: categoryName,
-          name: categoryName,
-          type: type,
-          displayName: displayName,
-        });
-      });
-    });
-
-    setAvailableCategories(formattedCategories);
-
-    // Extraer todas las marcas únicas
-    const allBrandNames = [];
-    Object.values(brandsByBusinessLine).forEach((brandSet) => {
-      brandSet.forEach((brand) => {
-        if (!allBrandNames.includes(brand)) {
-          allBrandNames.push(brand);
-        }
-      });
-    });
-
-    // Crear objetos de marca con metadatos de línea de negocio
-    const empresaBrands = allBrandNames.map((brandName) => {
-      // Determinar a qué líneas de negocio pertenece esta marca
-      const lines = Object.entries(brandsByBusinessLine)
-        .filter(([_, brands]) => brands.has(brandName))
-        .map(([line]) => line);
-
-      return {
-        id: brandName,
-        name: brandName,
-        businessLines: lines,
-        // Si la marca pertenece a una sola línea, la asignamos directamente
-        primaryBusinessLine: lines.length === 1 ? lines[0] : null,
-      };
-    });
-
-    setAvailableBrands(empresaBrands);
-
-    // Calcular rango de precios - esto se mantiene igual
-    if (products.length > 0) {
-      const prices = products.map((p) => p.price).filter((p) => p > 0);
-      if (prices.length > 0) {
-        const minPrice = Math.floor(Math.min(...prices));
-        const maxPrice = Math.ceil(Math.max(...prices));
-        setPriceRange({ min: minPrice, max: maxPrice });
-      }
-    }
-  };
-
   // Efecto para cargar productos cuando cambia la empresa o el usuario
   useEffect(() => {
+    console.log("entre");
+
     // Limpiar cualquier búsqueda pendiente al cambiar de empresa
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Si venimos del detalle de un producto, no reiniciar el término de búsqueda ni los filtros
-    // Solo identificamos esto si hay filtros guardados para esta empresa
-    const hasSavedFilters =
-      sessionStorage.getItem(`filters_${empresaName}`) !== null;
-
-    if (!hasSavedFilters) {
-      // Solo reiniciar filtros si no venimos del detalle de un producto
-      setSearchTerm("");
-      setSelectedCategories([]);
-      setSelectedBrands([]);
-      setCurrentPriceRange({ min: 0, max: priceRange.max });
-    }
-
-    setFilteredProducts(null);
     setIsLoading(true);
 
     // Determinar si el usuario tiene acceso
@@ -761,18 +723,8 @@ const Catalogo = () => {
       // Verificar si hay datos en caché y si son válidos
       if (isCacheValid(empresaName)) {
         // console.log("Usando productos en caché para:", empresaName);
-        const cachedProducts = getCachedProducts(empresaName);
-
-        // IMPORTANTE: Primero actualizar allProducts para que esté disponible
+        const cachedProducts = getCachedProducts(empresaName); // IMPORTANTE: Primero actualizar allProducts para que esté disponible
         setAllProducts(cachedProducts);
-
-        // Luego extraer categorías y marcas
-        extractCategoriesAndBrands(cachedProducts);
-
-        // Si no venimos del detalle, actualizar productos filtrados
-        if (!hasSavedFilters) {
-          setFilteredProducts(cachedProducts);
-        }
 
         setIsLoading(false); // Finalizar carga cuando usamos caché
       } else {
@@ -782,121 +734,6 @@ const Catalogo = () => {
       setIsLoading(false);
     }
   }, [empresaName, user]);
-
-  // Dentro del handleFilters, reemplaza el filtro comentado por la implementación real:
-  const handleFilters = useCallback(
-    (filters) => {
-      if (!hasAccess || !allProducts) return;
-
-      // Actualizar estados locales de filtros seleccionados
-      setSelectedCategories(filters.categories || []);
-      setSelectedBrands(filters.brands || []);
-      setCurrentPriceRange(filters.price || currentPriceRange);
-
-      // Actualizar línea de negocio si viene en los filtros
-      if (filters.businessLine && filters.businessLine !== lineaNegocio) {
-        setLineaNegocio(filters.businessLine);
-        // console.log("[DEBUG] Cambiando línea de negocio a:", filters.businessLine);
-      }
-
-      // Usar siempre allProducts como base para aplicar filtros
-      let productsToFilter = [...allProducts];
-
-      // Si hay término de búsqueda, filtrar primero por búsqueda
-      if (searchTerm.trim()) {
-        const searchValue = searchTerm.toLowerCase().trim();
-        productsToFilter = productsToFilter.filter((product) => {
-          if (!product || !product.id) return false;
-
-          return (
-            (product.name &&
-              product.name.toLowerCase().includes(searchValue)) ||
-            (product.description &&
-              product.description.toLowerCase().includes(searchValue)) ||
-            (product.id && product.id.toString().includes(searchValue)) ||
-            (product.codigoBarras &&
-              product.codigoBarras.toLowerCase().includes(searchValue))
-          );
-        });
-      }
-
-      // Si tenemos productos, aplicar los filtros directamente
-      applyFilters(productsToFilter, filters);
-    },
-    [hasAccess, allProducts, searchTerm, lineaNegocio, currentPriceRange]
-  );
-
-  // Función para aplicar filtros (extraída para reutilizar)
-  const applyFilters = (products, filters) => {
-    let result = [...products];
-
-    // Filtrar por línea de negocio explícitamente
-    if (filters.businessLine && filters.businessLine !== "DEFAULT") {
-      result = result.filter(
-        (product) => product.lineaNegocio === filters.businessLine
-      );
-    }
-
-    // Filtrar por categorías usando AND
-    if (filters.categories && filters.categories.length > 0) {
-      result = result.filter((product) => {
-        // Un producto debe tener TODAS las categorías seleccionadas (AND)
-        return filters.categories.every((category) =>
-          product.categories?.includes(category)
-        );
-      });
-    }
-
-    // Filtrar por marcas
-    if (filters.brands && filters.brands.length > 0) {
-      result = result.filter((product) =>
-        filters.brands.includes(product.brand)
-      );
-    }
-
-    // Filtrar por precio
-    if (filters.price) {
-      result = result.filter(
-        (product) =>
-          product.price === 0 || // Considerar productos con precio cero como válidos siempre
-          (product.price >= filters.price.min &&
-            product.price <= filters.price.max)
-      );
-    }
-
-    // NO filtrar por término de búsqueda aquí para evitar el filtrado doble
-    // Esto ya se hace en handleSearch
-
-    setFilteredProducts(result);
-    setCurrentPage(1);
-  };
-
-  const handleSort = (e) => {
-    const option = e.target.value;
-    setSortOption(option);
-
-    let sorted = [...filteredProducts];
-
-    switch (option) {
-      case "price_asc":
-        sorted.sort((a, b) => a.price - b.price);
-        break;
-      case "price_desc":
-        sorted.sort((a, b) => b.price - a.price);
-        break;
-      case "name_asc":
-        sorted.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case "rating":
-        sorted.sort((a, b) => b.rating - a.rating);
-        break;
-      default:
-        // No sorting needed
-        break;
-    }
-
-    setFilteredProducts(sorted);
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -914,205 +751,57 @@ const Catalogo = () => {
     handleNavigate();
   };
 
-  // Calcular total de páginas cada vez que cambian los productos filtrados
+  const currentSort = searchParams.get("sort") || "default";
+  const currentLimit = parseInt(searchParams.get("limit") || "12");
+  const currentPage = parseInt(searchParams.get("page") || "1");
+  const currentSearch = searchParams.get("search") || "";
+  const currentCategories = searchParams.get("cat")?.split(",") || [];
+  const currentBrands = searchParams.get("brands")?.split(",") || [];
+  const currentLine = searchParams.get("line") || "DEFAULT";
+  const currentPriceRange = searchParams.get("price")
+    ? (() => {
+        const [min, max] = searchParams.get("price").split("-").map(Number);
+        return { min, max };
+      })()
+    : { min: 0, max: 100000 };
+
   useEffect(() => {
-    if (filteredProducts === null) return; // Evitar cálculos si aún no hay productos
-    setTotalPages(Math.ceil(filteredProducts.length / productsPerPage));
-    // Reset a la primera página cuando cambian los filtros
-    setCurrentPage(1);
-  }, [filteredProducts, productsPerPage]);
+    // Extraer el número de página de searchParams
+    const pageParam = searchParams.get("page");
+    const currentPageNumber = parseInt(pageParam || "1");
 
-  // Calcular productos actuales para paginación
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = filteredProducts
-    ? filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct)
-    : [];
-
-  // Crear función para cambiar de página
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-    // Scroll al principio de la lista de productos
-    window.scrollTo(
-      0,
-      document.getElementById("productos-grid").offsetTop - 80
-    );
-  };
-
-  // Efecto para detectar la línea de negocio predominante
-  useEffect(() => {
-    if (filteredProducts && filteredProducts.length > 0) {
-      // Contar las líneas de negocio presentes
-      const lineCount = {};
-      filteredProducts.forEach((product) => {
-        const line = (product.lineaNegocio || "DEFAULT").toUpperCase();
-        lineCount[line] = (lineCount[line] || 0) + 1;
-      });
-
-      // Encontrar la línea más común
-      let maxCount = 0;
-      let dominantLine = "DEFAULT";
-
-      Object.entries(lineCount).forEach(([line, count]) => {
-        if (count > maxCount) {
-          maxCount = count;
-          dominantLine = line;
-        }
-      });
-
-      setLineaNegocio(dominantLine);
+    // Actualizar processedProducts para mostrar la página correcta
+    if (
+      processedProducts &&
+      processedProducts.currentPage !== currentPageNumber &&
+      currentPageNumber <= processedProducts.totalPages
+    ) {
+      // No hacer nada más, solo asegurarse de que processedProducts use el valor correcto      console.log("Ajustando a página:", currentPageNumber);
     }
-  }, [filteredProducts]);
+  }, [searchParams, processedProducts]);
 
-  // 1. Añade esta función para guardar los filtros en sessionStorage
-  const saveFiltersToSession = useCallback(() => {
-    const currentFilters = {
-      categories: selectedCategories,
-      brands: selectedBrands,
-      priceRange: currentPriceRange,
-      businessLine: lineaNegocio,
-      searchTerm: searchTerm,
-      sortOption: sortOption,
-      productsPerPage: productsPerPage,
-      currentPage: currentPage,
-    };
+  // Handler para cambiar línea de negocio
+  const handleBusinessLineChange = useCallback(
+    (newLine) => {
+      const newSearchParams = new URLSearchParams(searchParams);
 
-    try {
-      sessionStorage.setItem(
-        `filters_${empresaName}`,
-        JSON.stringify(currentFilters)
-      );
-    } catch (error) {
-      console.error("[FILTROS] Error al guardar filtros:", error);
-    }
-  }, [
-    selectedCategories,
-    selectedBrands,
-    currentPriceRange,
-    lineaNegocio,
-    searchTerm,
-    sortOption,
-    productsPerPage,
-    currentPage,
-    empresaName,
-  ]);
-
-  // 2. Añade un efecto para guardar filtros cuando estos cambien
-  useEffect(() => {
-    // Solo guardar si ya tenemos productos cargados (no en la carga inicial)
-    if (filteredProducts !== null) {
-      saveFiltersToSession();
-    }
-  }, [
-    selectedCategories,
-    selectedBrands,
-    currentPriceRange,
-    lineaNegocio,
-    searchTerm,
-    sortOption,
-    productsPerPage,
-    currentPage,
-    saveFiltersToSession,
-  ]);
-
-  // 3. Añade este efecto para restaurar filtros cuando se carguen los productos
-  useEffect(() => {
-    // Solo intentar restaurar después de cargar productos y si hay productos disponibles
-    if (!isLoading && allProducts && allProducts.length > 0) {
-      try {
-        const savedFilters = sessionStorage.getItem(`filters_${empresaName}`);
-
-        if (savedFilters) {
-          const filters = JSON.parse(savedFilters);
-
-          // Restaurar todos los filtros
-          setSelectedCategories(filters.categories || []);
-          setSelectedBrands(filters.brands || []);
-          setCurrentPriceRange(filters.priceRange || priceRange);
-
-          if (filters.businessLine) {
-            setLineaNegocio(filters.businessLine);
-          }
-
-          if (filters.searchTerm) {
-            setSearchTerm(filters.searchTerm);
-          }
-
-          if (filters.sortOption) {
-            setSortOption(filters.sortOption);
-          }
-
-          if (filters.productsPerPage) {
-            setProductsPerPage(filters.productsPerPage);
-          }
-
-          if (filters.currentPage) {
-            setCurrentPage(filters.currentPage);
-          }
-
-          // Aplicar los filtros a los productos
-          const currentFilters = {
-            categories: filters.categories || [],
-            brands: filters.brands || [],
-            price: filters.priceRange || priceRange,
-            businessLine: filters.businessLine,
-          };
-
-          // Aplicar filtros después de que los estados se hayan actualizado
-          setTimeout(() => {
-            // Primero aplicar la búsqueda si hay término
-            if (filters.searchTerm) {
-              const searchValue = filters.searchTerm.toLowerCase().trim();
-              const searchResults = allProducts.filter((product) => {
-                if (!product || !product.id) return false;
-
-                return (
-                  (product.name &&
-                    product.name.toLowerCase().includes(searchValue)) ||
-                  (product.description &&
-                    product.description.toLowerCase().includes(searchValue)) ||
-                  (product.id && product.id.toString().includes(searchValue)) ||
-                  (product.codigoBarras &&
-                    product.codigoBarras.toLowerCase().includes(searchValue))
-                );
-              });
-
-              applyFilters(searchResults, currentFilters);
-            } else {
-              // Si no hay búsqueda, aplicar solo los filtros
-              applyFilters(allProducts, currentFilters);
-            }
-
-            // Aplicar ordenamiento después de filtrar
-            if (filters.sortOption && filters.sortOption !== "default") {
-              setTimeout(() => {
-                let sorted = [...filteredProducts];
-
-                switch (filters.sortOption) {
-                  case "price_asc":
-                    sorted.sort((a, b) => a.price - b.price);
-                    break;
-                  case "price_desc":
-                    sorted.sort((a, b) => b.price - a.price);
-                    break;
-                  case "name_asc":
-                    sorted.sort((a, b) => a.name.localeCompare(b.name));
-                    break;
-                  case "rating":
-                    sorted.sort((a, b) => b.rating - a.rating);
-                    break;
-                }
-
-                setFilteredProducts(sorted);
-              }, 100);
-            }
-          }, 100);
-        }
-      } catch (error) {
-        console.error("[FILTROS] Error al restaurar filtros:", error);
+      // Cambiar la línea de negocio
+      if (newLine === "DEFAULT") {
+        newSearchParams.delete("line");
+      } else {
+        newSearchParams.set("line", newLine);
       }
-    }
-  }, [allProducts, isLoading, empresaName]);
+
+      // Limpiar filtros cuando se cambia de línea
+      newSearchParams.delete("cat");
+      newSearchParams.delete("brands");
+      newSearchParams.delete("price");
+      newSearchParams.delete("page");
+
+      setSearchParams(newSearchParams);
+    },
+    [searchParams, setSearchParams]
+  );
 
   // Si la empresa no existe, mostrar mensaje
   if (!empresaInfo) {
@@ -1204,7 +893,7 @@ const Catalogo = () => {
 
       <PageHeader>
         <PageTitle>Catálogo de {empresaInfo.nombre}</PageTitle>
-        {filteredProducts && (
+        {processedProducts && (
           <ProductsCount>
             {validProductCount} productos encontrados
           </ProductsCount>
@@ -1212,34 +901,29 @@ const Catalogo = () => {
       </PageHeader>
 
       <ContentLayout>
+        {" "}
         <FilterSidebar
-          availableCategories={availableCategories}
-          availableBrands={availableBrands}
-          priceRange={priceRange}
-          onApplyFilters={handleFilters}
-          lineaNegocio={lineaNegocio}
           allProducts={allProducts}
-          selectedCategories={selectedCategories}
-          selectedBrands={selectedBrands}
-          currentPriceRange={currentPriceRange}
+          lineaNegocio={currentLine}
           availableBusinessLines={availableBusinessLines}
-          countFilteredProducts={filteredProducts ? filteredProducts.length : 0}
+          onBusinessLineChange={handleBusinessLineChange}
+          selectedCategories={currentCategories}
+          selectedBrands={currentBrands}
+          selectedPriceRange={currentPriceRange}
+          onApplyFilters={handleFilters}
+          countFilteredProducts={processedProducts.totalItems}
         />
-
         <div style={{ flex: 1 }}>
           <SortContainer>
-            <SearchInputWrapper>
-              <FaSearch />
-              <SearchInput
-                type="text"
-                placeholder="Buscar productos por nombre, descripción o código..."
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                style={{ paddingLeft: "36px" }}
-              />
-            </SearchInputWrapper>
+            <SearchBar
+              value={currentSearch}
+              onChange={handleSearch}
+              placeholder="Buscar productos por nombre, descripción o código..."
+              debounceTime={300}
+              width="100%"
+            />
             {/* Solo mostrar el selector de ordenación si hay productos */}
-            {filteredProducts && filteredProducts.length > 0 && (
+            {processedProducts && processedProducts.items.length > 0 && (
               <>
                 <Select
                   options={[
@@ -1249,7 +933,7 @@ const Catalogo = () => {
                     { value: "name_asc", label: "Alfabético (A-Z)" },
                     { value: "rating", label: "Mejor valorados" },
                   ]}
-                  value={sortOption}
+                  value={currentSort}
                   onChange={handleSort}
                   preValue="Ordenar por:"
                   placeholder="Ordenar por..."
@@ -1262,8 +946,8 @@ const Catalogo = () => {
                     { value: 72, label: "72" },
                     { value: 144, label: "144" },
                   ]}
-                  value={productsPerPage}
-                  onChange={(e) => setProductsPerPage(Number(e.target.value))}
+                  value={currentLimit}
+                  onChange={handleItemsPerPageChange}
                   preValue="Mostrar: "
                   postValue=" items por página"
                   placeholder="Mostrar items"
@@ -1274,7 +958,7 @@ const Catalogo = () => {
 
           <ProductsGrid id="productos-grid">
             {/* Condición de carga */}
-            {isLoading || filteredProducts === null ? (
+            {isLoading || !processedProducts ? (
               <div style={{ gridColumn: "1 / -1" }}>
                 <RenderLoader
                   size="large"
@@ -1284,8 +968,8 @@ const Catalogo = () => {
                   showSpinner={false}
                 />
               </div>
-            ) : filteredProducts.length > 0 ? (
-              currentProducts.map((product) => {
+            ) : processedProducts.items.length > 0 ? (
+              processedProducts.items.map((product) => {
                 // Verificar que el producto es válido antes de renderizarlo
                 if (!product || !product.id) {
                   console.warn(
@@ -1314,11 +998,11 @@ const Catalogo = () => {
                   gridColumn: "1 / -1",
                 }}
               >
-                {searchTerm ? (
+                {currentSearch ? (
                   <>
                     <p>
                       No se encontraron productos que coincidan con "
-                      <strong>{searchTerm}</strong>".
+                      <strong>{currentSearch}</strong>".
                     </p>
                     <p>Intenta con otros términos o elimina algunos filtros.</p>
                   </>
@@ -1333,47 +1017,52 @@ const Catalogo = () => {
           </ProductsGrid>
 
           {/* Paginación - solo mostrar si hay productos y no está cargando */}
-          {filteredProducts && filteredProducts.length > 0 && !isLoading && (
-            <Pagination>
-              <PageButton
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                leftIconName={"FaChevronLeft"}
-                text={"Anterior"}
-                size="small"
-              />
+          {processedProducts &&
+            processedProducts.totalItems > 0 &&
+            !isLoading && (
+              <Pagination>
+                <PageButton
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  leftIconName={"FaChevronLeft"}
+                  text={"Anterior"}
+                  size="small"
+                />
 
-              {/* Mostrar números de página */}
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(
-                  (page) =>
-                    page === 1 ||
-                    page === totalPages ||
-                    (page >= currentPage - 1 && page <= currentPage + 1)
+                {/* Mostrar números de página */}
+                {Array.from(
+                  { length: processedProducts.totalPages },
+                  (_, i) => i + 1
                 )
-                .map((page, index, array) => (
-                  <React.Fragment key={page}>
-                    {index > 0 && array[index - 1] !== page - 1 && (
-                      <PageButton disabled text="..." />
-                    )}
-                    <PageButton
-                      $active={currentPage === page}
-                      onClick={() => handlePageChange(page)}
-                      text={page}
-                      size="small"
-                    />
-                  </React.Fragment>
-                ))}
+                  .filter(
+                    (page) =>
+                      page === 1 ||
+                      page === processedProducts.totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                  )
+                  .map((page, index, array) => (
+                    <React.Fragment key={page}>
+                      {index > 0 && array[index - 1] !== page - 1 && (
+                        <PageButton disabled text="..." />
+                      )}
+                      <PageButton
+                        $active={currentPage === page}
+                        onClick={() => handlePageChange(page)}
+                        text={page}
+                        size="small"
+                      />
+                    </React.Fragment>
+                  ))}
 
-              <PageButton
-                size="small"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                rightIconName={"FaChevronRight"}
-                text={"Siguiente"}
-              />
-            </Pagination>
-          )}
+                <PageButton
+                  size="small"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === processedProducts.totalPages}
+                  rightIconName={"FaChevronRight"}
+                  text={"Siguiente"}
+                />
+              </Pagination>
+            )}
         </div>
       </ContentLayout>
     </PageContainer>

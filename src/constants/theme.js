@@ -134,6 +134,7 @@ export const lightTheme = {
     warning: "#ffc107",
     error: "#dc3545",
     info: "#17a2b8",
+    
 
     // Variaciones de grises
     background: "#f5f5f5",

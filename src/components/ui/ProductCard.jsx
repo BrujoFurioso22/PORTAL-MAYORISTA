@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useCart } from "../../context/CartContext";
 import Button from "../ui/Button";
@@ -192,6 +192,7 @@ const PRODUCT_LINE_CONFIG = {
 
 const ProductCard = ({ product, lineConfig }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart, isAdminOrCoord } = useCart();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
@@ -209,8 +210,16 @@ const ProductCard = ({ product, lineConfig }) => {
       return;
     }
 
+    const currentUrl = `${location.pathname}${location.search}`;
+
     console.log("Navegando al detalle del producto:", product.id);
-    navigate(`/productos/${product.id}`, { state: { product } });
+    // Navegar al detalle del producto pasando la URL anterior
+    navigate(`/productos/${product.id}`, {
+      state: {
+        product,
+        prevUrl: currentUrl, // Guardar la URL anterior para poder volver
+      },
+    });
   };
 
   const handleAddToCart = (e) => {
