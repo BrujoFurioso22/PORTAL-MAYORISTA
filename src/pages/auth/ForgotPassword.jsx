@@ -386,7 +386,7 @@ const ForgotPassword = () => {
               type={showPassword ? "text" : "password"}
               placeholder="Ingresa tu nueva contraseña"
               leftIconName="FaLock"
-              rightIconName={showPassword ? "EyeOff" : "Eye"}
+              rightIconName={showPassword ? "FaEyeSlash" : "FaEye"}
               onRightIconClick={() => setShowPassword(!showPassword)}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -409,14 +409,16 @@ const ForgotPassword = () => {
               <Message type={message.type}>{message.text}</Message>
             )}
 
-            <Button
-              type="submit"
-              text={isLoading ? "Actualizando..." : "Actualizar contraseña"}
-              fullWidth
-              onClick={async (e) => {
-                await handleResetPassword(e);
-              }}
-            />
+            {(message.type !== "success" || !message) && (
+              <Button
+                type="submit"
+                text={isLoading ? "Actualizando..." : "Actualizar contraseña"}
+                fullWidth
+                onClick={async (e) => {
+                  await handleResetPassword(e);
+                }}
+              />
+            )}
           </Form>
         )}
       </Card>

@@ -274,8 +274,6 @@ const mapApiProductToAppFormat = (item) => {
       ? parseInt(item.DMA_STOCK)
       : 0;
 
-      console.log("[MAPEO] Mapeando producto:");
-      console.log("CATEGORIESBYTYPE", categoriesByType)
       // Crear objeto de producto adaptado al formato esperado usando la plantilla correspondiente
     return {
       id: item.DMA_CODIGO,
@@ -335,8 +333,7 @@ const Catalogo = () => {
 
   /**
    * fin de bloque ------------------------------------------------------------------------
-   */
-  const searchParamsValues = useMemo(
+   */  const searchParamsValues = useMemo(
     () => ({
       page: parseInt(searchParams.get("page") || "1"),
       limit: parseInt(searchParams.get("limit") || "12"),
@@ -350,7 +347,7 @@ const Catalogo = () => {
             const [min, max] = searchParams.get("price").split("-").map(Number);
             return { min, max };
           })()
-        : { min: 0, max: 100000 }, // Valor por defecto alto
+        : null, // No establecer valores por defecto aquí
     }),
     [searchParams]
   );
@@ -376,9 +373,7 @@ const Catalogo = () => {
     const lineToMatch =
       params.line !== "DEFAULT" ? params.line.toLowerCase() : null;
     const hasCategories = params.categories.length > 0;
-    const hasBrands = params.brands.length > 0;
-    const hasPrice =
-      params.price && (params.price.min > 0 || params.price.max < 100000);
+    const hasBrands = params.brands.length > 0;    const hasPrice = params.price && (params.price.min > 0 || params.price.max < Infinity);
 
     // Aplicar todos los filtros en una sola pasada
     let result = allProducts.filter((product) => {
@@ -524,9 +519,8 @@ const Catalogo = () => {
           case "line":
             if (value !== "DEFAULT") params.set("line", value);
             else params.delete("line");
-            break;
-          case "price":
-            if (value.min !== 0 || value.max !== 100000) {
+            break;          case "price":
+            if (value && (value.min > 0 || value.max < Infinity)) {
               params.set("price", `${value.min}-${value.max}`);
             } else {
               params.delete("price");
@@ -577,12 +571,24 @@ const Catalogo = () => {
   const handleSort = (e) => {
     updateUrlParams({ sort: e.target.value, page: 1 });
   };
-
   const handleFilters = (filters) => {
+    // Calcular el rango de precios real de los productos actuales
+    const currentPriceRange = allProducts && allProducts.length > 0 
+      ? (() => {
+          const prices = allProducts.map(p => p.price).filter(p => p > 0);
+          return prices.length > 0 
+            ? { min: Math.min(...prices), max: Math.max(...prices) }
+            : { min: 0, max: 100000 };
+        })()
+      : { min: 0, max: 100000 };
+
     updateUrlParams({
       categories: filters.categories || [],
       brands: filters.brands || [],
-      price: filters.price || { min: 0, max: 100000 },
+      price: (filters.price && 
+             (filters.price.min > currentPriceRange.min || filters.price.max < currentPriceRange.max))
+        ? filters.price 
+        : null, // No incluir precio si es el rango completo
       line: filters.businessLine || "DEFAULT",
       page: 1,
     });
@@ -633,7 +639,6 @@ const Catalogo = () => {
         field: "empresa",
         value: empresaName,
       });
-      console.log(respProductos);
 
       if (respProductos.success) {
         const productos = respProductos.data || [];
@@ -706,8 +711,6 @@ const Catalogo = () => {
 
   // Efecto para cargar productos cuando cambia la empresa o el usuario
   useEffect(() => {
-    console.log("entre");
-
     // Limpiar cualquier búsqueda pendiente al cambiar de empresa
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -757,13 +760,12 @@ const Catalogo = () => {
   const currentSearch = searchParams.get("search") || "";
   const currentCategories = searchParams.get("cat")?.split(",") || [];
   const currentBrands = searchParams.get("brands")?.split(",") || [];
-  const currentLine = searchParams.get("line") || "DEFAULT";
-  const currentPriceRange = searchParams.get("price")
+  const currentLine = searchParams.get("line") || "DEFAULT";  const currentPriceRange = searchParams.get("price")
     ? (() => {
         const [min, max] = searchParams.get("price").split("-").map(Number);
         return { min, max };
       })()
-    : { min: 0, max: 100000 };
+    : null; // No establecer valores por defecto
 
   useEffect(() => {
     // Extraer el número de página de searchParams

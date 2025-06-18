@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { format, formatDistance } from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "react-toastify";
 import { useAppTheme } from "../../context/AppThemeContext";
 import Button from "../../components/ui/Button";
-import { order_getOrderById } from "../../services/order/order";
+import Select from "../../components/ui/Select";
+import Input from "../../components/ui/Input";
 import RenderIcon from "../../components/ui/RenderIcon";
+import { order_getOrderById } from "../../services/order/order";
 import { baseLinkImages } from "../../constants/links";
-import ContactModal from "../../components/ui/ContactModal";
 
-// Estilos para el componente
+// Estilos del componente
 const PageContainer = styled.div`
   padding: 24px;
   max-width: 1200px;
@@ -60,6 +62,7 @@ const OrderDate = styled.p`
 const OrderActions = styled.div`
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 `;
 
 const StatusBadge = styled.span`
@@ -113,13 +116,6 @@ const SectionTitle = styled.h2`
   display: flex;
   align-items: center;
   gap: 8px;
-`;
-
-const Divider = styled.hr`
-  border: none;
-  height: 1px;
-  background-color: ${({ theme }) => theme.colors.border};
-  margin: 20px 0;
 `;
 
 const TwoColumns = styled.div`
@@ -234,100 +230,32 @@ const SummaryValue = styled.span`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-const TrackingSteps = styled.div`
+const EditableSection = styled.div`
+  border: 2px dashed ${({ theme }) => theme.colors.primary};
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+  background-color: ${({ theme }) => theme.colors.primary}10;
+`;
+
+const EditableSectionTitle = styled.h3`
+  margin: 0 0 16px 0;
+  color: ${({ theme }) => theme.colors.primary};
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  margin-top: 30px;
-  width: 100%;
+  align-items: center;
+  gap: 8px;
+`;
+
+const FormRow = styled.div`
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: end;
 
   @media (max-width: 768px) {
     flex-direction: column;
-    gap: 20px;
+    align-items: stretch;
   }
-`;
-const TrackingStep = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  flex: 1;
-  position: relative;
-  padding: 0 10px;
-
-  // Línea horizontal entre pasos
-  &:not(:last-child)::after {
-    content: "";
-    position: absolute;
-    top: 15px; // Alinear con el centro del ícono
-    right: calc(-50% + 10px);
-    width: 100%;
-    height: 2px;
-    background-color: ${({ theme }) => theme.colors.border};
-    z-index: 0;
-  }
-
-  // En modo móvil, volver al diseño vertical
-  @media (max-width: 768px) {
-    flex-direction: row;
-    text-align: left;
-
-    &:not(:last-child)::after {
-      content: "";
-      position: absolute;
-      left: 15px;
-      top: 32px;
-      bottom: -20px;
-      width: 2px;
-      height: calc(100% - 10px);
-      right: auto;
-    }
-  }
-`;
-
-const StepIconContainer = styled.div`
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: ${({ theme, $completed }) =>
-    $completed ? theme.colors.primary : theme.colors.surface};
-  border: 2px solid
-    ${({ theme, $completed }) =>
-      $completed ? theme.colors.primary : theme.colors.border};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${({ theme, $completed }) =>
-    $completed ? theme.colors.white : theme.colors.textLight};
-  margin-bottom: 12px;
-  z-index: 1; // Para que aparezca por encima de la línea
-
-  @media (max-width: 768px) {
-    margin-right: 16px;
-    margin-bottom: 0;
-  }
-`;
-
-const StepContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  @media (max-width: 768px) {
-    align-items: flex-start;
-  }
-`;
-
-const StepTitle = styled.h4`
-  margin: 0 0 4px 0;
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.9rem;
-`;
-
-const StepDate = styled.p`
-  margin: 0;
-  font-size: 0.8rem;
-  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const EmptyState = styled.div`
@@ -335,14 +263,62 @@ const EmptyState = styled.div`
   padding: 40px;
 `;
 
-const DetallePedido = () => {
+const AddressAlert = styled.div`
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: 8px;
+  background-color: ${({ theme, $confirmed }) =>
+    $confirmed
+      ? theme.colors.success + "20"
+      : theme.colors.warning + "20"};
+  border-left: 4px solid
+    ${({ theme, $confirmed }) =>
+      $confirmed
+        ? theme.colors.success
+        : theme.colors.warning};
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const AddressAlertContent = styled.div`
+  flex: 1;
+`;
+
+const AddressAlertTitle = styled.h4`
+  margin: 0 0 4px 0;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const AddressAlertText = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.textLight};
+  font-size: 0.9rem;
+`;
+
+const DetallePedidoCoordinador = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const { theme } = useAppTheme();
+  
+  // Estados del componente
   const [orderDetails, setOrderDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showContactModal, setShowContactModal] = useState(false);
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [newStatus, setNewStatus] = useState("");
+  const [editingDiscount, setEditingDiscount] = useState(false);
+  const [newDiscount, setNewDiscount] = useState(0);
+  const [addressConfirmed, setAddressConfirmed] = useState(false);
+
+  // Opciones de estado disponibles para coordinador
+  const statusOptions = [
+    { value: "PENDIENTE", label: "Pendiente" },
+    { value: "CONFIRMADO", label: "Confirmado" },
+    { value: "ENTREGADO", label: "Entregado" },
+    { value: "CANCELADO", label: "Cancelado" },
+  ];
+
   // Traducir estado a español para mostrar
   const translateStatus = (status) => {
     const statusMap = {
@@ -354,6 +330,7 @@ const DetallePedido = () => {
     return statusMap[status] || status;
   };
 
+  // Cargar datos del pedido
   useEffect(() => {
     const fetchOrderDetails = async () => {
       setLoading(true);
@@ -361,7 +338,6 @@ const DetallePedido = () => {
         const response = await order_getOrderById(orderId);
 
         if (response.success && response.data && response.data.length > 0) {
-          // Transformar los datos de la API al formato que necesita nuestro componente
           const apiOrder = response.data[0];
           const cabecera = apiOrder.CABECERA;
           const detalle = apiOrder.DETALLE || [];
@@ -370,15 +346,21 @@ const DetallePedido = () => {
           const subtotal = detalle.reduce(
             (sum, item) => sum + item.PRICE * item.QUANTITY,
             0
-          );          // Crear un objeto con la estructura que espera nuestro componente
+          );
+
+          // Verificar si tiene direcciones nuevas
+          const hasNewAddress = 
+            cabecera.SHIPPING_ADDRESS?.ORIGIN === "CLIENT" ||
+            cabecera.BILLING_ADDRESS?.ORIGIN === "CLIENT";
+
           const formattedOrder = {
             id: cabecera.ID_CART_HEADER,
             date: new Date(cabecera.createdAt),
-            status: cabecera.STATUS, // Mantener el valor original de la API
+            status: cabecera.STATUS,
             customer: {
               name: cabecera.USER.NAME_USER,
               email: cabecera.USER.EMAIL,
-              phone: "No disponible", // Este dato no viene en la API
+              phone: cabecera.USER.PHONE || "No disponible",
             },
             shipping: {
               address: cabecera.SHIPPING_ADDRESS.STREET,
@@ -390,19 +372,12 @@ const DetallePedido = () => {
               city: cabecera.BILLING_ADDRESS.CITY,
               state: cabecera.BILLING_ADDRESS.STATE,
             },
-            payment: {
-              method: "Transferencia bancaria", // Este dato no viene en la API
-              status: "Pendiente",
-              reference: "No disponible", // Este dato no viene en la API
-              date: new Date(cabecera.createdAt),
-            },
             items: detalle.map((item) => ({
               id: item.PRODUCT_CODE,
               name: item.MAESTRO?.DMA_NOMBREITEM || "Producto",
               sku: item.PRODUCT_CODE,
               price: item.PRICE,
               quantity: item.QUANTITY,
-              discount: 0, // Este dato no viene en la API
               total: item.PRICE * item.QUANTITY,
               image: item.MAESTRO?.DMA_RUTAIMAGEN
                 ? `${baseLinkImages}${item.MAESTRO.DMA_RUTAIMAGEN}`
@@ -410,68 +385,19 @@ const DetallePedido = () => {
             })),
             subtotal: subtotal,
             discount: cabecera.DISCOUNT || 0,
-            total: cabecera.TOTAL || subtotal, // Si no hay total, usar subtotal
-            tracking: [
-              {
-                step: "Pedido recibido",
-                date: new Date(cabecera.createdAt),
-                completed: true,
-              },
-              {
-                step: "Pedido confirmado",
-                date: null,
-                completed: false,
-              },
-              {
-                step: "Entregado",
-                date: null,
-                completed: false,
-              },
-            ],
+            total: cabecera.TOTAL || subtotal,
             empresaInfo: {
               id: cabecera.ENTERPRISE,
               name: cabecera.ENTERPRISE,
             },
-          };          // Actualizar el estado de tracking según el status del pedido
-          if (formattedOrder.status === "PENDIENTE") {
-            // Solo el primer paso está completo - fecha de creación del pedido
-          } else if (formattedOrder.status === "CONFIRMADO") {
-            // Pedido confirmado
-            const creationDate = new Date(cabecera.createdAt);
-            
-            formattedOrder.tracking[1].completed = true;
-            const confirmDate = new Date(creationDate);
-            confirmDate.setDate(creationDate.getDate() + 1);
-            formattedOrder.tracking[1].date = confirmDate;
-          } else if (formattedOrder.status === "ENTREGADO") {
-            // Todos los pasos están completos
-            const creationDate = new Date(cabecera.createdAt);
+            hasNewAddress: hasNewAddress,
+            originalData: apiOrder,
+          };
 
-            // Establecer fechas para cada paso del proceso
-            const dates = [
-              creationDate, // Pedido recibido: fecha de creación
-              new Date(creationDate.getTime() + 24 * 60 * 60 * 1000), // Pedido confirmado: +1 día
-              new Date(creationDate.getTime() + 5 * 24 * 60 * 60 * 1000), // Entregado: +5 días
-            ];
-
-            // Aplicar las fechas al tracking
-            formattedOrder.tracking.forEach((step, index) => {
-              step.completed = true;
-              step.date = dates[index];
-            });
-          } else if (formattedOrder.status === "CANCELADO") {
-            // Si el pedido está cancelado, solo el primer paso está completo
-            // y se añade un paso adicional de cancelación con la fecha actual
-            formattedOrder.tracking = [
-              formattedOrder.tracking[0], // Mantener "Pedido recibido"
-              {
-                step: "Pedido cancelado",
-                date: new Date(),
-                completed: true,
-              },
-            ];
-          }
           setOrderDetails(formattedOrder);
+          setNewStatus(formattedOrder.status);
+          setNewDiscount(formattedOrder.discount);
+          setAddressConfirmed(!hasNewAddress);
           setError(null);
         } else {
           setError("No se encontraron detalles del pedido");
@@ -486,31 +412,69 @@ const DetallePedido = () => {
 
     fetchOrderDetails();
   }, [orderId]);
-  const handleCancelOrder = () => {
-    const canCancel = orderDetails.status === "PENDIENTE";
-    if (canCancel) {
-      // Implementar la lógica de cancelación
-      alert("Pedido cancelado correctamente");
-    } else {
-      // Mostrar mensaje de error
-      alert(
-        "Lo sentimos, no es posible cancelar este pedido ya que ha sido confirmado para su procesamiento."
-      );
+
+  // Calcular total con nuevo descuento
+  const calculateNewTotal = () => {
+    if (!orderDetails) return 0;
+    return Math.max(0, orderDetails.subtotal - newDiscount);
+  };
+
+  // Guardar cambio de estado
+  const handleSaveStatus = async () => {
+    try {
+      // Aquí iría la llamada a la API para actualizar el estado
+      // await updateOrderStatus(orderId, newStatus);
+      
+      setOrderDetails(prev => ({ ...prev, status: newStatus }));
+      setEditingStatus(false);
+      toast.success("Estado actualizado correctamente");
+    } catch (error) {
+      console.error("Error al actualizar estado:", error);
+      toast.error("Error al actualizar el estado");
     }
   };
 
-  const handleContactSupport = () => {
-    setShowContactModal(true);
+  // Guardar cambio de descuento
+  const handleSaveDiscount = async () => {
+    try {
+      // Aquí iría la llamada a la API para actualizar el descuento
+      // await updateOrderDiscount(orderId, newDiscount);
+      
+      const newTotal = calculateNewTotal();
+      setOrderDetails(prev => ({ 
+        ...prev, 
+        discount: newDiscount,
+        total: newTotal
+      }));
+      setEditingDiscount(false);
+      toast.success("Descuento aplicado correctamente");
+    } catch (error) {
+      console.error("Error al aplicar descuento:", error);
+      toast.error("Error al aplicar el descuento");
+    }
+  };
+
+  // Confirmar dirección nueva
+  const handleConfirmAddress = async () => {
+    try {
+      // Aquí iría la llamada a la API para confirmar la dirección
+      // await confirmOrderAddress(orderId);
+      
+      setAddressConfirmed(true);
+      toast.success("Dirección confirmada correctamente");
+    } catch (error) {
+      console.error("Error al confirmar dirección:", error);
+      toast.error("Error al confirmar la dirección");
+    }
   };
 
   if (loading) {
     return (
       <PageContainer>
         <BackLink
-          onClick={() => navigate("/mis-pedidos")}
-          text="← Volver a mis pedidos"
+          onClick={() => navigate("/coordinadora")}
+          text="← Volver a gestión de pedidos"
         />
-
         <EmptyState>Cargando detalles del pedido...</EmptyState>
       </PageContainer>
     );
@@ -520,32 +484,27 @@ const DetallePedido = () => {
     return (
       <PageContainer>
         <BackLink
-          onClick={() => navigate("/mis-pedidos")}
-          text="← Volver a mis pedidos"
+          onClick={() => navigate("/coordinadora")}
+          text="← Volver a gestión de pedidos"
         />
         <EmptyState>
           <h2>Pedido no encontrado</h2>
-          <p>
-            {error ||
-              "No pudimos encontrar la información del pedido solicitado."}
-          </p>
+          <p>{error || "No pudimos encontrar la información del pedido solicitado."}</p>
           <Button
-            text="Volver a mis pedidos"
+            text="Volver a gestión de pedidos"
             variant="solid"
-            onClick={() => navigate("/mis-pedidos")}
+            onClick={() => navigate("/coordinadora")}
           />
         </EmptyState>
       </PageContainer>
     );
   }
 
-  const canCancel = orderDetails.status === "PENDIENTE";
-
   return (
     <PageContainer>
       <BackLink
-        onClick={() => navigate("/mis-pedidos")}
-        text="← Volver a mis pedidos"
+        onClick={() => navigate("/coordinadora")}
+        text="← Volver a gestión de pedidos"
       />
 
       <PageHeader>
@@ -560,71 +519,161 @@ const DetallePedido = () => {
         </OrderTitle>
 
         <OrderActions>
-          {canCancel ? (
-            <Button
-              text="Cancelar pedido"
-              variant="outlined"
-              leftIconName="FaTimesCircle"
-              onClick={handleCancelOrder}
-            />
-          ) : (
-            <Button
-              text="No se puede cancelar"
-              variant="outlined"
-              leftIconName="FaTimesCircle"
-              onClick={() =>
-                alert(
-                  "Lo sentimos, no es posible cancelar este pedido ya que ha sido confirmado para su procesamiento."
-                )
-              }
-              disabled={true}
-            />
-          )}
-          <Button
-            text="Contactar soporte"
-            variant="solid"
-            backgroundColor={theme.colors.primary}
-            leftIconName="FaHeadset"
-            onClick={handleContactSupport}
-            disabled={orderDetails.status === "CANCELADO"}
-          />
-        </OrderActions>
-      </PageHeader>
-
-      <Section>        <SectionTitle>
-          Estado del pedido:{" "}
           <StatusBadge status={orderDetails.status}>
             {translateStatus(orderDetails.status)}
           </StatusBadge>
+        </OrderActions>
+      </PageHeader>
+
+      {/* Alerta de dirección nueva */}
+      {orderDetails.hasNewAddress && !addressConfirmed && (
+        <AddressAlert $confirmed={addressConfirmed}>
+          <RenderIcon 
+            name="FaExclamationTriangle" 
+            size={20} 
+            style={{ color: theme.colors.warning }} 
+          />
+          <AddressAlertContent>
+            <AddressAlertTitle>Dirección nueva requiere revisión</AddressAlertTitle>
+            <AddressAlertText>
+              Este pedido tiene una dirección nueva que necesita ser verificada antes de procesar.
+            </AddressAlertText>
+          </AddressAlertContent>
+          <Button
+            text="Confirmar dirección"
+            variant="solid"
+            size="small"
+            backgroundColor={theme.colors.warning}
+            onClick={handleConfirmAddress}
+          />
+        </AddressAlert>
+      )}
+
+      {/* Sección de gestión del estado */}
+      <Section>
+        <SectionTitle>
+          <RenderIcon name="FaCog" size={18} /> Gestión del pedido
         </SectionTitle>
 
-        {orderDetails.status !== "CANCELADO" && (
-          <TrackingSteps>
-            {orderDetails.tracking.map((step, index) => (
-              <TrackingStep key={index}>
-                <StepIconContainer $completed={step.completed}>
-                  {step.completed ? "✓" : index + 1}
-                </StepIconContainer>
-                <StepContent>
-                  <StepTitle>{step.step}</StepTitle>
-                  <StepDate>
-                    {step.date
-                      ? format(step.date, "d 'de' MMMM, yyyy 'a las' HH:mm", {
-                          locale: es,
-                        })
-                      : "Pendiente"}
-                  </StepDate>
-                </StepContent>
-              </TrackingStep>
-            ))}
-          </TrackingSteps>
-        )}
+        <EditableSection>
+          <EditableSectionTitle>
+            <RenderIcon name="FaEdit" size={16} />
+            Cambiar estado del pedido
+          </EditableSectionTitle>
+          
+          {editingStatus ? (
+            <FormRow>
+              <Select
+                options={statusOptions}
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+                width="200px"
+                label="Nuevo estado"
+              />
+              <Button
+                text="Guardar"
+                variant="solid"
+                size="small"
+                backgroundColor={theme.colors.success}
+                leftIconName="FaSave"
+                onClick={handleSaveStatus}
+              />
+              <Button
+                text="Cancelar"
+                variant="outlined"
+                size="small"
+                leftIconName="FaTimes"
+                onClick={() => {
+                  setEditingStatus(false);
+                  setNewStatus(orderDetails.status);
+                }}
+              />
+            </FormRow>
+          ) : (
+            <FormRow>
+              <div>
+                <Label>Estado actual:</Label>
+                <Value>{translateStatus(orderDetails.status)}</Value>
+              </div>
+              <Button
+                text="Editar estado"
+                variant="outlined"
+                size="small"
+                leftIconName="FaEdit"
+                onClick={() => setEditingStatus(true)}
+              />
+            </FormRow>
+          )}
+        </EditableSection>
+
+        <EditableSection>
+          <EditableSectionTitle>
+            <RenderIcon name="FaPercentage" size={16} />
+            Aplicar descuento
+          </EditableSectionTitle>
+          
+          {editingDiscount ? (
+            <FormRow>
+              <Input
+                type="number"
+                min="0"
+                max={orderDetails.subtotal}
+                step="0.01"
+                value={newDiscount}
+                onChange={(e) => setNewDiscount(parseFloat(e.target.value) || 0)}
+                label="Descuento ($)"
+                width="150px"
+              />
+              <div>
+                <Label>Nuevo total:</Label>
+                <Value>${calculateNewTotal().toFixed(2)}</Value>
+              </div>
+              <Button
+                text="Aplicar"
+                variant="solid"
+                size="small"
+                backgroundColor={theme.colors.success}
+                leftIconName="FaSave"
+                onClick={handleSaveDiscount}
+              />
+              <Button
+                text="Cancelar"
+                variant="outlined"
+                size="small"
+                leftIconName="FaTimes"
+                onClick={() => {
+                  setEditingDiscount(false);
+                  setNewDiscount(orderDetails.discount);
+                }}
+              />
+            </FormRow>
+          ) : (
+            <FormRow>
+              <div>
+                <Label>Descuento actual:</Label>
+                <Value>${orderDetails.discount.toFixed(2)}</Value>
+              </div>
+              <div>
+                <Label>Total:</Label>
+                <Value>${orderDetails.total.toFixed(2)}</Value>
+              </div>
+              <Button
+                text="Editar descuento"
+                variant="outlined"
+                size="small"
+                leftIconName="FaEdit"
+                onClick={() => setEditingDiscount(true)}
+              />
+            </FormRow>
+          )}
+        </EditableSection>
       </Section>
 
+      {/* Información del pedido */}
       <TwoColumns>
         <Section>
           <SectionTitle>
-            <RenderIcon name="FaInfoCircle" size={18} /> Información Adicional
+            <RenderIcon name="FaInfoCircle" size={18} /> Información del pedido
           </SectionTitle>
 
           <InfoItem>
@@ -635,16 +684,14 @@ const DetallePedido = () => {
             <Label>Empresa:</Label>
             <Value>{orderDetails.empresaInfo.name}</Value>
           </InfoItem>
-
           <InfoItem>
             <Label>Fecha de pedido:</Label>
             <Value>
-              {format(orderDetails.date, "d 'de' MMMM, yyyy", {
-                locale: es,
-              })}
+              {format(orderDetails.date, "d 'de' MMMM, yyyy", { locale: es })}
             </Value>
           </InfoItem>
         </Section>
+        
         <Section>
           <SectionTitle>
             <RenderIcon name="FaUser" size={18} /> Datos del cliente
@@ -654,14 +701,18 @@ const DetallePedido = () => {
             <Label>Nombre:</Label>
             <Value>{orderDetails.customer.name}</Value>
           </InfoItem>
-
           <InfoItem>
             <Label>Email:</Label>
             <Value>{orderDetails.customer.email}</Value>
           </InfoItem>
+          <InfoItem>
+            <Label>Teléfono:</Label>
+            <Value>{orderDetails.customer.phone}</Value>
+          </InfoItem>
         </Section>
       </TwoColumns>
 
+      {/* Direcciones */}
       <TwoColumns>
         <Section>
           <SectionTitle>
@@ -672,32 +723,29 @@ const DetallePedido = () => {
             <Label>Dirección:</Label>
             <Value>{orderDetails.shipping.address}</Value>
           </InfoItem>
-
           <InfoItem>
             <Label>Ciudad:</Label>
             <Value>{orderDetails.shipping.city}</Value>
           </InfoItem>
-
           <InfoItem>
             <Label>Estado/Provincia:</Label>
             <Value>{orderDetails.shipping.state}</Value>
           </InfoItem>
         </Section>
+        
         <Section>
           <SectionTitle>
-            <RenderIcon name="FaFileInvoiceDollar" size={18} /> Información de
-            Facturación
+            <RenderIcon name="FaFileInvoiceDollar" size={18} /> Información de facturación
           </SectionTitle>
+          
           <InfoItem>
             <Label>Dirección:</Label>
             <Value>{orderDetails.billing.address}</Value>
           </InfoItem>
-
           <InfoItem>
             <Label>Ciudad:</Label>
             <Value>{orderDetails.billing.city}</Value>
           </InfoItem>
-
           <InfoItem>
             <Label>Estado/Provincia:</Label>
             <Value>{orderDetails.billing.state}</Value>
@@ -705,6 +753,7 @@ const DetallePedido = () => {
         </Section>
       </TwoColumns>
 
+      {/* Productos */}
       <Section>
         <SectionTitle>
           <RenderIcon name="FaBoxOpen" size={18} /> Productos
@@ -724,13 +773,7 @@ const DetallePedido = () => {
             {orderDetails.items.map((item) => (
               <ProductRow key={item.id}>
                 <ProductCell>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                    }}
-                  >
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <ProductImage src={item.image} alt={item.name} />
                     <ProductInfo>
                       <ProductName>{item.name}</ProductName>
@@ -765,15 +808,8 @@ const DetallePedido = () => {
           </SummaryRow>
         </OrderSummary>
       </Section>
-
-      <ContactModal
-        isOpen={showContactModal}
-        onClose={() => setShowContactModal(false)}
-        selectedCompany={orderDetails?.empresaInfo?.id} // Filtrar por la empresa del pedido actual
-        selectedOrderId={orderDetails?.id}
-      />
     </PageContainer>
   );
 };
 
-export default DetallePedido;
+export default DetallePedidoCoordinador;

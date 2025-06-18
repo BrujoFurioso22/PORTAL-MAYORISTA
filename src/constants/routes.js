@@ -9,13 +9,12 @@ export const ROUTES = {
     USER_ADMIN: "/admin/usuarios",
     COORDINADOR_ADMIN: "/admin/coordinadores",
     // Otras rutas de admin...
-  },
-  COORDINADOR: {
-    PEDIDOS: "/",
-    DETALLE_PEDIDO: "/coordinador/pedidos/:orderId",
-    EDITAR_PEDIDO: "/coordinador/pedidos/:orderId/editar",
-    PRODUCTOS: "/coordinador/productos",
-    DETALLE_PRODUCTO: "/coordinador/productos/:id",
+  },  COORDINADOR: {
+    PEDIDOS: "/coordinadora",
+    DETALLE_PEDIDO: "/coordinadora/pedidos/:orderId",
+    EDITAR_PEDIDO: "/coordinadora/pedidos/:orderId/editar",
+    PRODUCTOS: "/coordinadora/productos",
+    DETALLE_PRODUCTO: "/coordinadora/productos/:id",
   },
   ECOMMERCE: {
     HOME: "/",

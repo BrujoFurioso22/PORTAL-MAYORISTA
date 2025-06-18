@@ -168,7 +168,7 @@ const Login = () => {
           </ForgotPasswordLink>
 
           <Button
-            type="button"
+            type="submit"
             text={isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
             onClick={handleLogin}
             fullWidth

@@ -8,7 +8,6 @@ import { differenceInHours, format, formatDistance } from "date-fns";
 import { es } from "date-fns/locale";
 import { order_getOrdersByAccount } from "../../services/order/order";
 import { useAuth } from "../../context/AuthContext";
-import { FaSearch } from "react-icons/fa";
 import Select from "../../components/ui/Select";
 import SearchBar from "../../components/ui/SearchBar";
 
@@ -69,15 +68,13 @@ const StatusBadge = styled.span`
   font-weight: 500;
   background-color: ${({ theme, status }) => {
     switch (status) {
-      case "pendiente":
-        return theme.colors.warning + "33"; // 33 is for opacity
-      case "en-proceso":
+      case "PENDIENTE":
+        return theme.colors.warning + "33";
+      case "CONFIRMADO":
         return theme.colors.info + "33";
-      case "enviado":
-        return theme.colors.primary + "33";
-      case "entregado":
+      case "ENTREGADO":
         return theme.colors.success + "33";
-      case "cancelado":
+      case "CANCELADO":
         return theme.colors.error + "33";
       default:
         return theme.colors.border;
@@ -85,15 +82,13 @@ const StatusBadge = styled.span`
   }};
   color: ${({ theme, status }) => {
     switch (status) {
-      case "pendiente":
+      case "PENDIENTE":
         return theme.colors.warning;
-      case "en-proceso":
+      case "CONFIRMADO":
         return theme.colors.info;
-      case "enviado":
-        return theme.colors.primary;
-      case "entregado":
+      case "ENTREGADO":
         return theme.colors.success;
-      case "cancelado":
+      case "CANCELADO":
         return theme.colors.error;
       default:
         return theme.colors.textLight;
@@ -137,34 +132,15 @@ const MisPedidos = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   // Traducir estado a español para mostrar
   const translateStatus = (status) => {
     const statusMap = {
       PENDIENTE: "Pendiente",
-      EN_PROCESO: "En Proceso",
-      ENVIADO: "Enviado",
+      CONFIRMADO: "Confirmado",
       ENTREGADO: "Entregado",
       CANCELADO: "Cancelado",
-      pendiente: "Pendiente",
-      "en-proceso": "En Proceso",
-      enviado: "Enviado",
-      entregado: "Entregado",
-      cancelado: "Cancelado",
     };
     return statusMap[status] || status;
-  };
-
-  // Función para mapear el estado de API a los valores que espera el componente
-  const mapApiStatus = (apiStatus) => {
-    const statusMap = {
-      PENDIENTE: "pendiente",
-      EN_PROCESO: "en-proceso",
-      ENVIADO: "enviado",
-      ENTREGADO: "entregado",
-      CANCELADO: "cancelado",
-    };
-    return statusMap[apiStatus] || "pendiente";
   };
 
   // Función para obtener los pedidos del usuario
@@ -172,6 +148,7 @@ const MisPedidos = () => {
     try {
       setLoading(true);
       const response = await order_getOrdersByAccount(user.ACCOUNT_USER);
+      console.log(user);
 
       if (response.success && response.data) {
         // Transformar los datos de la API al formato que espera nuestro componente
@@ -183,14 +160,12 @@ const MisPedidos = () => {
           const itemsCount = order.DETALLE.reduce(
             (sum, item) => sum + item.QUANTITY,
             0
-          );
-
-          return {
+          );          return {
             id: order.CABECERA.ID_CART_HEADER,
-            date: order.CABECERA.createdAt, // Como no tenemos fecha en el API, usamos la actual
+            date: order.CABECERA.createdAt,
             total: total,
             items: itemsCount,
-            status: mapApiStatus(order.CABECERA.STATUS),
+            status: order.CABECERA.STATUS, // Usar directamente el valor de la API
             paymentMethod: "Pendiente", // Este dato no viene en la API
             empresaId: order.CABECERA.ENTERPRISE,
             // Guardamos la información original para mostrarla en detalles
@@ -210,11 +185,53 @@ const MisPedidos = () => {
       setLoading(false);
     }
   };
-
   useEffect(() => {
-    if (user && user.ACCOUNT_USER) {
-      handleObtainOrders();
-    }
+    const fetchOrders = async () => {
+      if (!user?.ACCOUNT_USER) return;
+      
+      try {
+        setLoading(true);
+        const response = await order_getOrdersByAccount(user.ACCOUNT_USER);
+
+        if (response.success && response.data) {
+          // Transformar los datos de la API al formato que espera nuestro componente
+          const formattedOrders = response.data.map((order) => {
+            // Calcular el total si está vacío
+            const total = order.CABECERA.TOTAL || order.CABECERA.SUBTOTAL;
+
+            // Calcular la cantidad total de items
+            const itemsCount = order.DETALLE.reduce(
+              (sum, item) => sum + item.QUANTITY,
+              0
+            );
+
+            return {
+              id: order.CABECERA.ID_CART_HEADER,
+              date: order.CABECERA.createdAt,
+              total: total,
+              items: itemsCount,
+              status: order.CABECERA.STATUS, // Usar directamente el valor de la API
+              paymentMethod: "Pendiente", // Este dato no viene en la API
+              empresaId: order.CABECERA.ENTERPRISE,
+              // Guardamos la información original para mostrarla en detalles
+              originalData: order,
+            };
+          });
+
+          setOrders(formattedOrders);
+          setError(null);
+        } else {
+          setError("No se pudieron cargar los pedidos");
+        }
+      } catch (err) {
+        console.error("Error al obtener pedidos:", err);
+        setError("Error al obtener los pedidos");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
   }, [user]);
 
   // Aplicar filtros a los pedidos
@@ -352,14 +369,12 @@ const MisPedidos = () => {
   const handleViewDetails = (row) => {
     navigate(`/mis-pedidos/${row.id}`);
   };
-
   const statusOptions = [
     { value: "todos", label: "Todos" },
-    { value: "pendiente", label: "Pendiente" },
-    { value: "en-proceso", label: "En Proceso" },
-    { value: "enviado", label: "Enviado" },
-    { value: "entregado", label: "Entregado" },
-    { value: "cancelado", label: "Cancelado" },
+    { value: "PENDIENTE", label: "Pendiente" },
+    { value: "CONFIRMADO", label: "Confirmado" },
+    { value: "ENTREGADO", label: "Entregado" },
+    { value: "CANCELADO", label: "Cancelado" },
   ];
 
   const dateOptions = [

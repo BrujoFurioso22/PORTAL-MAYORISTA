@@ -22,7 +22,7 @@ const SelectButton = styled(Button)`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 6px 10px;
+  padding: 10px;
   border-radius: 4px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background-color: ${({ theme }) => theme.colors.surface};
@@ -56,7 +56,6 @@ const DropdownMenu = styled.div`
   right: 0;
   margin-top: 4px;
   max-height: 300px;
-  overflow-y: auto;
   background-color: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 4px;
@@ -101,6 +100,30 @@ const OptionsList = styled.ul`
   margin: 0;
   max-height: ${({ $hasSearch }) => ($hasSearch ? "242px" : "300px")};
   overflow-y: auto;
+
+  /* Estilos personalizados para el scrollbar */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${({ theme }) => theme.colors.background};
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: 4px;
+    border: 1px solid ${({ theme }) => theme.colors.background};
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: ${({ theme }) => theme.colors.textLight};
+  }
+
+  /* Para Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: ${({ theme }) => theme.colors.border} ${({ theme }) => theme.colors.background};
 `;
 
 const OptionItem = styled.li`

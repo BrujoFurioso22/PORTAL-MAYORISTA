@@ -12,7 +12,7 @@ import Perfil from "../pages/usuario/Perfil";
 import SearchResults from "../pages/busqueda/SearchResults";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
-import DetallePedidoCoordinador from "../pages/coordinadora/DetallePedido";
+import DetallePedidoCoordinador from "../pages/coordinadora/DetallePedidoCoordinador";
 import EditarPedidoCoordinador from "../pages/coordinadora/EditarPedido";
 import UsersAdministration from "../pages/admin/UsersAdministration";
 import ClientHomeComponent from "../pages/client/ClientHomeComponent";

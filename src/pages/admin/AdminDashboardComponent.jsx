@@ -450,7 +450,7 @@ const AdminDashboardComponent = () => {
               onClick={() => navigateToSection(ROUTES.ADMIN.COORDINADOR_ADMIN)}
             >
               <ActionIcon color={theme.colors.info}>
-                <Fa name="FaUserTie" size={16} />
+                <RenderIcon name="FaUserTie" size={16} />
               </ActionIcon>
               <ActionContent>
                 <ActionTitle>Administrar Coordinadores</ActionTitle>

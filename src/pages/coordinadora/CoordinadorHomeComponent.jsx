@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { useAuth } from "../../context/AuthContext";
+import { useAppTheme } from "../../context/AppThemeContext";
+import Button from "../../components/ui/Button";
+import DataTable from "../../components/ui/Table";
+import RenderIcon from "../../components/ui/RenderIcon";
+import Select from "../../components/ui/Select";
+import SearchBar from "../../components/ui/SearchBar";
+import { differenceInHours, format, formatDistance } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   FaSearch,
-  FaFilter,
   FaEye,
-  FaEdit,
   FaCheck,
-  FaTimes,
-  FaQuestionCircle,
+  FaExclamationTriangle,
+  FaClock,
 } from "react-icons/fa";
-import Button from "../../components/ui/Button";
-import { useAuth } from "../../context/AuthContext";
+import { toast } from "react-toastify";
+import { order_getOrdersByEnterprises } from "../../services/order/order";
 
 // Estilos
 const PageContainer = styled.div`
@@ -28,8 +33,9 @@ const PageTitle = styled.h1`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-const FiltersRow = styled.div`
+const FiltersContainer = styled.div`
   display: flex;
+  flex-direction: row;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
@@ -53,160 +59,39 @@ const FilterGroup = styled.div`
   }
 `;
 
-const FilterLabel = styled.label`
-  font-size: 0.9rem;
-  color: ${({ theme }) => theme.colors.textLight};
-  display: flex;
-  align-items: center;
-  gap: 6px;
-`;
-
-const FilterSelect = styled.select`
-  padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const SearchInputContainer = styled.div`
-  position: relative;
-  width: 100%;
-  max-width: 300px;
-
-  @media (max-width: 768px) {
-    max-width: 100%;
-  }
-`;
-
-const SearchInput = styled.input`
-  padding: 8px 12px;
-  padding-right: 40px;
-  border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  width: 100%;
-`;
-
-const SearchIcon = styled.div`
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: ${({ theme }) => theme.colors.textLight};
-  cursor: pointer;
-`;
-
-const OrdersTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
-  border-radius: 8px;
-  overflow: hidden;
-`;
-
-const TableHeader = styled.thead`
-  background-color: ${({ theme }) => theme.colors.surface};
-`;
-
-const TableHeaderCell = styled.th`
-  padding: 16px;
-  text-align: left;
-  color: ${({ theme }) => theme.colors.textLight};
-  font-weight: 600;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.border};
-`;
-
-const TableBody = styled.tbody``;
-
-const TableRow = styled.tr`
-  background-color: ${({ theme }) => theme.colors.surface};
-
-  &:nth-child(odd) {
-    background-color: ${({ theme }) =>
-      theme.mode === "dark"
-        ? theme.colors.backgroundAlt
-        : theme.colors.backgroundLight};
-  }
-
-  &:hover {
-    background-color: ${({ theme }) =>
-      theme.colors.border + "40"}; // 40 = 25% opacity
-  }
-`;
-
-const TableCell = styled.td`
-  padding: 12px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  color: ${({ theme }) => theme.colors.text};
-`;
-
 const StatusBadge = styled.span`
-  display: inline-block;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: 12px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
   background-color: ${({ theme, status }) => {
     switch (status) {
-      case "pendiente":
+      case "PENDIENTE":
         return theme.colors.warning + "33";
-      case "en_proceso":
+      case "CONFIRMADO":
         return theme.colors.info + "33";
-      case "en_proceso_observacion":
-        return theme.colors.info + "66";
-      case "rechazado":
-        return theme.colors.error + "33";
-      case "cancelado_cliente":
-        return theme.colors.error + "66";
-      case "completado":
+      case "ENTREGADO":
         return theme.colors.success + "33";
-      case "despachado":
-        return theme.colors.success + "66";
+      case "CANCELADO":
+        return theme.colors.error + "33";
       default:
         return theme.colors.border;
     }
   }};
   color: ${({ theme, status }) => {
     switch (status) {
-      case "pendiente":
+      case "PENDIENTE":
         return theme.colors.warning;
-      case "en_proceso":
-      case "en_proceso_observacion":
+      case "CONFIRMADO":
         return theme.colors.info;
-      case "rechazado":
-      case "cancelado_cliente":
-        return theme.colors.error;
-      case "completado":
-      case "despachado":
+      case "ENTREGADO":
         return theme.colors.success;
+      case "CANCELADO":
+        return theme.colors.error;
       default:
         return theme.colors.textLight;
     }
   }};
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const ActionButton = styled(Button)`
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.primary};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.border};
-  }
 `;
 
 const AddressAlert = styled.div`
@@ -245,54 +130,36 @@ const NewAddressCount = styled.span`
 `;
 
 const NoDataContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 40px;
   text-align: center;
   background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
-  margin-top: 20px;
+`;
+
+const NoDataIcon = styled.div`
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const NoDataMessage = styled.p`
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
   color: ${({ theme }) => theme.colors.textLight};
-  margin: 0 0 16px 0;
 `;
 
-const Pagination = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-top: 20px;
-  gap: 8px;
-`;
-
-const PageButton = styled(Button)`
-  padding: 6px 12px;
-  border: 1px solid
-    ${({ theme, $active }) =>
-      $active ? theme.colors.primary : theme.colors.border};
-  background-color: ${({ theme, $active }) =>
-    $active ? theme.colors.primary : theme.colors.surface};
-  color: ${({ theme, $active }) =>
-    $active ? theme.colors.white : theme.colors.text};
-  border-radius: 4px;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-
-// Agregar un nuevo componente styled para el indicador
 const AddressIndicator = styled.div`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #f59e0b; /* Color amarillo/naranja */
+  color: ${({ theme }) => theme.colors.warning};
   margin-left: 6px;
-  cursor: help; /* Muestra cursor de ayuda al pasar sobre él */
+  cursor: help;
   position: relative;
 
   &:hover::after {
@@ -315,17 +182,16 @@ const AddressIndicator = styled.div`
 const CoordinadorHomeComponent = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { theme } = useAppTheme();
 
   // Estados
   const [orders, setOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [empresaFilter, setEmpresaFilter] = useState("todas");
   const [dateFilter, setDateFilter] = useState("todos");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [ordersPerPage] = useState(10);
   const [newAddressesCount, setNewAddressesCount] = useState(0);
 
   // Empresas a las que tiene acceso la coordinadora
@@ -338,391 +204,622 @@ const CoordinadorHomeComponent = () => {
     STOX: "Stox",
     IKONIX: "Ikonix",
     AUTOMAX: "Automax",
+    maxximundo: "Maxximundo",
+    stox: "Stox",
+    autollanta: "Autollanta",
+    ikonix: "Ikonix",
   };
-
   // Mapa de estados
   const estadosMap = {
-    pendiente: "Pendiente",
-    en_proceso: "En proceso",
-    en_proceso_observacion: "En proceso (con observación)",
-    rechazado: "Rechazado",
-    cancelado_cliente: "Cancelado por cliente",
-    completado: "Completado",
-    despachado: "Despachado",
+    PENDIENTE: "Pendiente",
+    CONFIRMADO: "Confirmado",
+    ENTREGADO: "Entregado",
+    CANCELADO: "Cancelado",
   };
-
   // Datos de ejemplo (en un caso real, esto vendría de una API)
-  const mockOrders = [
-    {
-      id: "ORD-2025-1001",
-      date: new Date(2025, 3, 15),
-      clientName: "Juan Pérez",
-      email: "juan@example.com",
-      phone: "555-123-4567",
-      total: 1250.75,
-      items: 8,
-      status: "pendiente",
-      empresaId: "maxximundo",
-      newAddress: true,
-    },
-    {
-      id: "ORD-2025-1002",
-      date: new Date(2025, 3, 10),
-      clientName: "María López",
-      email: "maria@example.com",
-      phone: "555-987-6543",
-      total: 458.2,
-      items: 3,
-      status: "en_proceso",
-      empresaId: "stox",
-      newAddress: false,
-    },
-    {
-      id: "ORD-2025-1003",
-      date: new Date(2025, 3, 5),
-      clientName: "Carlos Ramírez",
-      email: "carlos@example.com",
-      phone: "555-456-7890",
-      total: 876.5,
-      items: 5,
-      status: "completado",
-      empresaId: "maxximundo",
-      newAddress: false,
-    },
-    {
-      id: "ORD-2025-1004",
-      date: new Date(2025, 2, 28),
-      clientName: "Ana Gómez",
-      email: "ana@example.com",
-      phone: "555-234-5678",
-      total: 2100.0,
-      items: 12,
-      status: "despachado",
-      empresaId: "autollanta",
-      newAddress: false,
-    },
-    {
-      id: "ORD-2025-1005",
-      date: new Date(2025, 2, 20),
-      clientName: "Roberto Silva",
-      email: "roberto@example.com",
-      phone: "555-876-5432",
-      total: 345.8,
-      items: 2,
-      status: "rechazado",
-      empresaId: "stox",
-      newAddress: false,
-    },
-    {
-      id: "ORD-2025-1006",
-      date: new Date(2025, 2, 15),
-      clientName: "Lucía Martínez",
-      email: "lucia@example.com",
-      phone: "555-765-4321",
-      total: 950.25,
-      items: 6,
-      status: "cancelado_cliente",
-      empresaId: "maxximundo",
-      newAddress: true,
-    },
-    {
-      id: "ORD-2025-1007",
-      date: new Date(2025, 2, 8),
-      clientName: "Eduardo Torres",
-      email: "eduardo@example.com",
-      phone: "555-345-6789",
-      total: 540.0,
-      items: 4,
-      status: "en_proceso_observacion",
-      empresaId: "autollanta",
-      newAddress: false,
-    },
-  ];
-
-  // Cargar pedidos
+  const mockOrders = React.useMemo(
+    () => [
+      {
+        id: "ORD-2025-1001",
+        date: new Date(2025, 5, 15),
+        clientName: "Juan Pérez",
+        email: "juan@example.com",
+        phone: "555-123-4567",
+        total: 1250.75,
+        items: 8,
+        status: "pendiente",
+        empresaId: "maxximundo",
+        newAddress: true,
+      },
+      {
+        id: "ORD-2025-1002",
+        date: new Date(2025, 5, 10),
+        clientName: "María López",
+        email: "maria@example.com",
+        phone: "555-987-6543",
+        total: 458.2,
+        items: 3,
+        status: "en_proceso",
+        empresaId: "stox",
+        newAddress: false,
+      },
+      {
+        id: "ORD-2025-1003",
+        date: new Date(2025, 5, 5),
+        clientName: "Carlos Ramírez",
+        email: "carlos@example.com",
+        phone: "555-456-7890",
+        total: 876.5,
+        items: 5,
+        status: "completado",
+        empresaId: "maxximundo",
+        newAddress: false,
+      },
+      {
+        id: "ORD-2025-1004",
+        date: new Date(2025, 4, 28),
+        clientName: "Ana Gómez",
+        email: "ana@example.com",
+        phone: "555-234-5678",
+        total: 2100.0,
+        items: 12,
+        status: "despachado",
+        empresaId: "autollanta",
+        newAddress: false,
+      },
+      {
+        id: "ORD-2025-1005",
+        date: new Date(2025, 4, 20),
+        clientName: "Roberto Silva",
+        email: "roberto@example.com",
+        phone: "555-876-5432",
+        total: 345.8,
+        items: 2,
+        status: "rechazado",
+        empresaId: "stox",
+        newAddress: false,
+      },
+      {
+        id: "ORD-2025-1006",
+        date: new Date(2025, 4, 15),
+        clientName: "Lucía Martínez",
+        email: "lucia@example.com",
+        phone: "555-765-4321",
+        total: 950.25,
+        items: 6,
+        status: "cancelado_cliente",
+        empresaId: "maxximundo",
+        newAddress: true,
+      },
+      {
+        id: "ORD-2025-1007",
+        date: new Date(2025, 4, 8),
+        clientName: "Eduardo Torres",
+        email: "eduardo@example.com",
+        phone: "555-345-6789",
+        total: 540.0,
+        items: 4,
+        status: "en_proceso_observacion",
+        empresaId: "autollanta",
+        newAddress: false,
+      },
+    ],
+    []
+  );
   useEffect(() => {
     const loadOrders = async () => {
-      setLoading(true);
       try {
-        // Simulación de carga de datos
-        setTimeout(() => {
-          // Filtrar pedidos por empresas a las que tiene acceso
-          const accessibleOrders = mockOrders.filter((order) =>
-            empresasAcceso.includes(order.empresaId)
-          );
+        setLoading(true);
 
-          setOrders(accessibleOrders);
-          setFilteredOrders(accessibleOrders);
+        if (!user?.EMPRESAS) {
+          setError("No tienes empresas asignadas");
+          return;
+        }
 
-          // Contar direcciones nuevas
-          const newAddresses = accessibleOrders.filter(
+        const ordersResponse = await order_getOrdersByEnterprises(
+          user.EMPRESAS
+        );
+        console.log("Respuesta de pedidos:", ordersResponse);
+        if (ordersResponse.success && ordersResponse.data) {
+          // Transformar los datos agrupados por empresa en una lista plana
+          const allOrders = [];
+
+          Object.keys(ordersResponse.data).forEach((empresa) => {
+            const empresaOrders = ordersResponse.data[empresa];
+
+            empresaOrders.forEach((order) => {
+              // Calcular el total si está vacío
+              const total = order.CABECERA.TOTAL || order.CABECERA.SUBTOTAL;
+
+              // Calcular la cantidad total de items
+              const itemsCount = order.DETALLE.reduce(
+                (sum, item) => sum + item.QUANTITY,
+                0
+              );
+
+              // Detectar si tiene direcciones nuevas (CLIENT origin)
+              const hasNewAddress =
+                order.CABECERA.SHIPPING_ADDRESS?.ORIGIN === "CLIENT" ||
+                order.CABECERA.BILLING_ADDRESS?.ORIGIN === "CLIENT";
+
+              const formattedOrder = {
+                id: order.CABECERA.ID_CART_HEADER,
+                date: order.CABECERA.createdAt || new Date(), // Usar createdAt si existe
+                clientName: order.CABECERA.USER.NAME_USER,
+                email: order.CABECERA.USER.EMAIL,
+                phone: order.CABECERA.USER.PHONE || "No registrado",
+                total: total,
+                items: itemsCount,
+                status: order.CABECERA.STATUS, // Usar directamente el valor de la API
+                empresaId: order.CABECERA.ENTERPRISE.toLowerCase(),
+                newAddress: hasNewAddress,
+                // Guardamos la información original para referencias
+                originalData: order,
+              };
+
+              allOrders.push(formattedOrder);
+            });
+          });
+
+          // Calcular direcciones nuevas
+          const newAddressesCount = allOrders.filter(
             (order) => order.newAddress
           ).length;
-          setNewAddressesCount(newAddresses);
+          setNewAddressesCount(newAddressesCount);
 
-          setLoading(false);
-        }, 700);
-      } catch (error) {
-        console.error("Error al cargar los pedidos:", error);
+          setOrders(allOrders);
+          setError(null);
+        } else {
+          setError("No se pudieron cargar los pedidos");
+        }
+      } catch (err) {
+        console.error("Error al obtener pedidos:", err);
+        setError("Error al obtener los pedidos");
+
+        // Fallback a datos mock en caso de error
+        const newAddresses = mockOrders.filter(
+          (order) => order.newAddress
+        ).length;
+        setNewAddressesCount(newAddresses);
+        setOrders(mockOrders);
+      } finally {
         setLoading(false);
       }
     };
-    console.log("Empresas de acceso:", empresasAcceso);
 
-    loadOrders();
-  }, []);
-
-  // Aplicar filtros
-  useEffect(() => {
-    if (!orders.length) return;
-
-    let result = [...orders];
-
-    // Filtro por empresa
-    if (empresaFilter !== "todas") {
-      result = result.filter((order) => order.empresaId === empresaFilter);
+    if (user?.EMPRESAS) {
+      loadOrders();
     }
+  }, [user, mockOrders]); // Función para recargar pedidos
+  const handleObtainOrders = async () => {
+    try {
+      setLoading(true);
 
-    // Filtro por estado
-    if (statusFilter !== "todos") {
-      result = result.filter((order) => order.status === statusFilter);
+      if (!user?.EMPRESAS) {
+        setError("No tienes empresas asignadas");
+        return;
+      }
+
+      const ordersResponse = await order_getOrdersByEnterprises(user.EMPRESAS);
+      console.log("Recargando pedidos:", ordersResponse);
+
+      if (ordersResponse.success && ordersResponse.data) {
+        // Transformar los datos agrupados por empresa en una lista plana
+        const allOrders = [];
+
+        Object.keys(ordersResponse.data).forEach((empresa) => {
+          const empresaOrders = ordersResponse.data[empresa];
+
+          empresaOrders.forEach((order) => {
+            // Calcular el total si está vacío
+            const total = order.CABECERA.TOTAL || order.CABECERA.SUBTOTAL;
+
+            // Calcular la cantidad total de items
+            const itemsCount = order.DETALLE.reduce(
+              (sum, item) => sum + item.QUANTITY,
+              0
+            );
+
+            // Detectar si tiene direcciones nuevas (CLIENT origin)
+            const hasNewAddress =
+              order.CABECERA.SHIPPING_ADDRESS?.ORIGIN === "CLIENT" ||
+              order.CABECERA.BILLING_ADDRESS?.ORIGIN === "CLIENT";
+
+            const formattedOrder = {
+              id: order.CABECERA.ID_CART_HEADER,
+              date: order.CABECERA.createdAt || new Date(), // Usar createdAt si existe
+              clientName: order.CABECERA.USER.NAME_USER,
+              email: order.CABECERA.USER.EMAIL,
+              phone: order.CABECERA.USER.PHONE || "No registrado",
+              total: total,
+              items: itemsCount,
+              status: order.CABECERA.STATUS, // Usar directamente el valor de la API
+              empresaId: order.CABECERA.ENTERPRISE.toLowerCase(),
+              newAddress: hasNewAddress,
+              // Guardamos la información original para referencias
+              originalData: order,
+            };
+
+            allOrders.push(formattedOrder);
+          });
+        });
+
+        // Calcular direcciones nuevas
+        const newAddressesCount = allOrders.filter(
+          (order) => order.newAddress
+        ).length;
+        setNewAddressesCount(newAddressesCount);
+
+        setOrders(allOrders);
+        setError(null);
+      } else {
+        setError("No se pudieron cargar los pedidos");
+      }
+    } catch (err) {
+      console.error("Error al obtener pedidos:", err);
+      setError("Error al obtener los pedidos");
+    } finally {
+      setLoading(false);
     }
-
-    // Filtro por fecha
-    if (dateFilter === "hoy") {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      result = result.filter((order) => order.date >= today);
-    } else if (dateFilter === "esta_semana") {
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      weekStart.setHours(0, 0, 0, 0);
-      result = result.filter((order) => order.date >= weekStart);
-    } else if (dateFilter === "este_mes") {
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
-      result = result.filter((order) => order.date >= monthStart);
-    }
-
-    // Filtro por búsqueda
-    if (searchTerm) {
-      const termLower = searchTerm.toLowerCase();
-      result = result.filter(
-        (order) =>
-          order.id.toLowerCase().includes(termLower) ||
-          order.clientName.toLowerCase().includes(termLower) ||
-          order.email.toLowerCase().includes(termLower)
-      );
-    }
-
-    setFilteredOrders(result);
-    setCurrentPage(1); // Resetear página al filtrar
-  }, [orders, statusFilter, empresaFilter, dateFilter, searchTerm]);
-
-  // Paginación
-  const indexOfLastOrder = currentPage * ordersPerPage;
-  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = filteredOrders.slice(
-    indexOfFirstOrder,
-    indexOfLastOrder
-  );
-  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // Manejar clic en ver detalle
-  const handleViewDetail = (orderId) => {
-    navigate(`/coordinador/pedidos/${orderId}`);
   };
 
-  // Confirmar dirección nueva
+  // Aplicar filtros a los pedidos
+  const filteredOrders = orders.filter((order) => {
+    // 1. Filtro de estado
+    if (statusFilter !== "todos" && order.status !== statusFilter) {
+      return false;
+    }
+
+    // 2. Filtro de empresa
+    if (empresaFilter !== "todas" && order.empresaId !== empresaFilter) {
+      return false;
+    }
+
+    // 3. Filtro de fecha
+    if (dateFilter !== "todos") {
+      const orderDate = new Date(order.date);
+      const today = new Date();
+
+      if (dateFilter === "ultimos-30") {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        if (orderDate < thirtyDaysAgo) {
+          return false;
+        }
+      } else if (dateFilter === "ultimos-90") {
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(today.getDate() - 90);
+        if (orderDate < ninetyDaysAgo) {
+          return false;
+        }
+      } else if (dateFilter === "este-anio") {
+        const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+        if (orderDate < firstDayOfYear) {
+          return false;
+        }
+      } else if (dateFilter === "anio-anterior") {
+        const firstDayLastYear = new Date(today.getFullYear() - 1, 0, 1);
+        const firstDayThisYear = new Date(today.getFullYear(), 0, 1);
+        if (orderDate < firstDayLastYear || orderDate >= firstDayThisYear) {
+          return false;
+        }
+      }
+    }
+
+    // 4. Filtro de búsqueda
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase().trim();
+      const matchesId = order.id.toLowerCase().includes(term);
+      const matchesClient = order.clientName.toLowerCase().includes(term);
+      const matchesEmail = order.email.toLowerCase().includes(term);
+      const matchesEmpresa = order.empresaId.toLowerCase().includes(term);
+
+      if (!matchesId && !matchesClient && !matchesEmail && !matchesEmpresa) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Definición de columnas para el DataTable
+  const columns = [
+    {
+      header: "Nº de Pedido",
+      field: "id",
+      render: (row) => (
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {row.id.substring(0, 12) + "..."}
+          {row.newAddress && (
+            <AddressIndicator>
+              <RenderIcon name="FaExclamationTriangle" size={12} />
+            </AddressIndicator>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: "Fecha",
+      field: "date",
+      dataType: "date",
+      width: "180px",
+      render: (row) => {
+        const date = new Date(row.date);
+        const now = new Date();
+        const hoursAgo = differenceInHours(now, date);
+
+        if (hoursAgo >= 1) {
+          return format(date, "d 'de' MMMM, yyyy HH:mm", { locale: es });
+        } else {
+          return formatDistance(date, now, {
+            addSuffix: true,
+            locale: es,
+          });
+        }
+      },
+      sortValue: (row) => new Date(row.date).getTime(),
+    },
+    {
+      header: "Cliente",
+      field: "clientName",
+      render: (row) => (
+        <div>
+          <div style={{ fontWeight: "500" }}>{row.clientName}</div>
+          <div style={{ fontSize: "0.85rem", color: theme.colors.textLight }}>
+            {row.email}
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: "Empresa",
+      field: "empresaId",
+      render: (row) => empresasMap[row.empresaId] || row.empresaId,
+    },
+    {
+      header: "Total",
+      field: "total",
+      dataType: "number",
+      render: (row) => `$${row.total.toFixed(2)}`,
+      align: "right",
+    },
+    {
+      header: "Items",
+      field: "items",
+      dataType: "number",
+      render: (row) => `${row.items} items`,
+      align: "center",
+    },
+    {
+      header: "Estado",
+      field: "status",
+      render: (row) => (
+        <StatusBadge status={row.status}>
+          {estadosMap[row.status] || row.status}
+        </StatusBadge>
+      ),
+      align: "center",
+    },
+    {
+      header: "Teléfono",
+      field: "phone",
+      sortable: false,
+      render: (row) => (
+        <span
+          style={{
+            color:
+              row.phone === "No registrado"
+                ? theme.colors.textLight
+                : theme.colors.text,
+            fontStyle: row.phone === "No registrado" ? "italic" : "normal",
+          }}
+        >
+          {row.phone}
+        </span>
+      ),
+    },
+  ];
+  // Función para renderizar acciones por fila
+  const rowActions = (row) => (
+    <div style={{ display: "flex", gap: "8px" }}>
+      <Button
+        text="Ver detalle"
+        variant="outlined"
+        size="small"
+        leftIconName="FaEye"
+        onClick={() => navigate(`/coordinadora/pedidos/${row.id}`)}
+      />
+      {row.newAddress && (
+        <Button
+          text="Confirmar dirección"
+          variant="solid"
+          size="small"
+          backgroundColor={theme.colors.warning}
+          leftIconName="FaCheck"
+          onClick={() => handleConfirmAddress(row.id)}
+        />
+      )}
+    </div>
+  );
+
+  const handleViewDetails = (row) => {
+    navigate(`/coordinadora/pedidos/${row.id}`);
+  };
+
+  // Manejar confirmar dirección nueva
   const handleConfirmAddress = (orderId) => {
-    // Aquí iría la lógica para confirmar la dirección
-    alert(`Dirección confirmada para el pedido ${orderId}`);
+    toast.success(`Dirección confirmada para el pedido ${orderId}`);
 
-    // Actualizar el contador de direcciones nuevas
-    setNewAddressesCount((prev) => prev - 1);
-
-    // Actualizar el estado de newAddress del pedido
-    setOrders((prev) =>
-      prev.map((order) =>
+    // Actualizar el estado para quitar la marca de dirección nueva
+    setOrders((prevOrders) =>
+      prevOrders.map((order) =>
         order.id === orderId ? { ...order, newAddress: false } : order
       )
     );
+
+    // Actualizar contador
+    setNewAddressesCount((prev) => Math.max(0, prev - 1));
+  };
+  const statusOptions = [
+    { value: "todos", label: "Todos los estados" },
+    { value: "PENDIENTE", label: "Pendiente" },
+    { value: "CONFIRMADO", label: "Confirmado" },
+    { value: "ENTREGADO", label: "Entregado" },
+    { value: "CANCELADO", label: "Cancelado" },
+  ];
+
+  const empresaOptions = [
+    { value: "todas", label: "Todas las empresas" },
+    ...empresasAcceso.map((empresa) => ({
+      value: empresa.toLowerCase(),
+      label: empresasMap[empresa] || empresa,
+    })),
+  ];
+
+  const dateOptions = [
+    { value: "todos", label: "Todos los períodos" },
+    { value: "ultimos-30", label: "Últimos 30 días" },
+    { value: "ultimos-90", label: "Últimos 90 días" },
+    { value: "este-anio", label: "Este año" },
+    { value: "anio-anterior", label: "Año anterior" },
+  ];
+
+  const handleStatusChange = (e) => {
+    setStatusFilter(e.target.value);
+  };
+
+  const handleEmpresaChange = (e) => {
+    setEmpresaFilter(e.target.value);
+  };
+
+  const handleDateChange = (e) => {
+    setDateFilter(e.target.value);
   };
 
   return (
     <PageContainer>
-      <PageTitle>Gestión de Pedidos</PageTitle>
+      <PageTitle>Gestión de Pedidos - Coordinadora</PageTitle>
 
+      {/* Alerta de direcciones nuevas */}
       {newAddressesCount > 0 && (
         <AddressAlert>
           <AlertText>
+            <RenderIcon
+              name="FaExclamationTriangle"
+              size={16}
+              style={{ marginRight: "8px" }}
+            />
             Hay {newAddressesCount} pedido{newAddressesCount > 1 ? "s" : ""} con
-            direcciones nuevas que requieren confirmación
+            direcciones nuevas que requieren revisión
             <NewAddressCount>{newAddressesCount}</NewAddressCount>
           </AlertText>
+          <AlertActions>
+            <Button
+              text="Ver pedidos"
+              variant="outlined"
+              size="small"
+              onClick={() => setSearchTerm("")}
+            />
+          </AlertActions>
         </AddressAlert>
       )}
 
-      <FiltersRow>
+      <FiltersContainer>
         <FilterGroup>
-          <FilterLabel>
-            <FaFilter /> Empresa:
-          </FilterLabel>
-          <FilterSelect
-            value={empresaFilter}
-            onChange={(e) => setEmpresaFilter(e.target.value)}
-          >
-            <option value="todas">Todas</option>
-            {empresasAcceso.map((empresaId) => (
-              <option key={empresaId} value={empresaId}>
-                {empresasMap[empresaId] || empresaId}
-              </option>
-            ))}
-          </FilterSelect>
-
-          <FilterLabel>Estado:</FilterLabel>
-          <FilterSelect
+          <Select
+            options={statusOptions}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="todos">Todos</option>
-            {Object.entries(estadosMap).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </FilterSelect>
+            onChange={handleStatusChange}
+            placeholder="Seleccionar estado"
+            width="200px"
+            name="statusFilter"
+            label="Estado"
+          />
 
-          <FilterLabel>Fecha:</FilterLabel>
-          <FilterSelect
+          <Select
+            options={empresaOptions}
+            value={empresaFilter}
+            onChange={handleEmpresaChange}
+            placeholder="Seleccionar empresa"
+            width="200px"
+            name="empresaFilter"
+            label="Empresa"
+          />
+
+          <Select
+            options={dateOptions}
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-          >
-            <option value="todos">Todas las fechas</option>
-            <option value="hoy">Hoy</option>
-            <option value="esta_semana">Esta semana</option>
-            <option value="este_mes">Este mes</option>
-          </FilterSelect>
+            onChange={handleDateChange}
+            placeholder="Seleccionar período"
+            width="180px"
+            name="dateFilter"
+            label="Período"
+          />
         </FilterGroup>
 
-        <SearchInputContainer>
-          <SearchInput
-            type="text"
-            placeholder="Buscar por ID, cliente o email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <SearchIcon>
-            <FaSearch />
-          </SearchIcon>
-        </SearchInputContainer>
-      </FiltersRow>
+        <SearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Buscar por cliente, pedido o email"
+          debounceTime={300}
+          width="auto"
+        />
+      </FiltersContainer>
 
       {loading ? (
         <NoDataContainer>
+          <NoDataIcon>⏳</NoDataIcon>
           <NoDataMessage>Cargando pedidos...</NoDataMessage>
         </NoDataContainer>
+      ) : error ? (
+        <NoDataContainer>
+          <NoDataIcon>⚠️</NoDataIcon>
+          <NoDataMessage>{error}</NoDataMessage>
+          <Button
+            text="Intentar nuevamente"
+            variant="outlined"
+            onClick={handleObtainOrders}
+          />
+        </NoDataContainer>
       ) : filteredOrders.length > 0 ? (
-        <>
-          <OrdersTable>
-            <TableHeader>
-              <tr>
-                <TableHeaderCell>ID Pedido</TableHeaderCell>
-                <TableHeaderCell>Fecha</TableHeaderCell>
-                <TableHeaderCell>Cliente</TableHeaderCell>
-                <TableHeaderCell>Empresa</TableHeaderCell>
-                <TableHeaderCell>Total</TableHeaderCell>
-                <TableHeaderCell>Items</TableHeaderCell>
-                <TableHeaderCell>Estado</TableHeaderCell>
-                <TableHeaderCell>Acciones</TableHeaderCell>
-              </tr>
-            </TableHeader>
-            <TableBody>
-              {currentOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>{order.id}</TableCell>
-                  <TableCell>
-                    {format(order.date, "d 'de' MMMM, yyyy", { locale: es })}
-                  </TableCell>
-                  <TableCell>
-                    {order.clientName}
-                    <br />
-                    <small style={{ color: "#666" }}>{order.email}</small>
-                  </TableCell>
-                  <TableCell>{empresasMap[order.empresaId]}</TableCell>
-                  <TableCell>${order.total.toFixed(2)}</TableCell>
-                  <TableCell>{order.items}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={order.status}>
-                      {estadosMap[order.status]}
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell>
-                    <ActionButtons>
-                      <ActionButton
-                        title="Ver detalle"
-                        onClick={() => handleViewDetail(order.id)}
-                        leftIconName={"FaEye"}
-                      />
-                      {order.newAddress && (
-                        <AddressIndicator title="Revisar dirección">
-                          <FaQuestionCircle size={16} />
-                        </AddressIndicator>
-                      )}
-                    </ActionButtons>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </OrdersTable>
-
-          {totalPages > 1 && (
-            <Pagination>
-              <PageButton
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
-                text={"Anterior"}
-                size="small"
-              />
-
-              {[...Array(totalPages).keys()].map((number) => (
-                <PageButton
-                  key={number + 1}
-                  $active={currentPage === number + 1}
-                  onClick={() => paginate(number + 1)}
-                  text={number + 1}
-                  size="small"
-                />
-              ))}
-
-              <PageButton
-                onClick={() => paginate(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                text={"Siguiente"}
-                size="small"
-              />
-            </Pagination>
-          )}
-        </>
+        <DataTable
+          columns={columns}
+          data={filteredOrders}
+          emptyMessage="No se encontraron pedidos con los filtros seleccionados"
+          itemsPerPage={10}
+          rowActions={rowActions}
+          bordered={false}
+          striped={true}
+          onRowClick={handleViewDetails}
+          initialSortField="date"
+          initialSortDirection="desc"
+        />
       ) : (
         <NoDataContainer>
+          <NoDataIcon>📦</NoDataIcon>
           <NoDataMessage>
-            No se encontraron pedidos que coincidan con los criterios de
-            búsqueda.
+            {searchTerm ||
+            statusFilter !== "todos" ||
+            empresaFilter !== "todas" ||
+            dateFilter !== "todos"
+              ? "No se encontraron pedidos con los filtros seleccionados"
+              : "No hay pedidos registrados aún"}
           </NoDataMessage>
-          <Button
-            text="Limpiar filtros"
-            variant="outlined"
-            onClick={() => {
-              setStatusFilter("todos");
-              setEmpresaFilter("todas");
-              setDateFilter("todos");
-              setSearchTerm("");
-            }}
-          />
+          {statusFilter !== "todos" ||
+          empresaFilter !== "todas" ||
+          dateFilter !== "todos" ||
+          searchTerm ? (
+            <Button
+              text="Limpiar filtros"
+              variant="outlined"
+              onClick={() => {
+                setStatusFilter("todos");
+                setEmpresaFilter("todas");
+                setDateFilter("todos");
+                setSearchTerm("");
+              }}
+            />
+          ) : null}
         </NoDataContainer>
       )}
     </PageContainer>

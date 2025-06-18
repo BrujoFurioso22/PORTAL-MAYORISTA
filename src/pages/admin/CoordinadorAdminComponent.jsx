@@ -740,7 +740,7 @@ const CoordinadorAdminComponent = () => {
         }
         onClick={() => handleToggleStatus(coordinador)}
         leftIconName={
-          coordinador.STATUS_USER ? "FaToggleRight" : "FaToggleLeft"
+          coordinador.STATUS_USER ? "FaToggleOn" : "FaToggleOff"
         }
       />
 

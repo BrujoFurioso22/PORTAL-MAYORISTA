@@ -49,26 +49,3 @@ export const addresses_updateAddress = async (id, addressData) => {
     };
   }
 };
-
-/**
- * Eliminar dirección de usuario
- * @param {string|number} id - ID de la dirección a eliminar
- * @return {Promise<Object>} Objeto con información de éxito/error y datos
- */
-export const addresses_deleteAddress = async (id) => {
-  try {
-    const response = await api.delete(`/usuarios/deleteDireccion/${id}`);
-
-    if (response.status === 200) {
-      return { success: true, data: response.data };
-    } else {
-      return { success: false, error: "Error en la respuesta del servidor" };
-    }
-  } catch (error) {
-    console.error("Error al eliminar dirección:", error);
-    return {
-      success: false,
-      error: error.response?.data?.mensaje || "Error al procesar la solicitud",
-    };
-  }
-};
