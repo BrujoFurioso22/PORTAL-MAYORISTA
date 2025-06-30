@@ -7,7 +7,6 @@ import Input from "../../../components/ui/Input";
 import Select from "../../../components/ui/Select";
 import RenderIcon from "../../../components/ui/RenderIcon";
 import { toast } from "react-toastify";
-import { FaLock, FaCheck, FaCopy } from "react-icons/fa";
 import {
   addresses_createAddress,
   addresses_updateAddress,
@@ -62,6 +61,7 @@ const AddressCard = styled.div`
   border-radius: 8px;
   margin-bottom: 16px;
   position: relative;
+  background-color: ${({ theme }) => theme.colors.background};
 `;
 
 const AddressCardHeader = styled.div`
@@ -129,16 +129,6 @@ const CompanyFilterLabel = styled.label`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-const CompanyFilterSelect = styled.select`
-  padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 4px;
-  background-color: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.9rem;
-  cursor: pointer;
-`;
-
 const SapBadge = styled.span`
   display: inline-flex;
   align-items: center;
@@ -169,87 +159,6 @@ const FormTitle = styled.h3`
   margin: 0 0 16px 0;
   font-size: 1.1rem;
   color: ${({ theme }) => theme.colors.text};
-`;
-
-const CheckboxField = styled.div`
-  display: flex;
-  align-items: center;
-  margin: 16px 0;
-`;
-
-const CheckboxLabel = styled.label`
-  margin-left: 8px;
-  cursor: pointer;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const ModalOverlay = styled.div`
-  display: ${({ $show }) => ($show ? "flex" : "none")};
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
-`;
-
-const Modal = styled.div`
-  background-color: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const ModalTitle = styled.h3`
-  margin: 0;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const ModalBody = styled.div`
-  padding: 16px;
-  max-height: 60vh;
-  overflow-y: auto;
-`;
-
-const ModalFooter = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  padding: 16px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  gap: 12px;
-`;
-
-const CompanySelect = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-`;
-
-const CompanyOption = styled.div`
-  padding: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 6px;
-  cursor: pointer;
-  text-align: center;
-
-  &:hover {
-    background-color: ${({ theme }) => `${theme.colors.primary}15`};
-    border-color: ${({ theme }) => theme.colors.primary};
-  }
 `;
 
 const TypeFilterButton = styled(Button)`
@@ -299,19 +208,6 @@ const InfoMessage = styled.div`
   gap: 8px;
 `;
 
-const WarningMessage = styled.div`
-  background-color: ${({ theme }) => theme.colors.warning + "15"};
-  border: 1px solid ${({ theme }) => theme.colors.warning + "33"};
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 16px;
-  color: ${({ theme }) => theme.colors.warning};
-  font-size: 0.9rem;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-`;
-
 const Direcciones = () => {
   const { user, setUser } = useAuth();
   const { theme } = useAppTheme();
@@ -338,8 +234,6 @@ const Direcciones = () => {
 
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressErrors, setAddressErrors] = useState({});
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [addressToAssign, setAddressToAssign] = useState(null);
   const [addressTypeFilter, setAddressTypeFilter] = useState("all");
 
   // Obtener la lista de empresas disponibles
@@ -609,33 +503,6 @@ const Direcciones = () => {
     }
   };
 
-  const handleAssignToCompany = (empresaId) => {
-    if (!addressToAssign || !empresaId) return;
-
-    const newAddress = {
-      ...addressToAssign,
-      ID: Date.now(),
-      EMPRESA: empresaId,
-      PREDETERMINED: false,
-    };
-
-    let updatedDirections = { ...user.DIRECCIONES };
-
-    if (!updatedDirections[empresaId]) {
-      updatedDirections[empresaId] = [];
-    }
-
-    updatedDirections[empresaId].push(newAddress);
-
-    const updatedUser = {
-      ...user,
-      DIRECCIONES: updatedDirections,
-    };
-
-    setShowAssignModal(false);
-    toast.success(`Dirección asignada a la empresa seleccionada`);
-  };
-
   // Efectos
   useEffect(() => {
     if (location.state) {
@@ -668,48 +535,6 @@ const Direcciones = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location.state, user, empresasDisponibles, selectedEmpresa]);
-
-  // Modal de asignación de direcciones
-  const AssignAddressModal = () => (
-    <ModalOverlay $show={showAssignModal}>
-      <Modal>
-        <ModalHeader>
-          <ModalTitle>Asignar dirección a otra empresa</ModalTitle>
-          <RenderIcon
-            name="FaTimes"
-            onClick={() => setShowAssignModal(false)}
-          />
-        </ModalHeader>
-        <ModalBody>
-          <p>Selecciona la empresa a la que deseas asignar esta dirección:</p>
-          <p>
-            <strong>{addressToAssign?.CLASIFICATION}</strong> -{" "}
-            {addressToAssign?.STREET}
-          </p>
-
-          <CompanySelect>
-            {empresasDisponibles
-              .filter((empresa) => empresa !== selectedEmpresa)
-              .map((empresa, idx) => (
-                <CompanyOption
-                  key={idx}
-                  onClick={() => handleAssignToCompany(empresa)}
-                >
-                  {empresa}
-                </CompanyOption>
-              ))}
-          </CompanySelect>
-        </ModalBody>
-        <ModalFooter>
-          <Button
-            text="Cancelar"
-            variant="outlined"
-            onClick={() => setShowAssignModal(false)}
-          />
-        </ModalFooter>
-      </Modal>
-    </ModalOverlay>
-  );
 
   return (
     <>
@@ -750,7 +575,7 @@ const Direcciones = () => {
             />
           </CompanyFilter>
 
-          {/* Formulario para agregar/editar dirección */}
+          {/* Formulario para agregar dirección */}
           {showAddressForm ? (
             <>
               <AddressFormContainer>
@@ -903,7 +728,11 @@ const Direcciones = () => {
                   )}
                   {address.ORIGIN === "SAP" && (
                     <SapBadge>
-                      <FaLock size={10} style={{ marginRight: "4px" }} />
+                      <RenderIcon
+                        name="FaLock"
+                        size={10}
+                        style={{ marginRight: "4px" }}
+                      />
                       Sistema
                     </SapBadge>
                   )}
@@ -947,9 +776,6 @@ const Direcciones = () => {
           </EmptyState>
         )}
       </Card>
-
-      {/* Modal para asignar dirección a otra empresa */}
-      <AssignAddressModal />
     </>
   );
 };

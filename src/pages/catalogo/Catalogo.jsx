@@ -280,7 +280,7 @@ const mapApiProductToAppFormat = (item) => {
       name: name,
       description: description,
       price: price,
-      discount: 0,
+      discount: item.DMA_DESCUENTO_PROMOCIONAL,
       image: imageUrl,
       filtersByType: categoriesByType, // Objeto organizado por tipo
       brand: item.DMA_MARCA || "Sin marca",
@@ -642,6 +642,8 @@ const Catalogo = () => {
 
       if (respProductos.success) {
         const productos = respProductos.data || [];
+        console.log(productos);
+        
 
         // Mapear los productos con seguimiento de errores
         const mappedProducts = [];
@@ -694,6 +696,7 @@ const Catalogo = () => {
 
         // Guardar productos en caché
         cacheProducts(empresaName, mappedProducts); // Guardar todos los productos originales
+        
         setAllProducts(mappedProducts);
       } else {
         console.error("Error al cargar productos:", respProductos.message);

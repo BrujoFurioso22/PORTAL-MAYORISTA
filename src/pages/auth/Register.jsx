@@ -449,7 +449,7 @@ const Register = () => {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Ingresa tu correo"
             required
-            leftIconName="FaMail"
+            leftIconName="FaEnvelope"
             errorMessage={error}
           />
 
