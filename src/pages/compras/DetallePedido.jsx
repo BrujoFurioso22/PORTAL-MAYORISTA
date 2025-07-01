@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { format, formatDistance } from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAppTheme } from "../../context/AppThemeContext";
 import Button from "../../components/ui/Button";
@@ -9,8 +9,8 @@ import { order_getOrderById } from "../../services/order/order";
 import RenderIcon from "../../components/ui/RenderIcon";
 import { baseLinkImages } from "../../constants/links";
 import ContactModal from "../../components/ui/ContactModal";
-import { toast } from "react-toastify";
 import { copyToClipboard } from "../../utils/utils";
+import { useAuth } from "../../context/AuthContext";
 
 // Estilos para el componente
 const PageContainer = styled.div`
@@ -117,13 +117,6 @@ const SectionTitle = styled.h2`
   gap: 8px;
 `;
 
-const Divider = styled.hr`
-  border: none;
-  height: 1px;
-  background-color: ${({ theme }) => theme.colors.border};
-  margin: 20px 0;
-`;
-
 const TwoColumns = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -152,50 +145,6 @@ const Value = styled.p`
   margin: 0;
   color: ${({ theme }) => theme.colors.text};
   font-weight: 500;
-`;
-
-const ProductsTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-`;
-
-const ProductsHead = styled.thead`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const ProductsHeadCell = styled.th`
-  text-align: left;
-  padding: 12px 16px;
-  color: ${({ theme }) => theme.colors.textLight};
-  font-weight: 500;
-  font-size: 0.9rem;
-`;
-
-const ProductsBody = styled.tbody``;
-
-const ProductRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const ProductCell = styled.td`
-  padding: 16px;
-  vertical-align: middle;
-`;
-
-const ProductImage = styled.img`
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 4px;
-`;
-
-const ProductInfo = styled.div`
-  display: flex;
-  flex-direction: column;
 `;
 
 const ProductName = styled.span`
@@ -412,17 +361,15 @@ const ProductCardDiscount = styled.span`
   font-weight: 500;
 `;
 
-
 const DetallePedido = () => {
   const { orderId } = useParams();
-  const navigate = useNavigate();
   const { theme } = useAppTheme();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [orderDetails, setOrderDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [editedItems, setEditedItems] = useState([]);
-  const [editedAditionalDiscount, setEditedAditionalDiscount] = useState(0);
 
   // Traducir estado a español para mostrar
   const translateStatus = (status) => {
@@ -475,6 +422,7 @@ const DetallePedido = () => {
             status: currentStatus, // Mantener el valor original de la API
             aditionalDiscount: cabecera.ADITIONAL_DISCOUNT || 0,
             discount: cabecera.DISCOUNT || 0,
+            iva: cabecera.IVA_DETAIL.IVA_PERCENTAGE || 15,
             customer: {
               name: cabecera.USER.NAME_USER,
               email: cabecera.USER.EMAIL,
@@ -596,77 +544,6 @@ const DetallePedido = () => {
     fetchOrderDetails();
   }, [orderId]);
 
-  // Cuando se cargan los detalles, inicializa los estados editables
-  useEffect(() => {
-    if (orderDetails) {
-      setEditedItems(
-        orderDetails.items.map((item) => ({
-          ...item,
-          quantity: item.quantity,
-        }))
-      );
-      setEditedAditionalDiscount(orderDetails.aditionalDiscount || 0);
-    }
-  }, [orderDetails]);
-
-  // Cálculo de totales con descuentos en porcentaje
-  const getOrderCalculations = () => {
-    if (!orderDetails) {
-      return {
-        items: [],
-        subtotal: 0,
-        aditionalDiscount: 0,
-        generalDiscount: 0,
-        totalPromotionalDiscount: 0,
-        total: 0,
-      };
-    }
-    console.log(orderDetails);
-
-    // Descuentos en porcentaje
-    const aditionalDiscountPct = Number(editedAditionalDiscount) || 0;
-    const generalDiscountPct = Number(orderDetails.discount) || 0;
-
-    let subtotal = 0;
-    let totalPromotionalDiscount = 0;
-
-    const items = editedItems.map((item) => {
-      const promoPct = Number(item.promotionalDiscount) || 0;
-      const price = item.price;
-      const qty = Number(item.quantity);
-
-      // Descuento promocional por producto
-      const promoDiscount = price * qty * (promoPct / 100);
-      totalPromotionalDiscount += promoDiscount;
-
-      // Subtotal suma sin descuentos
-      subtotal += price * qty;
-
-      return {
-        ...item,
-        total: price * qty - promoDiscount,
-        promoDiscount,
-      };
-    });
-
-    // Descuento adicional (cliente) y general (pedido) sobre el subtotal
-    const aditionalDiscount = subtotal * (aditionalDiscountPct / 100);
-    const generalDiscount = subtotal * (generalDiscountPct / 100);
-
-    // Total final
-    const total =
-      subtotal - aditionalDiscount - generalDiscount - totalPromotionalDiscount;
-
-    return {
-      items,
-      subtotal,
-      aditionalDiscount,
-      generalDiscount,
-      totalPromotionalDiscount,
-      total,
-    };
-  };
-
   const handleCancelOrder = () => {
     const canCancel = orderDetails.status === "PENDIENTE";
     if (canCancel) {
@@ -752,8 +629,13 @@ const DetallePedido = () => {
   const aditionalDiscount =
     subtotalAfterGeneral * (Number(orderDetails.aditionalDiscount) / 100);
 
-  // 7. Total final
+  // 7. Total final antes de IVA
   const totalFinal = subtotalAfterGeneral - aditionalDiscount;
+
+  // IVA como porcentaje (por ejemplo, 19 para 19%)
+  const ivaPct = Number(orderDetails.iva || orderDetails.IVA || 0);
+  const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
+  const totalConIva = (totalFinal < 0 ? 0 : totalFinal) + valorIVA;
 
   return (
     <PageContainer>
@@ -879,6 +761,18 @@ const DetallePedido = () => {
             <Label>Email:</Label>
             <Value>{orderDetails.customer.email}</Value>
           </InfoItem>
+          <InfoItem>
+            <Label>Contacto Principal:</Label>
+            <Value>
+              {(() => {
+                const empresa = orderDetails.empresaInfo?.name || orderDetails.empresaInfo?.id;
+                const telefonosEmpresa = user.TELEFONOS?.[empresa] || [];
+                if (telefonosEmpresa.length === 0) return "No disponible";
+                const principal = telefonosEmpresa.find(t => t.PREDETERMINED) || telefonosEmpresa[0];
+                return principal ? `${principal.PHONE_NUMBER}` : "No disponible";
+              })()}
+            </Value>
+          </InfoItem>
         </Section>
       </TwoColumns>
 
@@ -977,49 +871,92 @@ const DetallePedido = () => {
         )}
 
         <ProductsList>
-  {orderDetails.items.map((item) => {
-    const promoPct = Number(item.promotionalDiscount) || 0;
-    const price = item.price;
-    const qty = Number(item.quantity);
-    const promoDiscount = price * qty * (promoPct / 100);
-    const subtotal = price * qty;
-    const total = subtotal - promoDiscount;
+          {orderDetails.items.map((item) => {
+            const promoPct = Number(item.promotionalDiscount) || 0;
+            const price = item.price;
+            const qty = Number(item.quantity);
+            const promoDiscount = price * qty * (promoPct / 100);
+            const subtotal = price * qty;
+            const total = subtotal - promoDiscount;
 
-    return (
-      <ProductCard key={item.id}>
-        <ProductCardImage src={item.image} alt={item.name} />
-        <ProductCardInfo>
-          <ProductName>{item.name}</ProductName>
-          <ProductSKU>SKU: {item.sku}</ProductSKU>
-          <ProductCardRow>
-            <ProductCardLabel>Precio unitario:</ProductCardLabel>
-            <ProductCardValue>${price.toFixed(2)}</ProductCardValue>
-          </ProductCardRow>
-          <ProductCardRow>
-            <ProductCardLabel>Cantidad:</ProductCardLabel>
-            <ProductCardValue>{qty}</ProductCardValue>
-          </ProductCardRow>
-          <ProductCardRow>
-            <ProductCardLabel>Descuento promocional:</ProductCardLabel>
-            {promoPct > 0 ? (
-              <ProductCardDiscount>{promoPct}% (-${promoDiscount.toFixed(2)})</ProductCardDiscount>
-            ) : (
-              <span style={{ color: "#bbb" }}>—</span>
-            )}
-          </ProductCardRow>
-          <ProductCardRow>
-            <ProductCardLabel>Total:</ProductCardLabel>
-            <ProductCardValue>${subtotal.toFixed(2)}</ProductCardValue>
-          </ProductCardRow>
-          <ProductCardRow>
-            <ProductCardLabel>Total con descuento:</ProductCardLabel>
-            <ProductCardTotal>${total.toFixed(2)}</ProductCardTotal>
-          </ProductCardRow>
-        </ProductCardInfo>
-      </ProductCard>
-    );
-  })}
-</ProductsList>
+            return (
+              <ProductCard key={item.id}>
+                <ProductCardImage src={item.image} alt={item.name} />
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    justifyContent: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <ProductName style={{ fontSize: "1.08rem" }}>
+                        {item.name}
+                      </ProductName>
+                      <ProductSKU>SKU: {item.sku}</ProductSKU>
+                    </div>
+                    <div style={{ textAlign: "right", minWidth: 110 }}>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          color: theme.colors.primary,
+                          fontSize: "1.08rem",
+                        }}
+                      >
+                        ${total.toFixed(2)}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.85rem",
+                          color: theme.colors.textLight,
+                        }}
+                      >
+                        Total
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginTop: 8,
+                      gap: 12,
+                    }}
+                  >
+                    <div
+                      style={{ color: theme.colors.text, fontSize: "0.98rem" }}
+                    >
+                      x{qty} · ${price.toFixed(2)} c/u ={" "}
+                      <b>${subtotal.toFixed(2)}</b>
+                    </div>
+                    {promoPct > 0 && (
+                      <div
+                        style={{
+                          color: theme.colors.success,
+                          fontWeight: 500,
+                          fontSize: "0.98rem",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        -{promoPct}% (${promoDiscount.toFixed(2)})
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ProductCard>
+            );
+          })}
+        </ProductsList>
 
         <OrderSummary>
           <SummaryRow>
@@ -1044,7 +981,9 @@ const DetallePedido = () => {
             <>
               <SummaryRow>
                 <SummaryLabel>Descuento general:</SummaryLabel>
-                <SummaryValue $operacion={true}>-${generalDiscount.toFixed(2)}</SummaryValue>
+                <SummaryValue $operacion={true}>
+                  -${generalDiscount.toFixed(2)}
+                </SummaryValue>
               </SummaryRow>
               <SummaryRow>
                 <SummaryLabel></SummaryLabel>
@@ -1066,15 +1005,18 @@ const DetallePedido = () => {
               </SummaryRow>
             </>
           )}
+          {/* Fila de IVA */}
+          {ivaPct > 0 && (
+            <SummaryRow>
+              <SummaryLabel>IVA ({ivaPct}%):</SummaryLabel>
+              <SummaryValue>+${valorIVA.toFixed(2)}</SummaryValue>
+            </SummaryRow>
+          )}
           <SummaryRow>
             <SummaryLabel>Total:</SummaryLabel>
-            <SummaryValue>
-              ${(totalFinal < 0 ? 0 : totalFinal).toFixed(2)}
-            </SummaryValue>
+            <SummaryValue>${totalConIva.toFixed(2)}</SummaryValue>
           </SummaryRow>
         </OrderSummary>
-
-       
       </Section>
 
       <ContactModal

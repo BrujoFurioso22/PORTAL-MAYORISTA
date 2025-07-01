@@ -115,14 +115,6 @@ const InformacionPersonal = () => {
               <div>{personalInfo.email}</div>
             </div>
             <div>
-              <strong>Teléfono:</strong>
-              <div>
-                {personalInfo.telefono || (
-                  <span style={{ color: "#aaa" }}>No registrado</span>
-                )}
-              </div>
-            </div>
-            <div>
               <strong>Empresas disponibles:</strong>
               {user?.EMPRESAS.length > 0 ? (
                 <EmpresasList>

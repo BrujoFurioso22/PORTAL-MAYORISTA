@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "react-toastify";
 import { useAppTheme } from "../../context/AppThemeContext";
+import { useAuth } from "../../context/AuthContext";
 import Button from "../../components/ui/Button";
 import Select from "../../components/ui/Select";
 import Input from "../../components/ui/Input";
@@ -268,14 +269,10 @@ const AddressAlert = styled.div`
   padding: 16px;
   border-radius: 8px;
   background-color: ${({ theme, $confirmed }) =>
-    $confirmed
-      ? theme.colors.success + "20"
-      : theme.colors.warning + "20"};
+    $confirmed ? theme.colors.success + "20" : theme.colors.warning + "20"};
   border-left: 4px solid
     ${({ theme, $confirmed }) =>
-      $confirmed
-        ? theme.colors.success
-        : theme.colors.warning};
+      $confirmed ? theme.colors.success : theme.colors.warning};
   display: flex;
   align-items: center;
   gap: 12px;
@@ -300,7 +297,8 @@ const DetallePedidoCoordinador = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const { theme } = useAppTheme();
-  
+  const { user } = useAuth();
+
   // Estados del componente
   const [orderDetails, setOrderDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -342,25 +340,82 @@ const DetallePedidoCoordinador = () => {
           const cabecera = apiOrder.CABECERA;
           const detalle = apiOrder.DETALLE || [];
 
+          const statusHistory = Array.isArray(cabecera.STATUS)
+            ? cabecera.STATUS
+            : [];
+          const currentStatusObj =
+            statusHistory[statusHistory.length - 1] || {};
+          const currentStatus =
+            currentStatusObj.VALUE_CATALOG || cabecera.STATUS;
+
           // Calcular el subtotal
           const subtotal = detalle.reduce(
             (sum, item) => sum + item.PRICE * item.QUANTITY,
             0
           );
 
+          // Calcular descuentos y totales igual que en DetallePedido.jsx
+          const items = detalle.map((item) => ({
+            id: item.PRODUCT_CODE,
+            name: item.MAESTRO?.DMA_NOMBREITEM || "Producto",
+            sku: item.PRODUCT_CODE,
+            price: item.PRICE,
+            quantity: item.QUANTITY,
+            promotionalDiscount: item.PROMOTIONAL_DISCOUNT || 0,
+            total: item.PRICE * item.QUANTITY,
+            image: item.MAESTRO?.DMA_RUTAIMAGEN
+              ? `${baseLinkImages}${item.MAESTRO.DMA_RUTAIMAGEN}`
+              : "https://placehold.co/50x50/png",
+          }));
+
+          // 1. Subtotal sin descuentos
+          const rawSubtotal = items.reduce(
+            (acc, item) => acc + item.price * item.quantity,
+            0
+          );
+          // 2. Total de descuentos promocionales (por producto)
+          const totalPromotionalDiscount = items.reduce(
+            (acc, item) =>
+              acc +
+              item.price *
+                item.quantity *
+                ((Number(item.promotionalDiscount) || 0) / 100),
+            0
+          );
+          // 3. Subtotal después de descuentos promocionales
+          const subtotalAfterPromo = rawSubtotal - totalPromotionalDiscount;
+          // 4. Descuento general (cliente) sobre el subtotal con promo
+          const generalDiscount =
+            subtotalAfterPromo * (Number(cabecera.DISCOUNT || 0) / 100);
+          // 5. Subtotal después de descuento general
+          const subtotalAfterGeneral = subtotalAfterPromo - generalDiscount;
+          // 6. Descuento adicional (coordinadora) sobre el subtotal con promo y general
+          const aditionalDiscount =
+            subtotalAfterGeneral *
+            (Number(cabecera.ADITIONAL_DISCOUNT || 0) / 100);
+          // 7. Total final antes de IVA
+          const totalFinal = subtotalAfterGeneral - aditionalDiscount;
+          // IVA como porcentaje
+          const ivaPct = Number(cabecera.IVA_DETAIL?.IVA_PERCENTAGE || 15);
+          const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
+          const totalConIva = (totalFinal < 0 ? 0 : totalFinal) + valorIVA;
+
           // Verificar si tiene direcciones nuevas
-          const hasNewAddress = 
+          const hasNewAddress =
             cabecera.SHIPPING_ADDRESS?.ORIGIN === "CLIENT" ||
             cabecera.BILLING_ADDRESS?.ORIGIN === "CLIENT";
 
           const formattedOrder = {
             id: cabecera.ID_CART_HEADER,
             date: new Date(cabecera.createdAt),
-            status: cabecera.STATUS,
+            status: currentStatus,
+            aditionalDiscount: cabecera.ADITIONAL_DISCOUNT || 0,
+            discount: cabecera.DISCOUNT || 0,
+            iva: ivaPct,
             customer: {
               name: cabecera.USER.NAME_USER,
               email: cabecera.USER.EMAIL,
-              phone: cabecera.USER.PHONE || "No disponible",
+              phone: "No disponible",
             },
             shipping: {
               address: cabecera.SHIPPING_ADDRESS.STREET,
@@ -372,26 +427,24 @@ const DetallePedidoCoordinador = () => {
               city: cabecera.BILLING_ADDRESS.CITY,
               state: cabecera.BILLING_ADDRESS.STATE,
             },
-            items: detalle.map((item) => ({
-              id: item.PRODUCT_CODE,
-              name: item.MAESTRO?.DMA_NOMBREITEM || "Producto",
-              sku: item.PRODUCT_CODE,
-              price: item.PRICE,
-              quantity: item.QUANTITY,
-              total: item.PRICE * item.QUANTITY,
-              image: item.MAESTRO?.DMA_RUTAIMAGEN
-                ? `${baseLinkImages}${item.MAESTRO.DMA_RUTAIMAGEN}`
-                : "https://placehold.co/50x50/png",
-            })),
-            subtotal: subtotal,
-            discount: cabecera.DISCOUNT || 0,
-            total: cabecera.TOTAL || subtotal,
+            items,
+            subtotal: rawSubtotal,
+            total: totalConIva,
             empresaInfo: {
               id: cabecera.ENTERPRISE,
               name: cabecera.ENTERPRISE,
             },
             hasNewAddress: hasNewAddress,
             originalData: apiOrder,
+            // Para desglose
+            rawSubtotal,
+            totalPromotionalDiscount,
+            subtotalAfterPromo,
+            generalDiscount,
+            subtotalAfterGeneral,
+            totalFinal,
+            valorIVA,
+            totalConIva,
           };
 
           setOrderDetails(formattedOrder);
@@ -424,8 +477,8 @@ const DetallePedidoCoordinador = () => {
     try {
       // Aquí iría la llamada a la API para actualizar el estado
       // await updateOrderStatus(orderId, newStatus);
-      
-      setOrderDetails(prev => ({ ...prev, status: newStatus }));
+
+      setOrderDetails((prev) => ({ ...prev, status: newStatus }));
       setEditingStatus(false);
       toast.success("Estado actualizado correctamente");
     } catch (error) {
@@ -439,12 +492,12 @@ const DetallePedidoCoordinador = () => {
     try {
       // Aquí iría la llamada a la API para actualizar el descuento
       // await updateOrderDiscount(orderId, newDiscount);
-      
+
       const newTotal = calculateNewTotal();
-      setOrderDetails(prev => ({ 
-        ...prev, 
+      setOrderDetails((prev) => ({
+        ...prev,
         discount: newDiscount,
-        total: newTotal
+        total: newTotal,
       }));
       setEditingDiscount(false);
       toast.success("Descuento aplicado correctamente");
@@ -459,13 +512,108 @@ const DetallePedidoCoordinador = () => {
     try {
       // Aquí iría la llamada a la API para confirmar la dirección
       // await confirmOrderAddress(orderId);
-      
+
       setAddressConfirmed(true);
       toast.success("Dirección confirmada correctamente");
     } catch (error) {
       console.error("Error al confirmar dirección:", error);
       toast.error("Error al confirmar la dirección");
     }
+  };
+
+  const handleUpdateQuantity = (productId, newQuantity) => {
+    if (newQuantity < 1) return;
+    setOrderDetails((prev) => {
+      const updatedItems = prev.items.map((item) =>
+        item.id === productId ? { ...item, quantity: newQuantity } : item
+      );
+      const updatedSubtotal = updatedItems.reduce(
+        (acc, item) => acc + item.price * item.quantity,
+        0
+      );
+      const updatedTotalPromotionalDiscount = updatedItems.reduce(
+        (acc, item) =>
+          acc +
+          item.price *
+            item.quantity *
+            ((Number(item.promotionalDiscount) || 0) / 100),
+        0
+      );
+      const updatedSubtotalAfterPromo =
+        updatedSubtotal - updatedTotalPromotionalDiscount;
+      const updatedGeneralDiscount =
+        updatedSubtotalAfterPromo * (Number(prev.discount) / 100);
+      const updatedSubtotalAfterGeneral =
+        updatedSubtotalAfterPromo - updatedGeneralDiscount;
+      const updatedAditionalDiscount =
+        updatedSubtotalAfterGeneral * (Number(prev.aditionalDiscount) / 100);
+      const updatedTotalFinal =
+        updatedSubtotalAfterGeneral - updatedAditionalDiscount;
+      const updatedValorIVA = updatedTotalFinal * (Number(prev.iva) / 100);
+      const updatedTotalConIva = updatedTotalFinal + updatedValorIVA;
+
+      return {
+        ...prev,
+        items: updatedItems,
+        rawSubtotal: updatedSubtotal,
+        totalPromotionalDiscount: updatedTotalPromotionalDiscount,
+        subtotalAfterPromo: updatedSubtotalAfterPromo,
+        generalDiscount: updatedGeneralDiscount,
+        subtotalAfterGeneral: updatedSubtotalAfterGeneral,
+        aditionalDiscount: updatedAditionalDiscount,
+        totalFinal: updatedTotalFinal,
+        valorIVA: updatedValorIVA,
+        totalConIva: updatedTotalConIva,
+      };
+    });
+  };
+
+  const handleRemoveProduct = (productId) => {
+    setOrderDetails((prev) => {
+      const updatedItems = prev.items.filter((item) => item.id !== productId);
+      if (updatedItems.length === 0) {
+        return { ...prev, items: [], status: "CANCELADO" };
+      }
+
+      const updatedSubtotal = updatedItems.reduce(
+        (acc, item) => acc + item.price * item.quantity,
+        0
+      );
+      const updatedTotalPromotionalDiscount = updatedItems.reduce(
+        (acc, item) =>
+          acc +
+          item.price *
+            item.quantity *
+            ((Number(item.promotionalDiscount) || 0) / 100),
+        0
+      );
+      const updatedSubtotalAfterPromo =
+        updatedSubtotal - updatedTotalPromotionalDiscount;
+      const updatedGeneralDiscount =
+        updatedSubtotalAfterPromo * (Number(prev.discount) / 100);
+      const updatedSubtotalAfterGeneral =
+        updatedSubtotalAfterPromo - updatedGeneralDiscount;
+      const updatedAditionalDiscount =
+        updatedSubtotalAfterGeneral * (Number(prev.aditionalDiscount) / 100);
+      const updatedTotalFinal =
+        updatedSubtotalAfterGeneral - updatedAditionalDiscount;
+      const updatedValorIVA = updatedTotalFinal * (Number(prev.iva) / 100);
+      const updatedTotalConIva = updatedTotalFinal + updatedValorIVA;
+
+      return {
+        ...prev,
+        items: updatedItems,
+        rawSubtotal: updatedSubtotal,
+        totalPromotionalDiscount: updatedTotalPromotionalDiscount,
+        subtotalAfterPromo: updatedSubtotalAfterPromo,
+        generalDiscount: updatedGeneralDiscount,
+        subtotalAfterGeneral: updatedSubtotalAfterGeneral,
+        aditionalDiscount: updatedAditionalDiscount,
+        totalFinal: updatedTotalFinal,
+        valorIVA: updatedValorIVA,
+        totalConIva: updatedTotalConIva,
+      };
+    });
   };
 
   if (loading) {
@@ -489,7 +637,10 @@ const DetallePedidoCoordinador = () => {
         />
         <EmptyState>
           <h2>Pedido no encontrado</h2>
-          <p>{error || "No pudimos encontrar la información del pedido solicitado."}</p>
+          <p>
+            {error ||
+              "No pudimos encontrar la información del pedido solicitado."}
+          </p>
           <Button
             text="Volver a gestión de pedidos"
             variant="solid"
@@ -528,15 +679,18 @@ const DetallePedidoCoordinador = () => {
       {/* Alerta de dirección nueva */}
       {orderDetails.hasNewAddress && !addressConfirmed && (
         <AddressAlert $confirmed={addressConfirmed}>
-          <RenderIcon 
-            name="FaExclamationTriangle" 
-            size={20} 
-            style={{ color: theme.colors.warning }} 
+          <RenderIcon
+            name="FaExclamationTriangle"
+            size={20}
+            style={{ color: theme.colors.warning }}
           />
           <AddressAlertContent>
-            <AddressAlertTitle>Dirección nueva requiere revisión</AddressAlertTitle>
+            <AddressAlertTitle>
+              Dirección nueva requiere revisión
+            </AddressAlertTitle>
             <AddressAlertText>
-              Este pedido tiene una dirección nueva que necesita ser verificada antes de procesar.
+              Este pedido tiene una dirección nueva que necesita ser verificada
+              antes de procesar.
             </AddressAlertText>
           </AddressAlertContent>
           <Button
@@ -549,124 +703,238 @@ const DetallePedidoCoordinador = () => {
         </AddressAlert>
       )}
 
-      {/* Sección de gestión del estado */}
+      {/* Gestión del pedido dividido en tres cuadros */}
       <Section>
         <SectionTitle>
           <RenderIcon name="FaCog" size={18} /> Gestión del pedido
         </SectionTitle>
 
-        <EditableSection>
-          <EditableSectionTitle>
-            <RenderIcon name="FaEdit" size={16} />
-            Cambiar estado del pedido
-          </EditableSectionTitle>
-          
-          {editingStatus ? (
-            <FormRow>
-              <Select
-                options={statusOptions}
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                width="200px"
-                label="Nuevo estado"
-              />
-              <Button
-                text="Guardar"
-                variant="solid"
-                size="small"
-                backgroundColor={theme.colors.success}
-                leftIconName="FaSave"
-                onClick={handleSaveStatus}
-              />
-              <Button
-                text="Cancelar"
-                variant="outlined"
-                size="small"
-                leftIconName="FaTimes"
-                onClick={() => {
-                  setEditingStatus(false);
-                  setNewStatus(orderDetails.status);
-                }}
-              />
-            </FormRow>
-          ) : (
-            <FormRow>
-              <div>
-                <Label>Estado actual:</Label>
-                <Value>{translateStatus(orderDetails.status)}</Value>
-              </div>
-              <Button
-                text="Editar estado"
-                variant="outlined"
-                size="small"
-                leftIconName="FaEdit"
-                onClick={() => setEditingStatus(true)}
-              />
-            </FormRow>
-          )}
-        </EditableSection>
+        <TwoColumns>
+          <EditableSection>
+            <EditableSectionTitle>
+              <RenderIcon name="FaEdit" size={16} /> Cambiar estado del pedido
+            </EditableSectionTitle>
 
-        <EditableSection>
-          <EditableSectionTitle>
-            <RenderIcon name="FaPercentage" size={16} />
-            Aplicar descuento
-          </EditableSectionTitle>
-          
-          {editingDiscount ? (
-            <FormRow>
-              <Input
-                type="number"
-                min="0"
-                max={orderDetails.subtotal}
-                step="0.01"
-                value={newDiscount}
-                onChange={(e) => setNewDiscount(parseFloat(e.target.value) || 0)}
-                label="Descuento ($)"
-                width="150px"
-              />
-              <div>
-                <Label>Nuevo total:</Label>
-                <Value>${calculateNewTotal().toFixed(2)}</Value>
-              </div>
-              <Button
-                text="Aplicar"
-                variant="solid"
-                size="small"
-                backgroundColor={theme.colors.success}
-                leftIconName="FaSave"
-                onClick={handleSaveDiscount}
-              />
-              <Button
-                text="Cancelar"
-                variant="outlined"
-                size="small"
-                leftIconName="FaTimes"
-                onClick={() => {
-                  setEditingDiscount(false);
-                  setNewDiscount(orderDetails.discount);
-                }}
-              />
-            </FormRow>
-          ) : (
-            <FormRow>
-              <div>
-                <Label>Descuento actual:</Label>
-                <Value>${orderDetails.discount.toFixed(2)}</Value>
-              </div>
-              <div>
-                <Label>Total:</Label>
-                <Value>${orderDetails.total.toFixed(2)}</Value>
-              </div>
-              <Button
-                text="Editar descuento"
-                variant="outlined"
-                size="small"
-                leftIconName="FaEdit"
-                onClick={() => setEditingDiscount(true)}
-              />
-            </FormRow>
-          )}
-        </EditableSection>
+            {editingStatus ? (
+              <FormRow>
+                <Select
+                  options={statusOptions}
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  width="200px"
+                  label="Nuevo estado"
+                />
+                <Button
+                  text="Guardar"
+                  variant="solid"
+                  size="small"
+                  backgroundColor={theme.colors.success}
+                  leftIconName="FaSave"
+                  onClick={handleSaveStatus}
+                />
+                <Button
+                  text="Cancelar"
+                  variant="outlined"
+                  size="small"
+                  leftIconName="FaTimes"
+                  onClick={() => {
+                    setEditingStatus(false);
+                    setNewStatus(orderDetails.status);
+                  }}
+                />
+              </FormRow>
+            ) : (
+              <FormRow>
+                <div>
+                  <Label>Estado actual:</Label>
+                  <Value>{translateStatus(orderDetails.status)}</Value>
+                </div>
+                <Button
+                  text="Editar estado"
+                  variant="outlined"
+                  size="small"
+                  leftIconName="FaEdit"
+                  onClick={() => setEditingStatus(true)}
+                />
+              </FormRow>
+            )}
+          </EditableSection>
+
+          <EditableSection>
+            <EditableSectionTitle>
+              <RenderIcon name="FaPercentage" size={16} /> Aplicar descuento
+            </EditableSectionTitle>
+
+            {editingDiscount ? (
+              <FormRow>
+                <Input
+                  type="number"
+                  min="0"
+                  max={orderDetails.subtotal}
+                  step="0.01"
+                  value={newDiscount}
+                  onChange={(e) =>
+                    setNewDiscount(parseFloat(e.target.value) || 0)
+                  }
+                  label="Descuento ($)"
+                  width="150px"
+                />
+                <div>
+                  <Label>Nuevo total:</Label>
+                  <Value>${calculateNewTotal().toFixed(2)}</Value>
+                </div>
+                <Button
+                  text="Aplicar"
+                  variant="solid"
+                  size="small"
+                  backgroundColor={theme.colors.success}
+                  leftIconName="FaSave"
+                  onClick={handleSaveDiscount}
+                />
+                <Button
+                  text="Cancelar"
+                  variant="outlined"
+                  size="small"
+                  leftIconName="FaTimes"
+                  onClick={() => {
+                    setEditingDiscount(false);
+                    setNewDiscount(orderDetails.discount);
+                  }}
+                />
+              </FormRow>
+            ) : (
+              <FormRow>
+                <div>
+                  <Label>Descuento actual:</Label>
+                  <Value>${orderDetails.discount.toFixed(2)}</Value>
+                </div>
+                <div>
+                  <Label>Total:</Label>
+                  <Value>${orderDetails.total.toFixed(2)}</Value>
+                </div>
+                <Button
+                  text="Editar descuento"
+                  variant="outlined"
+                  size="small"
+                  leftIconName="FaEdit"
+                  onClick={() => setEditingDiscount(true)}
+                />
+              </FormRow>
+            )}
+          </EditableSection>
+
+          <EditableSection>
+            <EditableSectionTitle>
+              <RenderIcon name="FaBox" size={16} /> Gestión de productos
+            </EditableSectionTitle>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {orderDetails.items.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 16,
+                    background: theme.colors.surface,
+                    borderRadius: 8,
+                    boxShadow: `0 1px 4px ${theme.colors.shadow}`,
+                    padding: 16,
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                >
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    style={{
+                      width: 60,
+                      height: 60,
+                      objectFit: "cover",
+                      borderRadius: 6,
+                      background: "#f6f6f6",
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span
+                          style={{
+                            fontWeight: 500,
+                            marginBottom: 4,
+                            color: theme.colors.text,
+                            fontSize: "1.08rem",
+                          }}
+                        >
+                          {item.name}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.8rem",
+                            color: theme.colors.textLight,
+                          }}
+                        >
+                          SKU: {item.sku}
+                        </span>
+                      </div>
+                      <div style={{ textAlign: "right", minWidth: 110 }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            color: theme.colors.primary,
+                            fontSize: "1.08rem",
+                          }}
+                        >
+                          ${item.price.toFixed(2)}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.85rem",
+                            color: theme.colors.textLight,
+                          }}
+                        >
+                          Precio
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginTop: 8,
+                        gap: 12,
+                      }}
+                    >
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleUpdateQuantity(item.id, parseInt(e.target.value, 10))
+                        }
+                        label="Cantidad"
+                        width="100px"
+                      />
+                      <Button
+                        text="Eliminar"
+                        variant="outlined"
+                        size="small"
+                        leftIconName="FaTrash"
+                        onClick={() => handleRemoveProduct(item.id)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </EditableSection>
+        </TwoColumns>
       </Section>
 
       {/* Información del pedido */}
@@ -691,7 +959,6 @@ const DetallePedidoCoordinador = () => {
             </Value>
           </InfoItem>
         </Section>
-        
         <Section>
           <SectionTitle>
             <RenderIcon name="FaUser" size={18} /> Datos del cliente
@@ -706,8 +973,22 @@ const DetallePedidoCoordinador = () => {
             <Value>{orderDetails.customer.email}</Value>
           </InfoItem>
           <InfoItem>
-            <Label>Teléfono:</Label>
-            <Value>{orderDetails.customer.phone}</Value>
+            <Label>Contacto Principal:</Label>
+            <Value>
+              {(() => {
+                const empresa =
+                  orderDetails.empresaInfo?.name ||
+                  orderDetails.empresaInfo?.id;
+                const telefonosEmpresa = user.TELEFONOS?.[empresa] || [];
+                if (telefonosEmpresa.length === 0) return "No disponible";
+                const principal =
+                  telefonosEmpresa.find((t) => t.PREDETERMINED) ||
+                  telefonosEmpresa[0];
+                return principal
+                  ? `${principal.PHONE_NUMBER}`
+                  : "No disponible";
+              })()}
+            </Value>
           </InfoItem>
         </Section>
       </TwoColumns>
@@ -732,12 +1013,13 @@ const DetallePedidoCoordinador = () => {
             <Value>{orderDetails.shipping.state}</Value>
           </InfoItem>
         </Section>
-        
+
         <Section>
           <SectionTitle>
-            <RenderIcon name="FaFileInvoiceDollar" size={18} /> Información de facturación
+            <RenderIcon name="FaFileInvoiceDollar" size={18} /> Información de
+            facturación
           </SectionTitle>
-          
+
           <InfoItem>
             <Label>Dirección:</Label>
             <Value>{orderDetails.billing.address}</Value>
@@ -759,52 +1041,251 @@ const DetallePedidoCoordinador = () => {
           <RenderIcon name="FaBoxOpen" size={18} /> Productos
         </SectionTitle>
 
-        <ProductsTable>
-          <ProductsHead>
-            <tr>
-              <ProductsHeadCell>Producto</ProductsHeadCell>
-              <ProductsHeadCell>Precio unitario</ProductsHeadCell>
-              <ProductsHeadCell>Cantidad</ProductsHeadCell>
-              <ProductsHeadCell>Total</ProductsHeadCell>
-            </tr>
-          </ProductsHead>
+        {/* Mostrar descuentos si existen */}
+        {(orderDetails.aditionalDiscount > 0 || orderDetails.discount > 0) && (
+          <div style={{ marginBottom: 16 }}>
+            {orderDetails.discount > 0 && (
+              <div
+                style={{
+                  background: theme.colors.info + "22",
+                  border: `1px solid ${theme.colors.info}`,
+                  color: theme.colors.info,
+                  borderRadius: 6,
+                  padding: "8px 12px",
+                  marginBottom: 6,
+                  fontWeight: 500,
+                  fontSize: "0.95rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <RenderIcon name="FaTag" size={16} style={{ marginRight: 6 }} />
+                Descuento general de cliente aplicado: {orderDetails.discount}%
+              </div>
+            )}
+            {orderDetails.aditionalDiscount > 0 && (
+              <div
+                style={{
+                  background: theme.colors.success + "22",
+                  border: `1px solid ${theme.colors.success}`,
+                  color: theme.colors.success,
+                  borderRadius: 6,
+                  padding: "8px 12px",
+                  fontWeight: 500,
+                  fontSize: "0.95rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <RenderIcon name="FaTag" size={16} style={{ marginRight: 6 }} />
+                Descuento especial aplicado por coordinadora:{" "}
+                {orderDetails.aditionalDiscount}%
+              </div>
+            )}
+          </div>
+        )}
 
-          <ProductsBody>
-            {orderDetails.items.map((item) => (
-              <ProductRow key={item.id}>
-                <ProductCell>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <ProductImage src={item.image} alt={item.name} />
-                    <ProductInfo>
-                      <ProductName>{item.name}</ProductName>
-                      <ProductSKU>SKU: {item.sku}</ProductSKU>
-                    </ProductInfo>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            marginBottom: 24,
+          }}
+        >
+          {orderDetails.items.map((item) => {
+            const promoPct = Number(item.promotionalDiscount) || 0;
+            const price = item.price;
+            const qty = Number(item.quantity);
+            const promoDiscount = price * qty * (promoPct / 100);
+            const subtotal = price * qty;
+            const total = subtotal - promoDiscount;
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "flex-start",
+                  gap: 16,
+                  background: theme.colors.surface,
+                  borderRadius: 8,
+                  boxShadow: `0 1px 4px ${theme.colors.shadow}`,
+                  padding: 16,
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  style={{
+                    width: 60,
+                    height: 60,
+                    objectFit: "cover",
+                    borderRadius: 6,
+                    background: "#f6f6f6",
+                  }}
+                />
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 4,
+                    justifyContent: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <span
+                        style={{
+                          fontWeight: 500,
+                          marginBottom: 4,
+                          color: theme.colors.text,
+                          fontSize: "1.08rem",
+                        }}
+                      >
+                        {item.name}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.8rem",
+                          color: theme.colors.textLight,
+                        }}
+                      >
+                        SKU: {item.sku}
+                      </span>
+                    </div>
+                    <div style={{ textAlign: "right", minWidth: 110 }}>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          color: theme.colors.primary,
+                          fontSize: "1.08rem",
+                        }}
+                      >
+                        ${total.toFixed(2)}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.85rem",
+                          color: theme.colors.textLight,
+                        }}
+                      >
+                        Total
+                      </div>
+                    </div>
                   </div>
-                </ProductCell>
-                <ProductCell>${item.price.toFixed(2)}</ProductCell>
-                <ProductCell>{item.quantity}</ProductCell>
-                <ProductCell>${item.total.toFixed(2)}</ProductCell>
-              </ProductRow>
-            ))}
-          </ProductsBody>
-        </ProductsTable>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginTop: 8,
+                      gap: 12,
+                    }}
+                  >
+                    <div
+                      style={{ color: theme.colors.text, fontSize: "0.98rem" }}
+                    >
+                      x{qty} · ${price.toFixed(2)} c/u ={" "}
+                      <b>${subtotal.toFixed(2)}</b>
+                    </div>
+                    {promoPct > 0 && (
+                      <div
+                        style={{
+                          color: theme.colors.success,
+                          fontWeight: 500,
+                          fontSize: "0.98rem",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        -{promoPct}% (${promoDiscount.toFixed(2)})
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
         <OrderSummary>
           <SummaryRow>
             <SummaryLabel>Subtotal:</SummaryLabel>
-            <SummaryValue>${orderDetails.subtotal.toFixed(2)}</SummaryValue>
+            <SummaryValue>${orderDetails.rawSubtotal.toFixed(2)}</SummaryValue>
           </SummaryRow>
-
+          {orderDetails.totalPromotionalDiscount > 0 && (
+            <>
+              <SummaryRow>
+                <SummaryLabel>Descuentos promocionales:</SummaryLabel>
+                <SummaryValue>
+                  -${orderDetails.totalPromotionalDiscount.toFixed(2)}
+                </SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel></SummaryLabel>
+                <SummaryValue>
+                  ${orderDetails.subtotalAfterPromo.toFixed(2)}
+                </SummaryValue>
+              </SummaryRow>
+            </>
+          )}
           {orderDetails.discount > 0 && (
+            <>
+              <SummaryRow>
+                <SummaryLabel>Descuento general:</SummaryLabel>
+                <SummaryValue>
+                  -${orderDetails.generalDiscount.toFixed(2)}
+                </SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel></SummaryLabel>
+                <SummaryValue>
+                  ${orderDetails.subtotalAfterGeneral.toFixed(2)}
+                </SummaryValue>
+              </SummaryRow>
+            </>
+          )}
+          {orderDetails.aditionalDiscount > 0 && (
+            <>
+              <SummaryRow>
+                <SummaryLabel>Descuento especial:</SummaryLabel>
+                <SummaryValue>
+                  -${orderDetails.aditionalDiscount.toFixed(2)}
+                </SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel>Subtotal tras descuento especial:</SummaryLabel>
+                <SummaryValue>
+                  $
+                  {(orderDetails.totalFinal < 0
+                    ? 0
+                    : orderDetails.totalFinal
+                  ).toFixed(2)}
+                </SummaryValue>
+              </SummaryRow>
+            </>
+          )}
+          {/* Fila de IVA */}
+          {orderDetails.iva > 0 && (
             <SummaryRow>
-              <SummaryLabel>Descuento:</SummaryLabel>
-              <SummaryValue>-${orderDetails.discount.toFixed(2)}</SummaryValue>
+              <SummaryLabel>IVA ({orderDetails.iva}%):</SummaryLabel>
+              <SummaryValue>+${orderDetails.valorIVA.toFixed(2)}</SummaryValue>
             </SummaryRow>
           )}
-
           <SummaryRow>
             <SummaryLabel>Total:</SummaryLabel>
-            <SummaryValue>${orderDetails.total.toFixed(2)}</SummaryValue>
+            <SummaryValue>${orderDetails.totalConIva.toFixed(2)}</SummaryValue>
           </SummaryRow>
         </OrderSummary>
       </Section>
