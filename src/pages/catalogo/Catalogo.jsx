@@ -324,6 +324,7 @@ const Catalogo = () => {
   ]);
   const [hasAccess, setHasAccess] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true); // Nueva bandera
+  const [initMessage, setInitMessage] = useState("Validando permisos..."); // Mensaje de inicialización
 
   /**
    * Revisar esto para ver si es necesario ------------------------------------------------------------------------
@@ -663,7 +664,6 @@ const Catalogo = () => {
 
       if (respProductos.success) {
         const productos = respProductos.data || [];
-        console.log(productos);
 
         // Mapear los productos con seguimiento de errores
         const mappedProducts = [];
@@ -739,25 +739,50 @@ const Catalogo = () => {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    setIsInitializing(true); // Inicia inicialización
+    setIsInitializing(true);
+    setInitMessage("Validando permisos...");
     setIsLoading(true);
 
-    // Determinar si el usuario tiene acceso
     const userHasAccess = user?.EMPRESAS?.includes(empresaName) || false;
     setHasAccess(userHasAccess);
 
     if (userHasAccess) {
+      setInitMessage("Cargando productos...");
       if (isCacheValid(empresaName)) {
         const cachedProducts = getCachedProducts(empresaName);
         setAllProducts(cachedProducts);
         setIsLoading(false);
-        setIsInitializing(false); // Finaliza inicialización
+        setInitMessage(
+          empresaInfo
+            ? `Cargando información de ${empresaInfo.nombre}...`
+            : empresaName
+            ? `Cargando información de ${empresaName}...`
+            : "Cargando información..."
+        );
+        setIsInitializing(false);
       } else {
-        fetchProductsFromAPI().finally(() => setIsInitializing(false));
+        setInitMessage("Cargando productos desde el servidor...");
+        fetchProductsFromAPI().finally(() => {
+          setInitMessage(
+            empresaInfo
+              ? `Cargando información de ${empresaInfo.nombre}...`
+              : empresaName
+              ? `Cargando información de ${empresaName}...`
+              : "Cargando información..."
+          );
+          setIsInitializing(false);
+        });
       }
     } else {
       setIsLoading(false);
-      setIsInitializing(false); // Finaliza inicialización
+      setInitMessage(
+        empresaInfo
+          ? `Cargando información de ${empresaInfo.nombre}...`
+          : empresaName
+          ? `Cargando información de ${empresaName}...`
+          : "Cargando información..."
+      );
+      setIsInitializing(false);
     }
   }, [empresaName, user]);
 
@@ -1097,13 +1122,7 @@ const Catalogo = () => {
         <NoAccessContainer>
           <RenderLoader
             size="large"
-            text={
-              empresaInfo
-                ? `Cargando información de ${empresaInfo.nombre}...`
-                : empresaName
-                ? `Cargando información de ${empresaName}...`
-                : "Cargando información..."
-            }
+            text={initMessage}
             showText={true}
             showDots={true}
             showSpinner={false}
