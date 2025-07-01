@@ -110,7 +110,7 @@ export function AuthProvider({ children }) {
         }
 
         // Guardar datos de usuario en localStorage
-        // localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("user", JSON.stringify(userData));
         localStorage.setItem("auth", "true");
 
         // Actualizar el estado

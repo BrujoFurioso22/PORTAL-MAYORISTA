@@ -565,7 +565,7 @@ const FilterSidebar = React.memo(
               {availableBusinessLines.map((line) => (
                 <BusinessLineButton
                   key={line}
-                  active={lineaNegocio === line}
+                  $active={lineaNegocio === line}
                   onClick={() =>
                     onBusinessLineChange && onBusinessLineChange(line)
                   }

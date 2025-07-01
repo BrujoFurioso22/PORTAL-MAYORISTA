@@ -186,6 +186,8 @@ const PageButton = styled(Button)`
   }
 `;
 
+
+
 const mapApiProductToAppFormat = (item) => {
   try {
     // Verificar que item no sea null o undefined
@@ -274,7 +276,15 @@ const mapApiProductToAppFormat = (item) => {
       ? parseInt(item.DMA_STOCK)
       : 0;
 
-      // Crear objeto de producto adaptado al formato esperado usando la plantilla correspondiente
+    if (item.DMA_DESCUENTO_PROMOCIONAL) {
+      console.log(
+        "[MAPEO] Producto con descuento promocional:",
+        item.DMA_DESCUENTO_PROMOCIONAL,
+        name
+      );
+    }
+
+    // Crear objeto de producto adaptado al formato esperado usando la plantilla correspondiente
     return {
       id: item.DMA_CODIGO,
       name: name,
@@ -305,7 +315,6 @@ const mapApiProductToAppFormat = (item) => {
 
 const Catalogo = () => {
   // Hooks existentes
-  const navigate = useNavigate();
   const { empresaName } = useParams();
   const { user, navigateToHomeByRole } = useAuth();
   const [allProducts, setAllProducts] = useState(null);
@@ -314,6 +323,7 @@ const Catalogo = () => {
     "DEFAULT",
   ]);
   const [hasAccess, setHasAccess] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true); // Nueva bandera
 
   /**
    * Revisar esto para ver si es necesario ------------------------------------------------------------------------
@@ -333,7 +343,7 @@ const Catalogo = () => {
 
   /**
    * fin de bloque ------------------------------------------------------------------------
-   */  const searchParamsValues = useMemo(
+   */ const searchParamsValues = useMemo(
     () => ({
       page: parseInt(searchParams.get("page") || "1"),
       limit: parseInt(searchParams.get("limit") || "12"),
@@ -373,7 +383,9 @@ const Catalogo = () => {
     const lineToMatch =
       params.line !== "DEFAULT" ? params.line.toLowerCase() : null;
     const hasCategories = params.categories.length > 0;
-    const hasBrands = params.brands.length > 0;    const hasPrice = params.price && (params.price.min > 0 || params.price.max < Infinity);
+    const hasBrands = params.brands.length > 0;
+    const hasPrice =
+      params.price && (params.price.min > 0 || params.price.max < Infinity);
 
     // Aplicar todos los filtros en una sola pasada
     let result = allProducts.filter((product) => {
@@ -405,20 +417,25 @@ const Catalogo = () => {
           product.lineaNegocio.toLowerCase() !== lineToMatch)
       ) {
         return false;
-      }      // 3. Filtro de categorías usando filtersByType con lógica AND
+      } // 3. Filtro de categorías usando filtersByType con lógica AND
       if (hasCategories) {
         // Verificar que el producto tiene TODAS las categorías seleccionadas
-        const hasAllCategories = params.categories.every(selectedCategory => {
-          if (!product.filtersByType || typeof product.filtersByType !== 'object') {
+        const hasAllCategories = params.categories.every((selectedCategory) => {
+          if (
+            !product.filtersByType ||
+            typeof product.filtersByType !== "object"
+          ) {
             return false;
           }
-          
+
           // Buscar la categoría en cualquier tipo de filtro del producto
-          return Object.values(product.filtersByType).some(filterArray => 
-            Array.isArray(filterArray) && filterArray.includes(selectedCategory)
+          return Object.values(product.filtersByType).some(
+            (filterArray) =>
+              Array.isArray(filterArray) &&
+              filterArray.includes(selectedCategory)
           );
         });
-        
+
         if (!hasAllCategories) {
           return false;
         }
@@ -519,7 +536,8 @@ const Catalogo = () => {
           case "line":
             if (value !== "DEFAULT") params.set("line", value);
             else params.delete("line");
-            break;          case "price":
+            break;
+          case "price":
             if (value && (value.min > 0 || value.max < Infinity)) {
               params.set("price", `${value.min}-${value.max}`);
             } else {
@@ -573,22 +591,25 @@ const Catalogo = () => {
   };
   const handleFilters = (filters) => {
     // Calcular el rango de precios real de los productos actuales
-    const currentPriceRange = allProducts && allProducts.length > 0 
-      ? (() => {
-          const prices = allProducts.map(p => p.price).filter(p => p > 0);
-          return prices.length > 0 
-            ? { min: Math.min(...prices), max: Math.max(...prices) }
-            : { min: 0, max: 100000 };
-        })()
-      : { min: 0, max: 100000 };
+    const currentPriceRange =
+      allProducts && allProducts.length > 0
+        ? (() => {
+            const prices = allProducts.map((p) => p.price).filter((p) => p > 0);
+            return prices.length > 0
+              ? { min: Math.min(...prices), max: Math.max(...prices) }
+              : { min: 0, max: 100000 };
+          })()
+        : { min: 0, max: 100000 };
 
     updateUrlParams({
       categories: filters.categories || [],
       brands: filters.brands || [],
-      price: (filters.price && 
-             (filters.price.min > currentPriceRange.min || filters.price.max < currentPriceRange.max))
-        ? filters.price 
-        : null, // No incluir precio si es el rango completo
+      price:
+        filters.price &&
+        (filters.price.min > currentPriceRange.min ||
+          filters.price.max < currentPriceRange.max)
+          ? filters.price
+          : null, // No incluir precio si es el rango completo
       line: filters.businessLine || "DEFAULT",
       page: 1,
     });
@@ -643,7 +664,6 @@ const Catalogo = () => {
       if (respProductos.success) {
         const productos = respProductos.data || [];
         console.log(productos);
-        
 
         // Mapear los productos con seguimiento de errores
         const mappedProducts = [];
@@ -696,7 +716,7 @@ const Catalogo = () => {
 
         // Guardar productos en caché
         cacheProducts(empresaName, mappedProducts); // Guardar todos los productos originales
-        
+
         setAllProducts(mappedProducts);
       } else {
         console.error("Error al cargar productos:", respProductos.message);
@@ -719,6 +739,7 @@ const Catalogo = () => {
       clearTimeout(searchTimeoutRef.current);
     }
 
+    setIsInitializing(true); // Inicia inicialización
     setIsLoading(true);
 
     // Determinar si el usuario tiene acceso
@@ -726,18 +747,17 @@ const Catalogo = () => {
     setHasAccess(userHasAccess);
 
     if (userHasAccess) {
-      // Verificar si hay datos en caché y si son válidos
       if (isCacheValid(empresaName)) {
-        // console.log("Usando productos en caché para:", empresaName);
-        const cachedProducts = getCachedProducts(empresaName); // IMPORTANTE: Primero actualizar allProducts para que esté disponible
+        const cachedProducts = getCachedProducts(empresaName);
         setAllProducts(cachedProducts);
-
-        setIsLoading(false); // Finalizar carga cuando usamos caché
+        setIsLoading(false);
+        setIsInitializing(false); // Finaliza inicialización
       } else {
-        fetchProductsFromAPI();
+        fetchProductsFromAPI().finally(() => setIsInitializing(false));
       }
     } else {
       setIsLoading(false);
+      setIsInitializing(false); // Finaliza inicialización
     }
   }, [empresaName, user]);
 
@@ -763,7 +783,8 @@ const Catalogo = () => {
   const currentSearch = searchParams.get("search") || "";
   const currentCategories = searchParams.get("cat")?.split(",") || [];
   const currentBrands = searchParams.get("brands")?.split(",") || [];
-  const currentLine = searchParams.get("line") || "DEFAULT";  const currentPriceRange = searchParams.get("price")
+  const currentLine = searchParams.get("line") || "DEFAULT";
+  const currentPriceRange = searchParams.get("price")
     ? (() => {
         const [min, max] = searchParams.get("price").split("-").map(Number);
         return { min, max };
@@ -808,270 +829,294 @@ const Catalogo = () => {
     [searchParams, setSearchParams]
   );
 
-  // Si la empresa no existe, mostrar mensaje
-  if (!empresaInfo) {
+  // --- Renderizado modularizado ---
+
+  // Renderiza el catálogo de productos
+  const renderCatalog = () => {
+    // Corregir la visualización del número de productos
+    const validProductCount = allProducts
+      ? allProducts.filter((product) => product && product.id).length
+      : 0;
+
     return (
-      <NoAccessContainer>
-        <h2>Empresa no encontrada</h2>
-        <p>La empresa que estás buscando no existe en nuestro sistema.</p>
-        <Button onClick={handleNavigate} text={"Volver al inicio"} />
-      </NoAccessContainer>
-    );
-  }
+      <PageContainer>
+        <BreadCrumb>
+          <BreadCrumbLink onClick={handleNavigate}>Inicio</BreadCrumbLink>
+          {">"}
+          <span>{empresaInfo.nombre}</span>
+        </BreadCrumb>
 
-  // Si no tiene acceso, mostrar formulario de solicitud
-  if (!hasAccess) {
-    return (
-      <NoAccessContainer>
-        <h2>Solicitar acceso a {empresaInfo.nombre}</h2>
-        <p>
-          Actualmente no tienes acceso a los productos de esta empresa. Por
-          favor, completa el formulario para solicitar acceso.
-        </p>
+        <PageHeader>
+          <PageTitle>Catálogo de {empresaInfo.nombre}</PageTitle>
+          {processedProducts && (
+            <ProductsCount>
+              {validProductCount} productos encontrados
+            </ProductsCount>
+          )}
+        </PageHeader>
 
-        <FormContainer>
-          <form onSubmit={handleSubmitRequest}>
-            <FormGroup>
-              <Label htmlFor="nombre">Nombre</Label>
-              <Input
-                type="text"
-                id="nombre"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleInputChange}
-                required
+        <ContentLayout>
+          <FilterSidebar
+            allProducts={allProducts}
+            lineaNegocio={currentLine}
+            availableBusinessLines={availableBusinessLines}
+            onBusinessLineChange={handleBusinessLineChange}
+            selectedCategories={currentCategories}
+            selectedBrands={currentBrands}
+            selectedPriceRange={currentPriceRange}
+            onApplyFilters={handleFilters}
+            countFilteredProducts={processedProducts.totalItems}
+          />
+          <div style={{ flex: 1 }}>
+            <SortContainer>
+              <SearchBar
+                value={currentSearch}
+                onChange={handleSearch}
+                placeholder="Buscar productos por nombre, descripción o código..."
+                debounceTime={300}
+                width="100%"
               />
-            </FormGroup>
-
-            <FormGroup>
-              <Label htmlFor="email">Correo electrónico</Label>
-              <Input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-              />
-            </FormGroup>
-
-            <FormGroup>
-              <Label htmlFor="mensaje">Mensaje</Label>
-              <TextArea
-                id="mensaje"
-                name="mensaje"
-                value={formData.mensaje}
-                onChange={handleInputChange}
-                placeholder="Por favor, indique por qué necesita acceso a los productos de esta empresa"
-                required
-              />
-            </FormGroup>
-
-            <ButtonGroup>
-              <Button
-                type="button"
-                variant="outlined"
-                onClick={handleNavigate}
-                text={"Regresar"}
-              />
-              <Button type="submit" text={"Enviar Solicitud"} />
-            </ButtonGroup>
-          </form>
-        </FormContainer>
-      </NoAccessContainer>
-    );
-  }
-
-  // Corregir la visualización del número de productos
-  // En vez de mostrar allProducts.length, mostremos el número real de productos válidos
-  const validProductCount = allProducts
-    ? allProducts.filter((product) => product && product.id).length
-    : 0;
-
-  return (
-    <PageContainer>
-      <BreadCrumb>
-        <BreadCrumbLink onClick={handleNavigate}>Inicio</BreadCrumbLink>
-        {">"}
-        <span>{empresaInfo.nombre}</span>
-      </BreadCrumb>
-
-      <PageHeader>
-        <PageTitle>Catálogo de {empresaInfo.nombre}</PageTitle>
-        {processedProducts && (
-          <ProductsCount>
-            {validProductCount} productos encontrados
-          </ProductsCount>
-        )}
-      </PageHeader>
-
-      <ContentLayout>
-        {" "}
-        <FilterSidebar
-          allProducts={allProducts}
-          lineaNegocio={currentLine}
-          availableBusinessLines={availableBusinessLines}
-          onBusinessLineChange={handleBusinessLineChange}
-          selectedCategories={currentCategories}
-          selectedBrands={currentBrands}
-          selectedPriceRange={currentPriceRange}
-          onApplyFilters={handleFilters}
-          countFilteredProducts={processedProducts.totalItems}
-        />
-        <div style={{ flex: 1 }}>
-          <SortContainer>
-            <SearchBar
-              value={currentSearch}
-              onChange={handleSearch}
-              placeholder="Buscar productos por nombre, descripción o código..."
-              debounceTime={300}
-              width="100%"
-            />
-            {/* Solo mostrar el selector de ordenación si hay productos */}
-            {processedProducts && processedProducts.items.length > 0 && (
-              <>
-                <Select
-                  options={[
-                    { value: "default", label: "Destacados" },
-                    { value: "price_asc", label: "Menor precio" },
-                    { value: "price_desc", label: "Mayor precio" },
-                    { value: "name_asc", label: "Alfabético (A-Z)" },
-                    { value: "rating", label: "Mejor valorados" },
-                  ]}
-                  value={currentSort}
-                  onChange={handleSort}
-                  preValue="Ordenar por:"
-                  placeholder="Ordenar por..."
-                />
-
-                <Select
-                  options={[
-                    { value: 12, label: "12" },
-                    { value: 36, label: "36" },
-                    { value: 72, label: "72" },
-                    { value: 144, label: "144" },
-                  ]}
-                  value={currentLimit}
-                  onChange={handleItemsPerPageChange}
-                  preValue="Mostrar: "
-                  postValue=" items por página"
-                  placeholder="Mostrar items"
-                />
-              </>
-            )}
-          </SortContainer>
-
-          <ProductsGrid id="productos-grid">
-            {/* Condición de carga */}
-            {isLoading || !processedProducts ? (
-              <div style={{ gridColumn: "1 / -1" }}>
-                <RenderLoader
-                  size="large"
-                  text="Cargando productos..."
-                  showText={true}
-                  showDots={true}
-                  showSpinner={false}
-                />
-              </div>
-            ) : processedProducts.items.length > 0 ? (
-              processedProducts.items.map((product) => {
-                // Verificar que el producto es válido antes de renderizarlo
-                if (!product || !product.id) {
-                  console.warn(
-                    "[RENDERIZADO] Producto inválido encontrado:",
-                    product
-                  );
-                  return null;
-                }
-
-                return (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    lineConfig={
-                      PRODUCT_LINE_CONFIG[product.lineaNegocio] ||
-                      PRODUCT_LINE_CONFIG.DEFAULT
-                    }
+              {/* Solo mostrar el selector de ordenación si hay productos */}
+              {processedProducts && processedProducts.items.length > 0 && (
+                <>
+                  <Select
+                    options={[
+                      { value: "default", label: "Destacados" },
+                      { value: "price_asc", label: "Menor precio" },
+                      { value: "price_desc", label: "Mayor precio" },
+                      { value: "name_asc", label: "Alfabético (A-Z)" },
+                      { value: "rating", label: "Mejor valorados" },
+                    ]}
+                    value={currentSort}
+                    onChange={handleSort}
+                    preValue="Ordenar por:"
+                    placeholder="Ordenar por..."
                   />
-                );
-              })
-            ) : (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "40px 20px",
-                  gridColumn: "1 / -1",
-                }}
-              >
-                {currentSearch ? (
-                  <>
+
+                  <Select
+                    options={[
+                      { value: 12, label: "12" },
+                      { value: 36, label: "36" },
+                      { value: 72, label: "72" },
+                      { value: 144, label: "144" },
+                    ]}
+                    value={currentLimit}
+                    onChange={handleItemsPerPageChange}
+                    preValue="Mostrar: "
+                    postValue=" items por página"
+                    placeholder="Mostrar items"
+                  />
+                </>
+              )}
+            </SortContainer>
+
+            <ProductsGrid id="productos-grid">
+              {/* Condición de carga */}
+              {isLoading || !processedProducts ? (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <RenderLoader
+                    size="large"
+                    text="Cargando productos..."
+                    showText={true}
+                    showDots={true}
+                    showSpinner={false}
+                  />
+                </div>
+              ) : processedProducts.items.length > 0 ? (
+                processedProducts.items.map((product) => {
+                  // Verificar que el producto es válido antes de renderizarlo
+                  if (!product || !product.id) {
+                    console.warn(
+                      "[RENDERIZADO] Producto inválido encontrado:",
+                      product
+                    );
+                    return null;
+                  }
+
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      lineConfig={
+                        PRODUCT_LINE_CONFIG[product.lineaNegocio] ||
+                        PRODUCT_LINE_CONFIG.DEFAULT
+                      }
+                    />
+                  );
+                })
+              ) : (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px 20px",
+                    gridColumn: "1 / -1",
+                  }}
+                >
+                  {currentSearch ? (
+                    <>
+                      <p>
+                        No se encontraron productos que coincidan con "
+                        <strong>{currentSearch}</strong>".
+                      </p>
+                      <p>Intenta con otros términos o elimina algunos filtros.</p>
+                    </>
+                  ) : (
                     <p>
-                      No se encontraron productos que coincidan con "
-                      <strong>{currentSearch}</strong>".
+                      No se encontraron productos que coincidan con los criterios
+                      seleccionados.
                     </p>
-                    <p>Intenta con otros términos o elimina algunos filtros.</p>
-                  </>
-                ) : (
-                  <p>
-                    No se encontraron productos que coincidan con los criterios
-                    seleccionados.
-                  </p>
-                )}
-              </div>
-            )}
-          </ProductsGrid>
+                  )}
+                </div>
+              )}
+            </ProductsGrid>
 
-          {/* Paginación - solo mostrar si hay productos y no está cargando */}
-          {processedProducts &&
-            processedProducts.totalItems > 0 &&
-            !isLoading && (
-              <Pagination>
-                <PageButton
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  leftIconName={"FaChevronLeft"}
-                  text={"Anterior"}
-                  size="small"
-                />
+            {/* Paginación - solo mostrar si hay productos y no está cargando */}
+            {processedProducts &&
+              processedProducts.totalItems > 0 &&
+              !isLoading && (
+                <Pagination>
+                  <PageButton
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    leftIconName={"FaChevronLeft"}
+                    text={"Anterior"}
+                    size="small"
+                  />
 
-                {/* Mostrar números de página */}
-                {Array.from(
-                  { length: processedProducts.totalPages },
-                  (_, i) => i + 1
-                )
-                  .filter(
-                    (page) =>
-                      page === 1 ||
-                      page === processedProducts.totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
+                  {/* Mostrar números de página */}
+                  {Array.from(
+                    { length: processedProducts.totalPages },
+                    (_, i) => i + 1
                   )
-                  .map((page, index, array) => (
-                    <React.Fragment key={page}>
-                      {index > 0 && array[index - 1] !== page - 1 && (
-                        <PageButton disabled text="..." />
-                      )}
-                      <PageButton
-                        $active={currentPage === page}
-                        onClick={() => handlePageChange(page)}
-                        text={page}
-                        size="small"
-                      />
-                    </React.Fragment>
-                  ))}
+                    .filter(
+                      (page) =>
+                        page === 1 ||
+                        page === processedProducts.totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                    )
+                    .map((page, index, array) => (
+                      <React.Fragment key={page}>
+                        {index > 0 && array[index - 1] !== page - 1 && (
+                          <PageButton disabled text="..." />
+                        )}
+                        <PageButton
+                          $active={currentPage === page}
+                          onClick={() => handlePageChange(page)}
+                          text={page}
+                          size="small"
+                        />
+                      </React.Fragment>
+                    ))}
 
-                <PageButton
-                  size="small"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === processedProducts.totalPages}
-                  rightIconName={"FaChevronRight"}
-                  text={"Siguiente"}
-                />
-              </Pagination>
-            )}
-        </div>
-      </ContentLayout>
-    </PageContainer>
+                  <PageButton
+                    size="small"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === processedProducts.totalPages}
+                    rightIconName={"FaChevronRight"}
+                    text={"Siguiente"}
+                  />
+                </Pagination>
+              )}
+          </div>
+        </ContentLayout>
+      </PageContainer>
+    );
+  };
+
+  // Renderiza el formulario de solicitud de acceso
+  const renderAccessRequestForm = () => (
+    <NoAccessContainer>
+      <h2>Solicitar acceso a {empresaInfo.nombre}</h2>
+      <p>
+        Actualmente no tienes acceso a los productos de esta empresa. Por
+        favor, completa el formulario para solicitar acceso.
+      </p>
+      <FormContainer>
+        <form onSubmit={handleSubmitRequest}>
+          <FormGroup>
+            <Label htmlFor="nombre">Nombre</Label>
+            <Input
+              type="text"
+              id="nombre"
+              name="nombre"
+              value={formData.nombre}
+              onChange={handleInputChange}
+              required
+            />
+          </FormGroup>
+          <FormGroup>
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+            />
+          </FormGroup>
+          <FormGroup>
+            <Label htmlFor="mensaje">Mensaje</Label>
+            <TextArea
+              id="mensaje"
+              name="mensaje"
+              value={formData.mensaje}
+              onChange={handleInputChange}
+              placeholder="Por favor, indique por qué necesita acceso a los productos de esta empresa"
+              required
+            />
+          </FormGroup>
+          <ButtonGroup>
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={handleNavigate}
+              text={"Regresar"}
+            />
+            <Button type="submit" text={"Enviar Solicitud"} />
+          </ButtonGroup>
+        </form>
+      </FormContainer>
+    </NoAccessContainer>
   );
+
+  // Renderiza el mensaje de empresa no encontrada
+  const renderCompanyNotFound = () => (
+    <NoAccessContainer>
+      <h2>Empresa no encontrada</h2>
+      <p>La empresa que estás buscando no existe en nuestro sistema.</p>
+      <Button onClick={handleNavigate} text={"Volver al inicio"} />
+    </NoAccessContainer>
+  );
+
+  // Decide qué renderizar según el estado
+  const renderMainContent = () => {
+    if (isInitializing) {
+      // Loader centralizado mientras se determina todo
+      return (
+        <NoAccessContainer>
+          <RenderLoader
+            size="large"
+            text={
+              empresaInfo
+                ? `Cargando información de ${empresaInfo.nombre}...`
+                : empresaName
+                ? `Cargando información de ${empresaName}...`
+                : "Cargando información..."
+            }
+            showText={true}
+            showDots={true}
+            showSpinner={false}
+          />
+        </NoAccessContainer>
+      );
+    }
+    if (!empresaInfo) return renderCompanyNotFound();
+    if (!hasAccess) return renderAccessRequestForm();
+    return renderCatalog();
+  };
+  
+  return renderMainContent();
 };
 
 export default Catalogo;

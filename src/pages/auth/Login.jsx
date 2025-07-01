@@ -88,8 +88,14 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login, navigateToHomeByRole } = useAuth();
+  const { login, navigateToHomeByRole, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigateToHomeByRole();
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleNavigate = () => {
     navigateToHomeByRole();

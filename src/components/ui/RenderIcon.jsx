@@ -52,6 +52,7 @@ export default function RenderIcon({
         style={{
           color: color || colors?.text, // Color personalizado o del tema
           stroke: color || "currentColor", // Forzar stroke
+          cursor: props.onClick ? "pointer" : undefined,
           ...style, // Estilos adicionales
         }}
         {...props}

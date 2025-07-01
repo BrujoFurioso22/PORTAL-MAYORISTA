@@ -9,6 +9,8 @@ import { order_getOrderById } from "../../services/order/order";
 import RenderIcon from "../../components/ui/RenderIcon";
 import { baseLinkImages } from "../../constants/links";
 import ContactModal from "../../components/ui/ContactModal";
+import { toast } from "react-toastify";
+import { copyToClipboard } from "../../utils/utils";
 
 // Estilos para el componente
 const PageContainer = styled.div`
@@ -223,6 +225,8 @@ const SummaryRow = styled.div`
     margin-top: 12px;
     font-weight: bold;
     font-size: 1.1rem;
+    border-top: 1px solid ${({ theme }) => theme.colors.border};
+    padding-top: 12px;
   }
 `;
 
@@ -232,6 +236,9 @@ const SummaryLabel = styled.span`
 
 const SummaryValue = styled.span`
   color: ${({ theme }) => theme.colors.text};
+  ${({ $operacion, theme }) =>
+    $operacion &&
+    `border-bottom: solid 1px ${theme.colors.border}; padding-bottom: 4px;`}
 `;
 
 const TrackingSteps = styled.div`
@@ -335,6 +342,77 @@ const EmptyState = styled.div`
   padding: 40px;
 `;
 
+const ProductsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+`;
+
+const ProductCard = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: 8px;
+  box-shadow: 0 1px 4px ${({ theme }) => theme.colors.shadow};
+  padding: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+  }
+`;
+
+const ProductCardImage = styled.img`
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #f6f6f6;
+`;
+
+const ProductCardInfo = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const ProductCardRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  font-size: 0.98rem;
+`;
+
+const ProductCardLabel = styled.span`
+  color: ${({ theme }) => theme.colors.textLight};
+  font-size: 0.92rem;
+  min-width: 120px;
+`;
+
+const ProductCardValue = styled.span`
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 500;
+`;
+
+const ProductCardTotal = styled.span`
+  font-weight: bold;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 1.08rem;
+`;
+
+const ProductCardDiscount = styled.span`
+  color: ${({ theme }) => theme.colors.success};
+  font-weight: 500;
+`;
+
+
 const DetallePedido = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -343,6 +421,9 @@ const DetallePedido = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [editedItems, setEditedItems] = useState([]);
+  const [editedAditionalDiscount, setEditedAditionalDiscount] = useState(0);
+
   // Traducir estado a español para mostrar
   const translateStatus = (status) => {
     const statusMap = {
@@ -361,20 +442,39 @@ const DetallePedido = () => {
         const response = await order_getOrderById(orderId);
 
         if (response.success && response.data && response.data.length > 0) {
+          console.log("Detalles del pedido:", response.data); // Para depuración
           // Transformar los datos de la API al formato que necesita nuestro componente
+
           const apiOrder = response.data[0];
           const cabecera = apiOrder.CABECERA;
           const detalle = apiOrder.DETALLE || [];
+
+          const statusHistory = Array.isArray(cabecera.STATUS)
+            ? cabecera.STATUS
+            : [];
+          const currentStatusObj =
+            statusHistory[statusHistory.length - 1] || {};
+          const currentStatus =
+            currentStatusObj.VALUE_CATALOG || cabecera.STATUS;
+
+          // Fechas de cada estado
+          const getStatusDate = (status) => {
+            const found = statusHistory.find((s) => s.VALUE_CATALOG === status);
+            return found ? new Date(found.createdAt) : null;
+          };
+          console.log(currentStatus);
 
           // Calcular el subtotal
           const subtotal = detalle.reduce(
             (sum, item) => sum + item.PRICE * item.QUANTITY,
             0
-          );          // Crear un objeto con la estructura que espera nuestro componente
+          ); // Crear un objeto con la estructura que espera nuestro componente
           const formattedOrder = {
             id: cabecera.ID_CART_HEADER,
             date: new Date(cabecera.createdAt),
-            status: cabecera.STATUS, // Mantener el valor original de la API
+            status: currentStatus, // Mantener el valor original de la API
+            aditionalDiscount: cabecera.ADITIONAL_DISCOUNT || 0,
+            discount: cabecera.DISCOUNT || 0,
             customer: {
               name: cabecera.USER.NAME_USER,
               email: cabecera.USER.EMAIL,
@@ -402,43 +502,52 @@ const DetallePedido = () => {
               sku: item.PRODUCT_CODE,
               price: item.PRICE,
               quantity: item.QUANTITY,
-              discount: 0, // Este dato no viene en la API
+              promotionalDiscount: item.PROMOTIONAL_DISCOUNT || 0,
               total: item.PRICE * item.QUANTITY,
               image: item.MAESTRO?.DMA_RUTAIMAGEN
                 ? `${baseLinkImages}${item.MAESTRO.DMA_RUTAIMAGEN}`
                 : "https://placehold.co/50x50/png",
             })),
             subtotal: subtotal,
-            discount: cabecera.DISCOUNT || 0,
             total: cabecera.TOTAL || subtotal, // Si no hay total, usar subtotal
             tracking: [
               {
                 step: "Pedido recibido",
-                date: new Date(cabecera.createdAt),
-                completed: true,
+                date:
+                  getStatusDate("PENDIENTE") || new Date(cabecera.createdAt),
+                completed: !!getStatusDate("PENDIENTE"),
               },
               {
                 step: "Pedido confirmado",
-                date: null,
-                completed: false,
+                date: getStatusDate("CONFIRMADO"),
+                completed: !!getStatusDate("CONFIRMADO"),
               },
               {
                 step: "Entregado",
-                date: null,
-                completed: false,
+                date: getStatusDate("ENTREGADO"),
+                completed: !!getStatusDate("ENTREGADO"),
               },
+              ...(getStatusDate("CANCELADO")
+                ? [
+                    {
+                      step: "Pedido cancelado",
+                      date: getStatusDate("CANCELADO"),
+                      completed: true,
+                    },
+                  ]
+                : []),
             ],
             empresaInfo: {
               id: cabecera.ENTERPRISE,
               name: cabecera.ENTERPRISE,
             },
-          };          // Actualizar el estado de tracking según el status del pedido
+          }; // Actualizar el estado de tracking según el status del pedido
           if (formattedOrder.status === "PENDIENTE") {
             // Solo el primer paso está completo - fecha de creación del pedido
           } else if (formattedOrder.status === "CONFIRMADO") {
             // Pedido confirmado
             const creationDate = new Date(cabecera.createdAt);
-            
+
             formattedOrder.tracking[1].completed = true;
             const confirmDate = new Date(creationDate);
             confirmDate.setDate(creationDate.getDate() + 1);
@@ -486,6 +595,78 @@ const DetallePedido = () => {
 
     fetchOrderDetails();
   }, [orderId]);
+
+  // Cuando se cargan los detalles, inicializa los estados editables
+  useEffect(() => {
+    if (orderDetails) {
+      setEditedItems(
+        orderDetails.items.map((item) => ({
+          ...item,
+          quantity: item.quantity,
+        }))
+      );
+      setEditedAditionalDiscount(orderDetails.aditionalDiscount || 0);
+    }
+  }, [orderDetails]);
+
+  // Cálculo de totales con descuentos en porcentaje
+  const getOrderCalculations = () => {
+    if (!orderDetails) {
+      return {
+        items: [],
+        subtotal: 0,
+        aditionalDiscount: 0,
+        generalDiscount: 0,
+        totalPromotionalDiscount: 0,
+        total: 0,
+      };
+    }
+    console.log(orderDetails);
+
+    // Descuentos en porcentaje
+    const aditionalDiscountPct = Number(editedAditionalDiscount) || 0;
+    const generalDiscountPct = Number(orderDetails.discount) || 0;
+
+    let subtotal = 0;
+    let totalPromotionalDiscount = 0;
+
+    const items = editedItems.map((item) => {
+      const promoPct = Number(item.promotionalDiscount) || 0;
+      const price = item.price;
+      const qty = Number(item.quantity);
+
+      // Descuento promocional por producto
+      const promoDiscount = price * qty * (promoPct / 100);
+      totalPromotionalDiscount += promoDiscount;
+
+      // Subtotal suma sin descuentos
+      subtotal += price * qty;
+
+      return {
+        ...item,
+        total: price * qty - promoDiscount,
+        promoDiscount,
+      };
+    });
+
+    // Descuento adicional (cliente) y general (pedido) sobre el subtotal
+    const aditionalDiscount = subtotal * (aditionalDiscountPct / 100);
+    const generalDiscount = subtotal * (generalDiscountPct / 100);
+
+    // Total final
+    const total =
+      subtotal - aditionalDiscount - generalDiscount - totalPromotionalDiscount;
+
+    return {
+      items,
+      subtotal,
+      aditionalDiscount,
+      generalDiscount,
+      totalPromotionalDiscount,
+      total,
+    };
+  };
+
   const handleCancelOrder = () => {
     const canCancel = orderDetails.status === "PENDIENTE";
     if (canCancel) {
@@ -541,6 +722,39 @@ const DetallePedido = () => {
 
   const canCancel = orderDetails.status === "PENDIENTE";
 
+  // 1. Subtotal sin descuentos
+  const rawSubtotal = orderDetails.items.reduce(
+    (acc, item) => acc + item.price * item.quantity,
+    0
+  );
+
+  // 2. Total de descuentos promocionales (por producto)
+  const totalPromotionalDiscount = orderDetails.items.reduce(
+    (acc, item) =>
+      acc +
+      item.price *
+        item.quantity *
+        ((Number(item.promotionalDiscount) || 0) / 100),
+    0
+  );
+
+  // 3. Subtotal después de descuentos promocionales
+  const subtotalAfterPromo = rawSubtotal - totalPromotionalDiscount;
+
+  // 4. Descuento general (cliente) sobre el subtotal con promo
+  const generalDiscount =
+    subtotalAfterPromo * (Number(orderDetails.discount) / 100);
+
+  // 5. Subtotal después de descuento general
+  const subtotalAfterGeneral = subtotalAfterPromo - generalDiscount;
+
+  // 6. Descuento adicional (coordinadora) sobre el subtotal con promo y general
+  const aditionalDiscount =
+    subtotalAfterGeneral * (Number(orderDetails.aditionalDiscount) / 100);
+
+  // 7. Total final
+  const totalFinal = subtotalAfterGeneral - aditionalDiscount;
+
   return (
     <PageContainer>
       <BackLink
@@ -552,6 +766,12 @@ const DetallePedido = () => {
         <OrderTitle>
           <OrderNumber>
             Pedido #{orderDetails.id.substring(0, 12)}...
+            <RenderIcon
+              name="FaCopy"
+              size={16}
+              style={{ marginLeft: "8px", cursor: "pointer" }}
+              onClick={() => copyToClipboard(orderDetails.id)}
+            />
           </OrderNumber>
           <OrderDate>
             Realizado el{" "}
@@ -591,13 +811,13 @@ const DetallePedido = () => {
         </OrderActions>
       </PageHeader>
 
-      <Section>        <SectionTitle>
-          Estado del pedido:{" "}
+      <Section>
+        <SectionTitle>
+          Estado del pedido:
           <StatusBadge status={orderDetails.status}>
             {translateStatus(orderDetails.status)}
           </StatusBadge>
         </SectionTitle>
-
         {orderDetails.status !== "CANCELADO" && (
           <TrackingSteps>
             {orderDetails.tracking.map((step, index) => (
@@ -710,60 +930,151 @@ const DetallePedido = () => {
           <RenderIcon name="FaBoxOpen" size={18} /> Productos
         </SectionTitle>
 
-        <ProductsTable>
-          <ProductsHead>
-            <tr>
-              <ProductsHeadCell>Producto</ProductsHeadCell>
-              <ProductsHeadCell>Precio unitario</ProductsHeadCell>
-              <ProductsHeadCell>Cantidad</ProductsHeadCell>
-              <ProductsHeadCell>Total</ProductsHeadCell>
-            </tr>
-          </ProductsHead>
+        {/* Mostrar descuentos si existen */}
+        {(orderDetails.aditionalDiscount > 0 || orderDetails.discount > 0) && (
+          <div style={{ marginBottom: 16 }}>
+            {orderDetails.discount > 0 && (
+              <div
+                style={{
+                  background: theme.colors.info + "22",
+                  border: `1px solid ${theme.colors.info}`,
+                  color: theme.colors.info,
+                  borderRadius: 6,
+                  padding: "8px 12px",
+                  marginBottom: 6,
+                  fontWeight: 500,
+                  fontSize: "0.95rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <RenderIcon name="FaTag" size={16} style={{ marginRight: 6 }} />
+                Descuento general de cliente aplicado: {orderDetails.discount}%
+              </div>
+            )}
+            {orderDetails.aditionalDiscount > 0 && (
+              <div
+                style={{
+                  background: theme.colors.success + "22",
+                  border: `1px solid ${theme.colors.success}`,
+                  color: theme.colors.success,
+                  borderRadius: 6,
+                  padding: "8px 12px",
+                  fontWeight: 500,
+                  fontSize: "0.95rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <RenderIcon name="FaTag" size={16} style={{ marginRight: 6 }} />
+                Descuento especial aplicado por coordinadora:{" "}
+                {orderDetails.aditionalDiscount}%
+              </div>
+            )}
+          </div>
+        )}
 
-          <ProductsBody>
-            {orderDetails.items.map((item) => (
-              <ProductRow key={item.id}>
-                <ProductCell>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                    }}
-                  >
-                    <ProductImage src={item.image} alt={item.name} />
-                    <ProductInfo>
-                      <ProductName>{item.name}</ProductName>
-                      <ProductSKU>SKU: {item.sku}</ProductSKU>
-                    </ProductInfo>
-                  </div>
-                </ProductCell>
-                <ProductCell>${item.price.toFixed(2)}</ProductCell>
-                <ProductCell>{item.quantity}</ProductCell>
-                <ProductCell>${item.total.toFixed(2)}</ProductCell>
-              </ProductRow>
-            ))}
-          </ProductsBody>
-        </ProductsTable>
+        <ProductsList>
+  {orderDetails.items.map((item) => {
+    const promoPct = Number(item.promotionalDiscount) || 0;
+    const price = item.price;
+    const qty = Number(item.quantity);
+    const promoDiscount = price * qty * (promoPct / 100);
+    const subtotal = price * qty;
+    const total = subtotal - promoDiscount;
+
+    return (
+      <ProductCard key={item.id}>
+        <ProductCardImage src={item.image} alt={item.name} />
+        <ProductCardInfo>
+          <ProductName>{item.name}</ProductName>
+          <ProductSKU>SKU: {item.sku}</ProductSKU>
+          <ProductCardRow>
+            <ProductCardLabel>Precio unitario:</ProductCardLabel>
+            <ProductCardValue>${price.toFixed(2)}</ProductCardValue>
+          </ProductCardRow>
+          <ProductCardRow>
+            <ProductCardLabel>Cantidad:</ProductCardLabel>
+            <ProductCardValue>{qty}</ProductCardValue>
+          </ProductCardRow>
+          <ProductCardRow>
+            <ProductCardLabel>Descuento promocional:</ProductCardLabel>
+            {promoPct > 0 ? (
+              <ProductCardDiscount>{promoPct}% (-${promoDiscount.toFixed(2)})</ProductCardDiscount>
+            ) : (
+              <span style={{ color: "#bbb" }}>—</span>
+            )}
+          </ProductCardRow>
+          <ProductCardRow>
+            <ProductCardLabel>Total:</ProductCardLabel>
+            <ProductCardValue>${subtotal.toFixed(2)}</ProductCardValue>
+          </ProductCardRow>
+          <ProductCardRow>
+            <ProductCardLabel>Total con descuento:</ProductCardLabel>
+            <ProductCardTotal>${total.toFixed(2)}</ProductCardTotal>
+          </ProductCardRow>
+        </ProductCardInfo>
+      </ProductCard>
+    );
+  })}
+</ProductsList>
 
         <OrderSummary>
           <SummaryRow>
             <SummaryLabel>Subtotal:</SummaryLabel>
-            <SummaryValue>${orderDetails.subtotal.toFixed(2)}</SummaryValue>
+            <SummaryValue>${rawSubtotal.toFixed(2)}</SummaryValue>
           </SummaryRow>
-
-          {orderDetails.discount > 0 && (
-            <SummaryRow>
-              <SummaryLabel>Descuento:</SummaryLabel>
-              <SummaryValue>-${orderDetails.discount.toFixed(2)}</SummaryValue>
-            </SummaryRow>
+          {totalPromotionalDiscount > 0 && (
+            <>
+              <SummaryRow>
+                <SummaryLabel>Descuentos promocionales:</SummaryLabel>
+                <SummaryValue $operacion={true}>
+                  -${totalPromotionalDiscount.toFixed(2)}
+                </SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel></SummaryLabel>
+                <SummaryValue>${subtotalAfterPromo.toFixed(2)}</SummaryValue>
+              </SummaryRow>
+            </>
           )}
-
+          {orderDetails.discount > 0 && (
+            <>
+              <SummaryRow>
+                <SummaryLabel>Descuento general:</SummaryLabel>
+                <SummaryValue $operacion={true}>-${generalDiscount.toFixed(2)}</SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel></SummaryLabel>
+                <SummaryValue>${subtotalAfterGeneral.toFixed(2)}</SummaryValue>
+              </SummaryRow>
+            </>
+          )}
+          {orderDetails.aditionalDiscount > 0 && (
+            <>
+              <SummaryRow>
+                <SummaryLabel>Descuento especial:</SummaryLabel>
+                <SummaryValue>-${aditionalDiscount.toFixed(2)}</SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel>Subtotal tras descuento especial:</SummaryLabel>
+                <SummaryValue>
+                  ${(totalFinal < 0 ? 0 : totalFinal).toFixed(2)}
+                </SummaryValue>
+              </SummaryRow>
+            </>
+          )}
           <SummaryRow>
             <SummaryLabel>Total:</SummaryLabel>
-            <SummaryValue>${orderDetails.total.toFixed(2)}</SummaryValue>
+            <SummaryValue>
+              ${(totalFinal < 0 ? 0 : totalFinal).toFixed(2)}
+            </SummaryValue>
           </SummaryRow>
         </OrderSummary>
+
+       
       </Section>
 
       <ContactModal
