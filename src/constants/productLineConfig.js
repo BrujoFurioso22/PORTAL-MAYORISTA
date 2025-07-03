@@ -91,9 +91,7 @@ export const PRODUCT_LINE_CONFIG = {
       },
     ],
     nameTemplate: (item) =>
-      `${item.DMA_MARCA || ""} ${item.DMA_DISENIO || ""} ${
-        item.DMA_ANCHO || ""
-      }R${item.DMA_RIN || ""} ${item.DMA_CARGA || ""}`,
+      `${item.DMA_NOMBREITEM || ""}`,
     descriptionTemplate: (item) =>
       `${item.DMA_MARCA || ""} ${item.DMA_DISENIO || ""} ${
         item.DMA_APLICACION || ""

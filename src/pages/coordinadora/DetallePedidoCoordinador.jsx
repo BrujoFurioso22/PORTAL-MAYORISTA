@@ -532,6 +532,8 @@ const DetallePedidoCoordinador = () => {
   // Guardar todos los cambios
   const handleSaveAllChanges = async () => {
     try {
+      console.log(orderDetails);
+
       const body = {
         ENTERPRISE: orderDetails.empresaInfo.id,
         ACCOUNT_USER: orderDetails.customer.account,
@@ -559,7 +561,11 @@ const DetallePedidoCoordinador = () => {
         aditionalDiscount: orderDraft.aditionalDiscount,
         items: orderDraft.items.map((item) => ({ ...item })),
         subtotal: orderDraft.rawSubtotal,
+        subtotalAfterGeneral: orderDraft.subtotalAfterGeneral,
+        subtotalAfterPromo: orderDraft.subtotalAfterPromo,
         total: orderDraft.totalConIva,
+        totalConIva: orderDraft.totalConIva,
+        totalPromotionalDiscount: orderDraft.totalPromotionalDiscount,
       };
 
       setOrderDetails(updatedOrder);
@@ -1319,7 +1325,7 @@ const DetallePedidoCoordinador = () => {
         <OrderSummary>
           <SummaryRow>
             <SummaryLabel>Subtotal:</SummaryLabel>
-            <SummaryValue>${orderDetails.rawSubtotal.toFixed(2)}</SummaryValue>
+            <SummaryValue>${orderDetails.subtotal.toFixed(2)}</SummaryValue>
           </SummaryRow>
           {orderDetails.totalPromotionalDiscount > 0 && (
             <>
@@ -1382,7 +1388,7 @@ const DetallePedidoCoordinador = () => {
           )}
           <SummaryRow>
             <SummaryLabel>Total:</SummaryLabel>
-            <SummaryValue>${orderDetails.totalConIva.toFixed(2)}</SummaryValue>
+            <SummaryValue>${orderDetails.total.toFixed(2)}</SummaryValue>
           </SummaryRow>
         </OrderSummary>
       </Section>
