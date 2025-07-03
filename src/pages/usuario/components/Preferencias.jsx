@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { useAppTheme } from "../../../context/AppThemeContext";
 import Button from "../../../components/ui/Button";
 import { toast } from "react-toastify";
+import { useAuth } from "../../../context/AuthContext";
 
 const Card = styled.div`
   background-color: ${({ theme }) => theme.colors.surface};
@@ -92,7 +93,8 @@ const Slider = styled.span`
 
 const Preferencias = () => {
   const { theme, toggleTheme } = useAppTheme();
-  
+  const { isClient } = useAuth();
+
   const [settings, setSettings] = useState({
     receiveEmails: true,
     receiveNotifications: true,
@@ -113,25 +115,27 @@ const Preferencias = () => {
 
   return (
     <>
-      <Card>
-        <CardTitle>Notificaciones</CardTitle>
+      {isClient && (
+        <Card>
+          <CardTitle>Notificaciones</CardTitle>
 
-        <PreferenceItem>
-          <PreferenceText>
-            <PreferenceTitle>Correos electrónicos</PreferenceTitle>
-            <PreferenceDescription>
-              Recibe actualizaciones, ofertas y noticias por correo
-            </PreferenceDescription>
-          </PreferenceText>
-          <Switch>
-            <SwitchInput
-              checked={settings.receiveEmails}
-              onChange={() => handleSettingChange("receiveEmails")}
-            />
-            <Slider />
-          </Switch>
-        </PreferenceItem>
-      </Card>
+          <PreferenceItem>
+            <PreferenceText>
+              <PreferenceTitle>Correos electrónicos</PreferenceTitle>
+              <PreferenceDescription>
+                Recibe actualizaciones, ofertas y noticias por correo
+              </PreferenceDescription>
+            </PreferenceText>
+            <Switch>
+              <SwitchInput
+                checked={settings.receiveEmails}
+                onChange={() => handleSettingChange("receiveEmails")}
+              />
+              <Slider />
+            </Switch>
+          </PreferenceItem>
+        </Card>
+      )}
 
       <Card>
         <CardTitle>Apariencia</CardTitle>

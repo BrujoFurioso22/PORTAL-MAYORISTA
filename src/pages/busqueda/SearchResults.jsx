@@ -586,7 +586,6 @@ const SearchResults = () => {
                 <RestrictedProductCard
                   key={`${product.empresaId}-${product.id}`}
                 >
-                  {console.log(product)}
                   <RestrictedImageContainer>
                     <RestrictedImage src={product.image} alt={product.name} />
                   </RestrictedImageContainer>
