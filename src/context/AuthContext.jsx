@@ -109,8 +109,6 @@ export function AuthProvider({ children }) {
           guardarRefreshToken(response.data.refreshToken);
         }
 
-        // Guardar datos de usuario en localStorage
-        localStorage.setItem("user", JSON.stringify(userData));
         localStorage.setItem("auth", "true");
 
         // Actualizar el estado
@@ -182,7 +180,6 @@ export function AuthProvider({ children }) {
     try {
       // Llamar al servicio que verifica la identificación (RUC/cédula)
       const response = await users_getByAccount(identification);
-      console.log(response);
 
       if (response.success && response.data.length > 0) {
         if (response.data) {
@@ -298,7 +295,6 @@ export function AuthProvider({ children }) {
       }
 
       const response = await resetPassword_verifyResetCode(token, otp);
-      console.log(response);
       localStorage.removeItem("resetToken");
 
       if (response.success) {
@@ -341,7 +337,6 @@ export function AuthProvider({ children }) {
         resetToken,
         newPassword
       );
-      console.log(response);
 
       // setNewPassword ya elimina el resetToken de localStorage al completarse
 
@@ -379,17 +374,12 @@ export function AuthProvider({ children }) {
 
       try {
         // Primer intento: verificar el token actual
-        console.log("Verificando token actual...");
         const response = await auth_me();
-        // console.log(response);
-        
 
         if (response && response.user) {
           // Token válido, establecer usuario
-          console.log("Token válido, usuario autenticado");
           setUser(response.user);
           setIsAuthenticated(true);
-          localStorage.setItem("user", JSON.stringify(response.user));
           localStorage.setItem("auth", "true");
         }
       } catch (error) {
@@ -397,26 +387,18 @@ export function AuthProvider({ children }) {
 
         // Si el token actual falló, intentar refrescarlo
         try {
-          console.log("Intentando refrescar token...");
           const refreshResponse = await auth_refresh();
-          console.log(refreshResponse);
           
 
           if (refreshResponse && refreshResponse.token) {
-            console.log(
-              "Token refrescado exitosamente, verificando nuevamente..."
-            );
-
             // Segundo intento: verificar con el token refrescado
             try {
               const newResponse = await auth_me();
 
               if (newResponse && newResponse.user) {
                 // Token refrescado válido, establecer usuario
-                console.log("Nuevo token válido, usuario autenticado");
                 setUser(newResponse.user);
                 setIsAuthenticated(true);
-                localStorage.setItem("user", JSON.stringify(newResponse.user));
                 localStorage.setItem("auth", "true");
               } else {
                 throw new Error("Verificación fallida con token refrescado");

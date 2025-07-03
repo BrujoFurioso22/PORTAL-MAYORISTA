@@ -104,3 +104,33 @@ export const order_getOrdersByEnterprises = async (enterprises) => {
     };
   }
 };
+
+/**
+ * Actualizar un pedido
+ * @param {string} orderId - ID del pedido
+ * @param {Object} orderData - Datos del pedido a actualizar
+ * @return {Promise<Object>} Respuesta de la API
+ */
+export const order_updateOrder = async (orderId, orderData) => {
+  try {
+    const response = await api.patch(
+      `/pedidos/updateOrder/${orderId}`,
+      orderData
+    );
+    return {
+      success: true,
+      message: response.data.message || "Pedido actualizado correctamente",
+      data: response.data.data || {},
+    };
+  } catch (error) {
+    const message =
+      error.response?.data?.message ||
+      "Ocurrió un error al actualizar el pedido";
+
+    return {
+      success: false,
+      message,
+      error: error.response?.data || null,
+    };
+  }
+};

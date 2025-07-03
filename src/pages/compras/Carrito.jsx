@@ -109,13 +109,16 @@ const ItemPricing = styled.div`
   flex-direction: column;
   justify-content: center;
   align-items: flex-end;
-  gap: 8px;
+  gap: 2px;
   min-width: 120px;
 `;
 
 const ItemPrice = styled.div`
   font-weight: bold;
-  color: ${({ theme }) => theme.colors.text};
+  color: ${({ theme, $subtotal }) =>
+    $subtotal ? theme.colors.text : theme.colors.primary};
+  font-size: ${({ $subtotal }) => ($subtotal ? "0.9rem" : "1.2rem")};
+  text-decoration: ${({ $subtotal }) => ($subtotal ? "line-through" : "none")};
 `;
 
 const ItemQuantityControl = styled.div`
@@ -162,17 +165,6 @@ const QuantityInput = styled.input`
   font-size: 0.9rem;
   background-color: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
-`;
-
-const RemoveButton = styled(Button)`
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.error};
-  cursor: pointer;
-  font-size: 0.8rem;
-  padding: 0;
-  margin-top: 8px;
-  text-align: right;
 `;
 
 const OrderSummary = styled.div`
@@ -457,14 +449,12 @@ const CompanyCheckoutButton = styled(Button)`
   }
 `;
 
-const CartItem = ({ item, handleQuantityChange, removeFromCart }) => {
-  console.log(item);
-
+const CartItem = ({ item, handleQuantityChange, removeFromCart, theme }) => {
+  const discount = item?.discount || 0;
   const maxStock = item?.stock || 0;
-  const discountedPrice = item?.discount
-    ? item.price * (1 - item.discount / 100)
-    : item?.price || 0;
-  const itemTotal = discountedPrice * item.quantity;
+  const subTotal = item?.price * item.quantity;
+  const discountedPrice = discount ? subTotal * (discount / 100) : 0;
+  const itemTotal = subTotal - discountedPrice;
   const isOverStock = item.quantity > maxStock;
 
   return (
@@ -511,11 +501,17 @@ const CartItem = ({ item, handleQuantityChange, removeFromCart }) => {
       </ItemDetails>
 
       <ItemPricing>
-        <ItemPrice>${itemTotal.toFixed(2)}</ItemPrice>
-        <RemoveButton
+        <ItemPrice>${subTotal.toFixed(2)}</ItemPrice>
+        {discount > 0 && (
+          <ItemPrice $subtotal>${itemTotal.toFixed(2)}</ItemPrice>
+        )}
+        <Button
           onClick={() => removeFromCart(item.id)}
-          text="Eliminar"
+          text={"Eliminar"}
+          color={theme.colors.error}
           size="small"
+          backgroundColor={"transparent"}
+          style={{ marginTop: "auto" }}
         />
       </ItemPricing>
     </CartItemContainer>
@@ -553,15 +549,16 @@ const findBestAvailableAddress = (addresses, company, type) => {
 const Carrito = () => {
   const {
     cart,
-    cartTotal,
     removeFromCart,
     updateQuantity,
     removeItemsByCompany,
     clearCart,
+    calculateCartTotal,
   } = useCart();
   const navigate = useNavigate();
   const { theme } = useAppTheme();
   const { user } = useAuth(); // Obtenemos el usuario actual
+  const cartTotal = calculateCartTotal(cart);
 
   // Estados para manejar direcciones
   const [addresses, setAddresses] = useState([]);
@@ -588,8 +585,6 @@ const Carrito = () => {
   // Cargar direcciones del usuario
   useEffect(() => {
     if (user) {
-      console.log(user);
-
       // Si el usuario tiene direcciones guardadas o usamos las de prueba
       let userAddresses = [];
 
@@ -621,7 +616,6 @@ const Carrito = () => {
   useEffect(() => {
     const groupByCompany = () => {
       const grouped = {};
-      console.log(cart);
 
       cart.forEach((item) => {
         const company = item.empresaId || "Sin empresa";
@@ -805,10 +799,43 @@ const Carrito = () => {
       (addr) => addr.id === companyData.billingAddressId
     );
 
+    // 1. Subtotal sin descuentos
+    const rawSubtotal = companyData.items.reduce(
+      (acc, item) => acc + item.price * item.quantity,
+      0
+    );
+    // 2. Total de descuentos promocionales (por producto)
+    const totalPromotionalDiscount = companyData.items.reduce(
+      (acc, item) =>
+        acc +
+        item.price *
+          item.quantity *
+          ((Number(item.promotionalDiscount) || 0) / 100),
+      0
+    );
+    // 3. Subtotal después de descuentos promocionales
+    const subtotalAfterPromo = rawSubtotal - totalPromotionalDiscount;
+    // 4. Descuento general (usuario)
+    const userDiscount = user?.DESCUENTOS?.[company] || 0;
+    const generalDiscount = subtotalAfterPromo * (Number(userDiscount) / 100);
+    // 5. Subtotal después de descuento general
+    const subtotalAfterGeneral = subtotalAfterPromo - generalDiscount;
+    // 6. Descuento especial (coordinadora)
+    const aditionalDiscount =
+      subtotalAfterGeneral * (Number(companyData.aditionalDiscount) / 100 || 0);
+    // 7. Total final antes de IVA
+    const totalFinal = subtotalAfterGeneral - aditionalDiscount;
+    // 8. IVA
+    const ivaPct = user?.IVA || 15;
+    const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
+    // 9. Total con IVA
+    const totalConIva = (totalFinal < 0 ? 0 : totalFinal) + valorIVA;
+
     const productsToProcess = companyData.items.map((item) => ({
       PRODUCT_CODE: item.id,
       QUANTITY: item.quantity,
       PRICE: item.price,
+      PROMOTIONAL_DISCOUNT: item.promotionalDiscount || 0,
     }));
 
     const orderToProcess = {
@@ -816,9 +843,9 @@ const Carrito = () => {
       ACCOUNT_USER: user.ACCOUNT_USER,
       SHIPPING_ADDRESS_ID: parseInt(shippingAddress.id),
       BILLING_ADDRESS_ID: parseInt(billingAddress.id),
-      SUBTOTAL: companyData.total,
-      DISCOUNT: null,
-      TOTAL: companyData.total,
+      SUBTOTAL: rawSubtotal,
+      DISCOUNT: userDiscount,
+      TOTAL: totalConIva,
       STATUS: "PENDIENTE",
       PRODUCTOS: productsToProcess,
     };
@@ -903,7 +930,6 @@ const Carrito = () => {
 
       {/* Pestañas de empresas */}
       <CompanyTabs>
-        {console.log(groupedCart)}
         {Object.keys(groupedCart).map((company) => (
           <CompanyTab
             key={company}
@@ -926,6 +952,7 @@ const Carrito = () => {
                   item={item}
                   handleQuantityChange={handleQuantityChange}
                   removeFromCart={removeFromCart}
+                  theme={theme}
                 />
               ))}
           </CartItemsList>
@@ -1184,44 +1211,106 @@ const Carrito = () => {
           <SummaryTitle>Resumen del pedido</SummaryTitle>
 
           {/* Resumen por empresa */}
-          {Object.entries(groupedCart).map(([company, data]) => (
-            <CompanySummary key={company}>
-              <CompanyName>{company}</CompanyName>
-              <SummaryRow>
-                <SummaryLabel>
-                  Subtotal ({data.items.length} productos)
-                </SummaryLabel>
-                <SummaryValue>${data.total.toFixed(2)}</SummaryValue>
-              </SummaryRow>
+          {Object.entries(groupedCart).map(([company, data]) => {
+            // 1. Subtotal sin descuentos
+            const rawSubtotal = data.items.reduce(
+              (acc, item) => acc + item.price * item.quantity,
+              0
+            );
+            // 2. Total de descuentos promocionales (por producto)
+            const totalPromotionalDiscount = data.items.reduce(
+              (acc, item) =>
+                acc +
+                item.price *
+                  item.quantity *
+                  ((Number(item.promotionalDiscount) || 0) / 100),
+              0
+            );
+            // 3. Subtotal después de descuentos promocionales
+            const subtotalAfterPromo = rawSubtotal - totalPromotionalDiscount;
+            // 4. Descuento general (usuario) sobre el subtotal con promo
+            const userDiscount = user?.DESCUENTOS?.[company] || 0;
+            const generalDiscount =
+              subtotalAfterPromo * (Number(userDiscount) / 100);
+            // 5. Subtotal después de descuento general
+            const subtotalAfterGeneral = subtotalAfterPromo - generalDiscount;
+            // 6. Descuento especial (coordinadora) sobre el subtotal con promo y general
+            const aditionalDiscount =
+              subtotalAfterGeneral *
+              (Number(data.aditionalDiscount) / 100 || 0);
+            // 7. Total final antes de IVA
+            const totalFinal = subtotalAfterGeneral - aditionalDiscount;
+            // 8. IVA (puedes ajustar el porcentaje según tu lógica)
+            const ivaPct = user?.IVA || 15;
+            const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
+            // 9. Total con IVA
+            const totalConIva = (totalFinal < 0 ? 0 : totalFinal) + valorIVA;
 
-              {/* Validación de direcciones por empresa */}
-              {!data.shippingAddressId && (
-                <ValidationWarning>Falta dirección de envío</ValidationWarning>
-              )}
-              {!data.billingAddressId && (
-                <ValidationWarning>
-                  Falta dirección de facturación
-                </ValidationWarning>
-              )}
+            return (
+              <CompanySummary key={company}>
+                <CompanyName>{company}</CompanyName>
+                <SummaryRow>
+                  <SummaryLabel>
+                    Subtotal ({data.items.length} productos)
+                  </SummaryLabel>
+                  <SummaryValue>${rawSubtotal.toFixed(2)}</SummaryValue>
+                </SummaryRow>
+                {totalPromotionalDiscount > 0 && (
+                  <SummaryRow>
+                    <SummaryLabel>Descuentos promocionales:</SummaryLabel>
+                    <SummaryValue>
+                      -${totalPromotionalDiscount.toFixed(2)}
+                    </SummaryValue>
+                  </SummaryRow>
+                )}
+                {userDiscount > 0 && (
+                  <SummaryRow>
+                    <SummaryLabel>Descuento general:</SummaryLabel>
+                    <SummaryValue>-${generalDiscount.toFixed(2)}</SummaryValue>
+                  </SummaryRow>
+                )}
+                {ivaPct > 0 && (
+                  <SummaryRow>
+                    <SummaryLabel>IVA ({ivaPct}%):</SummaryLabel>
+                    <SummaryValue>+${valorIVA.toFixed(2)}</SummaryValue>
+                  </SummaryRow>
+                )}
+                <TotalRow>
+                  <SummaryLabel>Total</SummaryLabel>
+                  <SummaryValue $bold>${totalConIva.toFixed(2)}</SummaryValue>
+                </TotalRow>
 
-              {/* Botón para pagar solo esta empresa */}
-              <CompanyCheckoutButton
-                text={`Proceder al pedido`}
-                color={theme.colors.white}
-                variant="outlined"
-                size="small"
-                leftIconName={"FaShoppingCart"}
-                backgroundColor={theme.colors.primary}
-                style={{ width: "100%" }}
-                onClick={() => handleCheckoutSingleCompany(company)}
-                disabled={
-                  !data.shippingAddressId ||
-                  !data.billingAddressId ||
-                  hasInsufficientStockForCompany(company)
-                }
-              />
-            </CompanySummary>
-          ))}
+                {/* Validación de direcciones por empresa */}
+                {!data.shippingAddressId && (
+                  <ValidationWarning>
+                    Falta dirección de envío
+                  </ValidationWarning>
+                )}
+                {!data.billingAddressId && (
+                  <ValidationWarning>
+                    Falta dirección de facturación
+                  </ValidationWarning>
+                )}
+
+                {/* Botón para pagar solo esta empresa */}
+                <CompanyCheckoutButton
+                  text={`Proceder al pedido`}
+                  color={theme.colors.white}
+                  variant="outlined"
+                  size="small"
+                  leftIconName={"FaShoppingCart"}
+                  backgroundColor={theme.colors.primary}
+                  style={{ width: "100%" }}
+                  onClick={() => handleCheckoutSingleCompany(company)}
+                  disabled={
+                    !data.shippingAddressId ||
+                    !data.billingAddressId ||
+                    hasInsufficientStockForCompany(company)
+                  }
+                />
+              </CompanySummary>
+            );
+          })}
 
           <TotalRow>
             <SummaryLabel>Total General</SummaryLabel>

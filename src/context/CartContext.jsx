@@ -18,6 +18,59 @@ export function CartProvider({ children }) {
   const [cartTotal, setCartTotal] = useState(0);
   const { user } = useAuth(); // Obtener el usuario actual
 
+  const calculateCartTotal = (cart) => {
+    // Agrupa los productos por empresa
+    const grouped = {};
+    cart.forEach((item) => {
+      const company = item.empresaId || "Sin empresa";
+      if (!grouped[company]) grouped[company] = [];
+      grouped[company].push(item);
+    });
+
+    let total = 0;
+
+    Object.entries(grouped).forEach(([company, items]) => {
+      // 1. Subtotal sin descuentos
+      const rawSubtotal = items.reduce(
+        (acc, item) => acc + item.price * item.quantity,
+        0
+      );
+      // 2. Total de descuentos promocionales (por producto)
+      const totalPromotionalDiscount = items.reduce(
+        (acc, item) =>
+          acc +
+          item.price *
+            item.quantity *
+            ((Number(item.promotionalDiscount) || 0) / 100),
+        0
+      );
+
+      // 3. Subtotal después de descuentos promocionales
+      const subtotalAfterPromo = rawSubtotal - totalPromotionalDiscount;
+      // 4. Descuento general (usuario) sobre el subtotal con promo
+      const userDiscount = user?.DESCUENTOS?.[company] || 0;
+      const generalDiscount = subtotalAfterPromo * (Number(userDiscount) / 100);
+      // 5. Subtotal después de descuento general
+      const subtotalAfterGeneral = subtotalAfterPromo - generalDiscount;
+      // 6. Descuento especial (coordinadora) sobre el subtotal con promo y general
+      // Si tienes aditionalDiscount por empresa, úsalo aquí, si no, pon 0
+      const aditionalDiscount = 0;
+      const subtotalAfterAditional = subtotalAfterGeneral - aditionalDiscount;
+      // 7. IVA (si tienes un valor por empresa, úsalo, si no, pon 0)
+      const ivaPct = user?.IVA || 15;      
+      const valorIVA =
+        (subtotalAfterAditional < 0 ? 0 : subtotalAfterAditional) *
+        (ivaPct / 100);
+      // 8. Total con IVA
+      const totalConIva =
+        (subtotalAfterAditional < 0 ? 0 : subtotalAfterAditional) + valorIVA;
+
+      total += totalConIva;
+    });
+
+    return total;
+  };
+
   // Verificar si el usuario es admin o coordinadora
   const isAdminOrCoord = () => {
     if (!user || !user.ROLE) return false;
@@ -110,6 +163,7 @@ export function CartProvider({ children }) {
     cart,
     cartTotal,
     addToCart,
+    calculateCartTotal,
     removeFromCart,
     updateQuantity,
     clearCart,

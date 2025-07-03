@@ -324,43 +324,6 @@ const ProductCardImage = styled.img`
   background: #f6f6f6;
 `;
 
-const ProductCardInfo = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-const ProductCardRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  font-size: 0.98rem;
-`;
-
-const ProductCardLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textLight};
-  font-size: 0.92rem;
-  min-width: 120px;
-`;
-
-const ProductCardValue = styled.span`
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: 500;
-`;
-
-const ProductCardTotal = styled.span`
-  font-weight: bold;
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: 1.08rem;
-`;
-
-const ProductCardDiscount = styled.span`
-  color: ${({ theme }) => theme.colors.success};
-  font-weight: 500;
-`;
-
 const DetallePedido = () => {
   const { orderId } = useParams();
   const { theme } = useAppTheme();
@@ -416,17 +379,20 @@ const DetallePedido = () => {
             (sum, item) => sum + item.PRICE * item.QUANTITY,
             0
           ); // Crear un objeto con la estructura que espera nuestro componente
+          console.log(cabecera);
+          const userDiscount = user?.DESCUENTOS?.[cabecera.ENTERPRISE] || 0;
+
           const formattedOrder = {
             id: cabecera.ID_CART_HEADER,
             date: new Date(cabecera.createdAt),
             status: currentStatus, // Mantener el valor original de la API
             aditionalDiscount: cabecera.ADITIONAL_DISCOUNT || 0,
-            discount: cabecera.DISCOUNT || 0,
-            iva: cabecera.IVA_DETAIL.IVA_PERCENTAGE || 15,
+            discount: userDiscount,
+            iva: cabecera.IVA_DETAIL?.IVA_PERCENTAGE || 15,
             customer: {
               name: cabecera.USER.NAME_USER,
               email: cabecera.USER.EMAIL,
-              phone: "No disponible", // Este dato no viene en la API
+              phone: cabecera?.PHONE[0]?.PHONE_NUMBER || "No dispone",
             },
             shipping: {
               address: cabecera.SHIPPING_ADDRESS.STREET,
@@ -763,15 +729,7 @@ const DetallePedido = () => {
           </InfoItem>
           <InfoItem>
             <Label>Contacto Principal:</Label>
-            <Value>
-              {(() => {
-                const empresa = orderDetails.empresaInfo?.name || orderDetails.empresaInfo?.id;
-                const telefonosEmpresa = user.TELEFONOS?.[empresa] || [];
-                if (telefonosEmpresa.length === 0) return "No disponible";
-                const principal = telefonosEmpresa.find(t => t.PREDETERMINED) || telefonosEmpresa[0];
-                return principal ? `${principal.PHONE_NUMBER}` : "No disponible";
-              })()}
-            </Value>
+            <Value>{orderDetails.customer.phone}</Value>
           </InfoItem>
         </Section>
       </TwoColumns>
@@ -995,7 +953,7 @@ const DetallePedido = () => {
             <>
               <SummaryRow>
                 <SummaryLabel>Descuento especial:</SummaryLabel>
-                <SummaryValue>-${aditionalDiscount.toFixed(2)}</SummaryValue>
+                <SummaryValue $operacion>-${aditionalDiscount.toFixed(2)}</SummaryValue>
               </SummaryRow>
               <SummaryRow>
                 <SummaryLabel>Subtotal tras descuento especial:</SummaryLabel>

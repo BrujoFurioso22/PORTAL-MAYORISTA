@@ -216,96 +216,7 @@ const CoordinadorHomeComponent = () => {
     ENTREGADO: "Entregado",
     CANCELADO: "Cancelado",
   };
-  // Datos de ejemplo (en un caso real, esto vendría de una API)
-  const mockOrders = React.useMemo(
-    () => [
-      {
-        id: "ORD-2025-1001",
-        date: new Date(2025, 5, 15),
-        clientName: "Juan Pérez",
-        email: "juan@example.com",
-        phone: "555-123-4567",
-        total: 1250.75,
-        items: 8,
-        status: "pendiente",
-        empresaId: "maxximundo",
-        newAddress: true,
-      },
-      {
-        id: "ORD-2025-1002",
-        date: new Date(2025, 5, 10),
-        clientName: "María López",
-        email: "maria@example.com",
-        phone: "555-987-6543",
-        total: 458.2,
-        items: 3,
-        status: "en_proceso",
-        empresaId: "stox",
-        newAddress: false,
-      },
-      {
-        id: "ORD-2025-1003",
-        date: new Date(2025, 5, 5),
-        clientName: "Carlos Ramírez",
-        email: "carlos@example.com",
-        phone: "555-456-7890",
-        total: 876.5,
-        items: 5,
-        status: "completado",
-        empresaId: "maxximundo",
-        newAddress: false,
-      },
-      {
-        id: "ORD-2025-1004",
-        date: new Date(2025, 4, 28),
-        clientName: "Ana Gómez",
-        email: "ana@example.com",
-        phone: "555-234-5678",
-        total: 2100.0,
-        items: 12,
-        status: "despachado",
-        empresaId: "autollanta",
-        newAddress: false,
-      },
-      {
-        id: "ORD-2025-1005",
-        date: new Date(2025, 4, 20),
-        clientName: "Roberto Silva",
-        email: "roberto@example.com",
-        phone: "555-876-5432",
-        total: 345.8,
-        items: 2,
-        status: "rechazado",
-        empresaId: "stox",
-        newAddress: false,
-      },
-      {
-        id: "ORD-2025-1006",
-        date: new Date(2025, 4, 15),
-        clientName: "Lucía Martínez",
-        email: "lucia@example.com",
-        phone: "555-765-4321",
-        total: 950.25,
-        items: 6,
-        status: "cancelado_cliente",
-        empresaId: "maxximundo",
-        newAddress: true,
-      },
-      {
-        id: "ORD-2025-1007",
-        date: new Date(2025, 4, 8),
-        clientName: "Eduardo Torres",
-        email: "eduardo@example.com",
-        phone: "555-345-6789",
-        total: 540.0,
-        items: 4,
-        status: "en_proceso_observacion",
-        empresaId: "autollanta",
-        newAddress: false,
-      },
-    ],
-    []
-  );
+
   useEffect(() => {
     const loadOrders = async () => {
       try {
@@ -329,13 +240,15 @@ const CoordinadorHomeComponent = () => {
 
             empresaOrders.forEach((order) => {
               // Calcular el total si está vacío
-              const total = order.CABECERA.TOTAL || order.CABECERA.SUBTOTAL;
+              const total = order.CABECERA.TOTAL;
+              const subtotal = order.CABECERA.SUBTOTAL;
 
               // Calcular la cantidad total de items
               const itemsCount = order.DETALLE.reduce(
                 (sum, item) => sum + item.QUANTITY,
                 0
               );
+              console.log(order);
 
               // Detectar si tiene direcciones nuevas (CLIENT origin)
               const hasNewAddress =
@@ -349,6 +262,7 @@ const CoordinadorHomeComponent = () => {
                 email: order.CABECERA.USER.EMAIL,
                 phone: order.CABECERA.USER.PHONE || "No registrado",
                 total: total,
+                subtotal: subtotal,
                 items: itemsCount,
                 status: order.CABECERA.STATUS, // Usar directamente el valor de la API
                 empresaId: order.CABECERA.ENTERPRISE.toLowerCase(),
@@ -376,12 +290,8 @@ const CoordinadorHomeComponent = () => {
         console.error("Error al obtener pedidos:", err);
         setError("Error al obtener los pedidos");
 
-        // Fallback a datos mock en caso de error
-        const newAddresses = mockOrders.filter(
-          (order) => order.newAddress
-        ).length;
-        setNewAddressesCount(newAddresses);
-        setOrders(mockOrders);
+        setNewAddressesCount([]);
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -390,7 +300,8 @@ const CoordinadorHomeComponent = () => {
     if (user?.EMPRESAS) {
       loadOrders();
     }
-  }, [user, mockOrders]); // Función para recargar pedidos
+  }, [user]); // Función para recargar pedidos
+
   const handleObtainOrders = async () => {
     try {
       setLoading(true);
@@ -409,6 +320,7 @@ const CoordinadorHomeComponent = () => {
 
         Object.keys(ordersResponse.data).forEach((empresa) => {
           const empresaOrders = ordersResponse.data[empresa];
+          console.log(empresaOrders);
 
           empresaOrders.forEach((order) => {
             // Calcular el total si está vacío
@@ -544,6 +456,7 @@ const CoordinadorHomeComponent = () => {
       dataType: "date",
       width: "180px",
       render: (row) => {
+        console.log(row);
         const date = new Date(row.date);
         const now = new Date();
         const hoursAgo = differenceInHours(now, date);
@@ -577,6 +490,13 @@ const CoordinadorHomeComponent = () => {
       render: (row) => empresasMap[row.empresaId] || row.empresaId,
     },
     {
+      header: "Subtotal",
+      field: "subtotal",
+      dataType: "number",
+      render: (row) => `$${row.subtotal.toFixed(2)}`,
+      align: "right",
+    },
+    {
       header: "Total",
       field: "total",
       dataType: "number",
@@ -599,24 +519,6 @@ const CoordinadorHomeComponent = () => {
         </StatusBadge>
       ),
       align: "center",
-    },
-    {
-      header: "Teléfono",
-      field: "phone",
-      sortable: false,
-      render: (row) => (
-        <span
-          style={{
-            color:
-              row.phone === "No registrado"
-                ? theme.colors.textLight
-                : theme.colors.text,
-            fontStyle: row.phone === "No registrado" ? "italic" : "normal",
-          }}
-        >
-          {row.phone}
-        </span>
-      ),
     },
   ];
   // Función para renderizar acciones por fila

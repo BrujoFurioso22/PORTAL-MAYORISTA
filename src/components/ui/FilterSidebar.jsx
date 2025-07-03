@@ -1,15 +1,9 @@
 import React, { useState, useCallback, useMemo } from "react";
 import styled from "styled-components";
-import {
-  FaTimes,
-  FaFilter,
-  FaTag,
-  FaTrademark,
-  FaIndustry,
-} from "react-icons/fa";
 import Button from "./Button";
 import { CATEGORY_TYPE_LABELS } from "../../constants/productLineConfig";
 import RenderIcon from "./RenderIcon";
+import Select from "./Select";
 
 const SidebarWrapper = styled.div`
   display: flex;
@@ -164,10 +158,10 @@ const BusinessLineSelector = styled.div`
 `;
 
 const BusinessLineButton = styled.button`
-  background: ${({ active, theme }) =>
-    active ? theme.colors.primary : theme.colors.background};
-  color: ${({ active, theme }) =>
-    active ? theme.colors.white : theme.colors.text};
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.primary : theme.colors.background};
+  color: ${({ $active, theme }) =>
+    $active ? theme.colors.white : theme.colors.text};
   border: 1px solid ${({ theme }) => theme.colors.border};
   padding: 8px 16px;
   margin: 0 4px 8px 0;
@@ -177,10 +171,55 @@ const BusinessLineButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ active, theme }) =>
-      active ? theme.colors.accent : theme.colors.backgroundHover};
+    background: ${({ $active, theme }) =>
+      $active ? theme.colors.accent : theme.colors.backgroundHover};
   }
 `;
+
+// Función para extraer y filtrar valores únicos de Rin, Ancho y Alto para LLANTAS
+function getNeumaticosFilters(productos, selectedRin, selectedAncho) {
+  // Solo productos con datos de neumaticos
+  const neumaticos = productos.filter(
+    (p) => p.lineaNegocio === "LLANTAS" && p.specs.rin
+  );
+
+  // RIN: todos los disponibles
+  const rinSet = new Set();
+  neumaticos.forEach((p) => rinSet.add(String(p.specs.rin)));
+  const rinOptions = Array.from(rinSet).sort((a, b) => Number(a) - Number(b));
+
+  // Filtrar por Rin seleccionado
+  const filteredByRin = selectedRin
+    ? neumaticos.filter((p) => String(p.specs.rin) === String(selectedRin))
+    : neumaticos;
+
+  // ANCHO: todos los disponibles para ese Rin
+  const anchoSet = new Set();
+  filteredByRin.forEach((p) => anchoSet.add(String(p.specs.ancho)));
+  const anchoOptions = Array.from(anchoSet).sort(
+    (a, b) => Number(a) - Number(b)
+  );
+
+  // Filtrar por Ancho seleccionado
+  const filteredByAncho = selectedAncho
+    ? filteredByRin.filter(
+        (p) => String(p.specs.ancho) === String(selectedAncho)
+      )
+    : filteredByRin;
+
+  // ALTO: solo si existe, para ese Rin y Ancho
+  const altoSet = new Set();
+  filteredByAncho.forEach((p) => {
+    if (p.specs.serie) altoSet.add(String(p.specs.serie));
+  });
+  const altoOptions = Array.from(altoSet).sort((a, b) => Number(a) - Number(b));
+
+  return {
+    rinOptions,
+    anchoOptions,
+    altoOptions,
+  };
+}
 
 // Componente simplificado
 const FilterSidebar = React.memo(
@@ -209,7 +248,7 @@ const FilterSidebar = React.memo(
           lineaNegocio === "DEFAULT" || product.lineaNegocio === lineaNegocio
       );
 
-      const prices = relevantProducts.map((p) => p.price).filter((p) => p > 0);
+      const prices = relevantProducts.map((p) => p.price);
 
       if (prices.length === 0) return { min: 0, max: 100 };
 
@@ -227,16 +266,23 @@ const FilterSidebar = React.memo(
         max: availablePriceRange.max,
       }
     );
+    // Estado local para los selects de neumaticos
+    const [selectedRin, setSelectedRin] = useState("");
+    const [selectedAncho, setSelectedAncho] = useState("");
+    const [selectedAlto, setSelectedAlto] = useState("");
 
-    // Sincronizar el precio local cuando cambie el rango disponible
     React.useEffect(() => {
-      if (!selectedPriceRange) {
-        setLocalPriceRange({
-          min: availablePriceRange.min,
-          max: availablePriceRange.max,
-        });
-      }
-    }, [availablePriceRange, selectedPriceRange]); // Extraer categorías agrupadas por tipo desde filtersByType
+      // Reiniciar todos los filtros locales cuando cambia la línea de negocio
+      setLocalCategories([]);
+      setLocalBrands([]);
+      setLocalPriceRange({
+        min: availablePriceRange.min,
+        max: availablePriceRange.max,
+      });
+      setSelectedRin("");
+      setSelectedAncho("");
+      setSelectedAlto("");
+    }, [lineaNegocio, availablePriceRange.min, availablePriceRange.max]);
     const categoriesGroupedByType = useMemo(() => {
       if (!allProducts || allProducts.length === 0) {
         return {};
@@ -350,6 +396,22 @@ const FilterSidebar = React.memo(
           }
         }
 
+        // Filtros de medidas para LLANTAS
+        if (lineaNegocio === "LLANTAS") {
+          if (selectedRin && String(product.specs.rin) !== String(selectedRin))
+            return false;
+          if (
+            selectedAncho &&
+            String(product.specs.ancho) !== String(selectedAncho)
+          )
+            return false;
+          if (
+            selectedAlto &&
+            String(product.specs.serie) !== String(selectedAlto)
+          )
+            return false;
+        }
+
         return true;
       });
 
@@ -444,6 +506,9 @@ const FilterSidebar = React.memo(
               brands: localBrands,
               price: localPriceRange,
               businessLine: lineaNegocio,
+              rin: selectedRin,
+              ancho: selectedAncho,
+              alto: selectedAlto,
             };
             debouncedApplyFilters(filters);
           }, 0);
@@ -517,12 +582,18 @@ const FilterSidebar = React.memo(
         min: availablePriceRange.min,
         max: availablePriceRange.max,
       });
+      setSelectedRin("");
+      setSelectedAncho("");
+      setSelectedAlto("");
 
       const filters = {
         categories: [],
         brands: [],
         price: { min: availablePriceRange.min, max: availablePriceRange.max },
         businessLine: lineaNegocio,
+        rin: "",
+        ancho: "",
+        alto: "",
       };
       debouncedApplyFilters(filters);
     }, [
@@ -531,6 +602,48 @@ const FilterSidebar = React.memo(
       availablePriceRange.max,
       debouncedApplyFilters,
     ]);
+
+    // Obtener opciones de filtros de neumaticos
+    const neumaticosFilters = useMemo(() => {
+      if (lineaNegocio !== "LLANTAS") return null;
+      return getNeumaticosFilters(allProducts, selectedRin, selectedAncho);
+    }, [allProducts, lineaNegocio, selectedRin, selectedAncho]);
+
+    // Cuando cambia la línea de negocio, limpiar selects
+    React.useEffect(() => {
+      if (lineaNegocio !== "LLANTAS") {
+        setSelectedRin("");
+        setSelectedAncho("");
+        setSelectedAlto("");
+      }
+    }, [lineaNegocio]);
+
+    // Cuando cambia Rin, limpiar Ancho y Alto
+    React.useEffect(() => {
+      setSelectedAncho("");
+      setSelectedAlto("");
+    }, [selectedRin]);
+    // Cuando cambia Ancho, limpiar Alto
+    React.useEffect(() => {
+      setSelectedAlto("");
+    }, [selectedAncho]);
+
+    // Al cambiar cualquier select, aplicar filtros inmediatos
+    React.useEffect(() => {
+      if (lineaNegocio !== "LLANTAS") return;
+      // Filtrar productos
+      const filters = {
+        categories: localCategories,
+        brands: localBrands,
+        price: localPriceRange,
+        businessLine: lineaNegocio,
+        rin: selectedRin,
+        ancho: selectedAncho,
+        alto: selectedAlto,
+      };
+      debouncedApplyFilters(filters);
+      // eslint-disable-next-line
+    }, [selectedRin, selectedAncho, selectedAlto]);
 
     return (
       <SidebarWrapper>
@@ -555,11 +668,12 @@ const FilterSidebar = React.memo(
               {countFilteredProducts} productos encontrados
             </ProductsCount>
           )}
+
           {/* Selector de líneas de negocio si hay más de una */}
           {availableBusinessLines.length > 1 && (
             <BusinessLineSelector>
               <SectionSubTitle>
-                <FaIndustry />
+                <RenderIcon name="FaIndustry" size={18} />
                 Línea de Negocio
               </SectionSubTitle>
               {availableBusinessLines.map((line) => (
@@ -574,14 +688,67 @@ const FilterSidebar = React.memo(
                 </BusinessLineButton>
               ))}
             </BusinessLineSelector>
-          )}{" "}
+          )}
+          {lineaNegocio === "LLANTAS" && neumaticosFilters && (
+            <div style={{ marginBottom: 20 }}>
+              <SectionSubTitle>
+                <RenderIcon name="FaRuler" size={18} />
+                Filtrar por medidas
+              </SectionSubTitle>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <Select
+                  options={neumaticosFilters.rinOptions.map((rin) => ({
+                    label: rin,
+                    value: rin,
+                  }))}
+                  value={selectedRin}
+                  onChange={(e) => setSelectedRin(e.target.value)}
+                  placeholder="Rin"
+                  width="90px"
+                  withSearch
+                  disabled={false}
+                />
+                <Select
+                  options={neumaticosFilters.anchoOptions.map((ancho) => ({
+                    label: ancho,
+                    value: ancho,
+                  }))}
+                  value={selectedAncho}
+                  onChange={(e) => setSelectedAncho(e.target.value)}
+                  placeholder="Ancho"
+                  width="90px"
+                  disabled={!selectedRin}
+                />
+                {neumaticosFilters.altoOptions.length > 0 && (
+                  <Select
+                    options={neumaticosFilters.altoOptions.map((alto) => ({
+                      label: alto,
+                      value: alto,
+                    }))}
+                    value={selectedAlto}
+                    onChange={(e) => setSelectedAlto(e.target.value)}
+                    placeholder="Alto"
+                    width="90px"
+                    disabled={!selectedAncho}
+                  />
+                )}
+              </div>
+            </div>
+          )}
           {/* Filtros agrupados por tipo con estado dinámico */}
           {Object.keys(availableFiltersWithStatus.categories).length > 0 &&
             Object.entries(availableFiltersWithStatus.categories).map(
               ([filterType, filterItems]) => (
                 <FilterGroup key={filterType}>
                   <SectionSubTitle>
-                    <FaTag />
+                    <RenderIcon name="FaTag" size={18} />
                     {CATEGORY_TYPE_LABELS[filterType] ||
                       filterType.charAt(0).toUpperCase() + filterType.slice(1)}
                   </SectionSubTitle>
@@ -602,12 +769,12 @@ const FilterSidebar = React.memo(
                   </ChipsContainer>
                 </FilterGroup>
               )
-            )}{" "}
+            )}
           {/* Filtro de Marcas con estado dinámico */}
           {availableFiltersWithStatus.brands.length > 0 && (
             <FilterGroup>
               <SectionSubTitle>
-                <FaTrademark />
+                <RenderIcon name="FaTrademark" size={18} />
                 Marcas
               </SectionSubTitle>
               <ChipsContainer>

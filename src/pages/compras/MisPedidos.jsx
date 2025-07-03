@@ -160,7 +160,8 @@ const MisPedidos = () => {
           const itemsCount = order.DETALLE.reduce(
             (sum, item) => sum + item.QUANTITY,
             0
-          );          return {
+          );
+          return {
             id: order.CABECERA.ID_CART_HEADER,
             date: order.CABECERA.createdAt,
             total: total,
@@ -188,18 +189,18 @@ const MisPedidos = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       if (!user?.ACCOUNT_USER) return;
-      
+
       try {
         setLoading(true);
         const response = await order_getOrdersByAccount(user.ACCOUNT_USER);
         console.log(response);
-        
 
         if (response.success && response.data) {
           // Transformar los datos de la API al formato que espera nuestro componente
           const formattedOrders = response.data.map((order) => {
             // Calcular el total si está vacío
-            const total = order.CABECERA.TOTAL || order.CABECERA.SUBTOTAL;
+            const total = order.CABECERA.TOTAL;
+            const subtotal = order.CABECERA.SUBTOTAL;
 
             // Calcular la cantidad total de items
             const itemsCount = order.DETALLE.reduce(
@@ -211,6 +212,7 @@ const MisPedidos = () => {
               id: order.CABECERA.ID_CART_HEADER,
               date: order.CABECERA.createdAt,
               total: total,
+              subtotal: subtotal,
               items: itemsCount,
               status: order.CABECERA.STATUS, // Usar directamente el valor de la API
               paymentMethod: "Pendiente", // Este dato no viene en la API
@@ -326,6 +328,13 @@ const MisPedidos = () => {
     {
       header: "Proveedor",
       field: "empresaId",
+    },
+    {
+      header: "Subtotal",
+      field: "subtotal",
+      dataType: "number",
+      render: (row) => `$${row.subtotal.toFixed(2)}`,
+      align: "right",
     },
     {
       header: "Total",

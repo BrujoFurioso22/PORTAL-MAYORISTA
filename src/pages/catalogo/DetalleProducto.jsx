@@ -256,7 +256,7 @@ const ZoomWindow = styled.div`
   border-radius: 8px;
   box-shadow: 0 4px 10px ${({ theme }) => theme.colors.shadow};
   overflow: hidden;
-  opacity: ${({ visible }) => (visible ? 1 : 0)};
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
   transition: opacity 0.3s;
   pointer-events: none;
   z-index: 5000;
@@ -391,15 +391,7 @@ const DetalleProducto = () => {
   const currentInCart = React.useMemo(() => {
     if (!cart || !product) return 0;
 
-    console.log(cart);
-
     const cartItem = cart.find((item) => item?.id === product.id);
-    console.log(cartItem);
-
-    console.log(
-      "Cantidad actual en el carrito:",
-      cartItem ? cartItem.quantity : 0
-    );
 
     return cartItem ? cartItem.quantity : 0;
   }, [cart, product]);
@@ -420,12 +412,8 @@ const DetalleProducto = () => {
   useEffect(() => {
     // Si ya tenemos el producto del state, no necesitamos buscarlo
     if (product) {
-      console.log("Producto obtenido del state de navegación:", product);
-
       return;
     }
-
-    console.log("Buscando producto con ID:", id); // Para depuración
 
     // Implementación de búsqueda existente como fallback
     let foundProduct = null;
@@ -438,7 +426,6 @@ const DetalleProducto = () => {
       );
 
       if (found) {
-        console.log("Producto encontrado:", found);
         foundProduct = found;
         foundEmpresaId = empresaId;
       }
@@ -525,7 +512,7 @@ const DetalleProducto = () => {
 
             {/* Ventana de zoom */}
             <ZoomWindow
-              visible={isHovering}
+              $visible={isHovering}
               style={{
                 left: `${zoomPosition.x}px`,
                 top: `${zoomPosition.y}px`,

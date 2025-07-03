@@ -10,7 +10,10 @@ import Button from "../../components/ui/Button";
 import Select from "../../components/ui/Select";
 import Input from "../../components/ui/Input";
 import RenderIcon from "../../components/ui/RenderIcon";
-import { order_getOrderById } from "../../services/order/order";
+import {
+  order_getOrderById,
+  order_updateOrder,
+} from "../../services/order/order";
 import { baseLinkImages } from "../../constants/links";
 
 // Estilos del componente
@@ -67,6 +70,9 @@ const OrderActions = styled.div`
 `;
 
 const StatusBadge = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 0.9rem;
@@ -124,7 +130,7 @@ const TwoColumns = styled.div`
   grid-template-columns: 1fr 1fr;
   gap: 24px;
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -149,61 +155,6 @@ const Value = styled.p`
   font-weight: 500;
 `;
 
-const ProductsTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-`;
-
-const ProductsHead = styled.thead`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-const ProductsHeadCell = styled.th`
-  text-align: left;
-  padding: 12px 16px;
-  color: ${({ theme }) => theme.colors.textLight};
-  font-weight: 500;
-  font-size: 0.9rem;
-`;
-
-const ProductsBody = styled.tbody``;
-
-const ProductRow = styled.tr`
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const ProductCell = styled.td`
-  padding: 16px;
-  vertical-align: middle;
-`;
-
-const ProductImage = styled.img`
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 4px;
-`;
-
-const ProductInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const ProductName = styled.span`
-  font-weight: 500;
-  margin-bottom: 4px;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const ProductSKU = styled.span`
-  font-size: 0.8rem;
-  color: ${({ theme }) => theme.colors.textLight};
-`;
-
 const OrderSummary = styled.div`
   margin-top: 24px;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
@@ -220,6 +171,8 @@ const SummaryRow = styled.div`
     margin-top: 12px;
     font-weight: bold;
     font-size: 1.1rem;
+    border-top: 1px solid ${({ theme }) => theme.colors.border};
+    padding-top: 12px;
   }
 `;
 
@@ -229,6 +182,9 @@ const SummaryLabel = styled.span`
 
 const SummaryValue = styled.span`
   color: ${({ theme }) => theme.colors.text};
+  ${({ $operacion, theme }) =>
+    $operacion &&
+    `border-bottom: solid 1px ${theme.colors.border}; padding-bottom: 4px;`}
 `;
 
 const EditableSection = styled.div`
@@ -293,21 +249,34 @@ const AddressAlertText = styled.p`
   font-size: 0.9rem;
 `;
 
+const ChangesBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background-color: ${({ theme }) => theme.colors.warning}22;
+  border: 1px solid ${({ theme }) => theme.colors.warning};
+  color: ${({ theme }) => theme.colors.warning};
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+`;
+
 const DetallePedidoCoordinador = () => {
   const { orderId } = useParams();
-  const navigate = useNavigate();
   const { theme } = useAppTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Estados del componente
   const [orderDetails, setOrderDetails] = useState(null);
+  const [orderDraft, setOrderDraft] = useState(null); // Nuevo estado para el borrador
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingStatus, setEditingStatus] = useState(false);
-  const [newStatus, setNewStatus] = useState("");
-  const [editingDiscount, setEditingDiscount] = useState(false);
-  const [newDiscount, setNewDiscount] = useState(0);
   const [addressConfirmed, setAddressConfirmed] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [deletedItems, setDeletedItems] = useState([]);
 
   // Opciones de estado disponibles para coordinador
   const statusOptions = [
@@ -347,12 +316,6 @@ const DetallePedidoCoordinador = () => {
             statusHistory[statusHistory.length - 1] || {};
           const currentStatus =
             currentStatusObj.VALUE_CATALOG || cabecera.STATUS;
-
-          // Calcular el subtotal
-          const subtotal = detalle.reduce(
-            (sum, item) => sum + item.PRICE * item.QUANTITY,
-            0
-          );
 
           // Calcular descuentos y totales igual que en DetallePedido.jsx
           const items = detalle.map((item) => ({
@@ -415,14 +378,17 @@ const DetallePedidoCoordinador = () => {
             customer: {
               name: cabecera.USER.NAME_USER,
               email: cabecera.USER.EMAIL,
-              phone: "No disponible",
+              account: cabecera.ACCOUNT_USER,
+              phone: cabecera.PHONE[0]?.PHONE_NUMBER || "No disponible",
             },
             shipping: {
+              id: cabecera.SHIPPING_ADDRESS.ID,
               address: cabecera.SHIPPING_ADDRESS.STREET,
               city: cabecera.SHIPPING_ADDRESS.CITY,
               state: cabecera.SHIPPING_ADDRESS.STATE,
             },
             billing: {
+              id: cabecera.BILLING_ADDRESS.ID,
               address: cabecera.BILLING_ADDRESS.STREET,
               city: cabecera.BILLING_ADDRESS.CITY,
               state: cabecera.BILLING_ADDRESS.STATE,
@@ -448,8 +414,7 @@ const DetallePedidoCoordinador = () => {
           };
 
           setOrderDetails(formattedOrder);
-          setNewStatus(formattedOrder.status);
-          setNewDiscount(formattedOrder.discount);
+          setOrderDraft(JSON.parse(JSON.stringify(formattedOrder))); // Inicializar draft al cargar datos
           setAddressConfirmed(!hasNewAddress);
           setError(null);
         } else {
@@ -466,44 +431,149 @@ const DetallePedidoCoordinador = () => {
     fetchOrderDetails();
   }, [orderId]);
 
-  // Calcular total con nuevo descuento
-  const calculateNewTotal = () => {
-    if (!orderDetails) return 0;
-    return Math.max(0, orderDetails.subtotal - newDiscount);
+  // Detectar si hay cambios pendientes (estado, descuento, productos) en tiempo real
+  useEffect(() => {
+    if (!orderDetails || !orderDraft) return;
+    // Detectar cambios entre draft y details
+    const statusChanged = orderDraft.status !== orderDetails.status;
+    const discountChanged =
+      orderDraft.aditionalDiscount !== orderDetails.aditionalDiscount;
+    const itemsChanged = (() => {
+      if (deletedItems.length > 0) return true;
+      if (orderDraft.items.length !== orderDetails.items.length) return true;
+      for (let i = 0; i < orderDetails.items.length; i++) {
+        const orig = orderDetails.items[i];
+        const mod = orderDraft.items.find((it) => it.id === orig.id);
+        if (!mod || mod.quantity !== orig.quantity) return true;
+      }
+      return false;
+    })();
+    setHasChanges(statusChanged || discountChanged || itemsChanged);
+  }, [orderDetails, orderDraft, deletedItems]);
+
+  // Función utilitaria para actualizar el estado correcto (draft o details)
+  function updateOrderState(updater) {
+    // Solo se debe actualizar el draft
+    setOrderDraft((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      return { ...prev, ...next };
+    });
+  }
+
+  // Handlers para editar el draft
+  const handleStatusChange = (value) => {
+    updateOrderState(() => ({ status: value }));
   };
 
-  // Guardar cambio de estado
-  const handleSaveStatus = async () => {
-    try {
-      // Aquí iría la llamada a la API para actualizar el estado
-      // await updateOrderStatus(orderId, newStatus);
-
-      setOrderDetails((prev) => ({ ...prev, status: newStatus }));
-      setEditingStatus(false);
-      toast.success("Estado actualizado correctamente");
-    } catch (error) {
-      console.error("Error al actualizar estado:", error);
-      toast.error("Error al actualizar el estado");
-    }
+  const handleDiscountChange = (value) => {
+    const discountValue = parseFloat(value) || 0;
+    updateOrderState((prev) => {
+      const totales = calcularTotales(prev.items, discountValue);
+      return {
+        aditionalDiscount: discountValue,
+        ...totales,
+      };
+    });
   };
 
-  // Guardar cambio de descuento
-  const handleSaveDiscount = async () => {
-    try {
-      // Aquí iría la llamada a la API para actualizar el descuento
-      // await updateOrderDiscount(orderId, newDiscount);
+  const handleUpdateQuantity = (productId, newQuantity) => {
+    if (newQuantity < 1) return;
+    updateOrderState((prev) => {
+      const updatedItems = prev.items.map((item) =>
+        item.id === productId ? { ...item, quantity: newQuantity } : item
+      );
+      const totales = calcularTotales(updatedItems, prev.aditionalDiscount);
+      return {
+        items: updatedItems,
+        ...totales,
+      };
+    });
+  };
 
-      const newTotal = calculateNewTotal();
-      setOrderDetails((prev) => ({
-        ...prev,
-        discount: newDiscount,
-        total: newTotal,
-      }));
-      setEditingDiscount(false);
-      toast.success("Descuento aplicado correctamente");
+  const handleRemoveProduct = (productId) => {
+    updateOrderState((prev) => {
+      const updatedItems = prev.items.filter((item) => item.id !== productId);
+      const totales = calcularTotales(updatedItems, prev.aditionalDiscount);
+      return {
+        items: updatedItems,
+        ...totales,
+      };
+    });
+    setDeletedItems((prev) => {
+      const already = prev.find((item) => item.id === productId);
+      if (already) return prev;
+      const removed = orderDraft.items.find((item) => item.id === productId);
+      return removed ? [...prev, removed] : prev;
+    });
+  };
+
+  const handleUndoRemoveProduct = (productId) => {
+    const restored = deletedItems.find((item) => item.id === productId);
+    if (!restored) return;
+    updateOrderState((prev) => {
+      // Restaurar los items del orderDetails
+      const updatedItems = orderDetails.items.map((item) => ({ ...item }));
+      const totales = calcularTotales(updatedItems, prev.aditionalDiscount);
+      return {
+        status: orderDetails.status,
+        items: updatedItems,
+        ...totales,
+      };
+    });
+    setDeletedItems((prev) => prev.filter((item) => item.id !== productId));
+  };
+
+  const handleCancelEdit = () => {
+    setOrderDraft(JSON.parse(JSON.stringify(orderDetails)));
+    setDeletedItems([]);
+    setEditMode(false);
+  };
+
+  // Guardar todos los cambios
+  const handleSaveAllChanges = async () => {
+    try {
+      const body = {
+        ENTERPRISE: orderDetails.empresaInfo.id,
+        ACCOUNT_USER: orderDetails.customer.account,
+        SHIPPING_ADDRESS_ID: orderDetails.shipping.id,
+        BILLING_ADDRESS_ID: orderDetails.billing.id,
+        SUBTOTAL: orderDraft.rawSubtotal,
+        DISCOUNT: orderDetails.discount,
+        ADITIONAL_DISCOUNT: orderDraft.aditionalDiscount,
+        TOTAL: orderDraft.totalConIva,
+        STATUS: orderDraft.status,
+
+        PRODUCTOS: orderDraft.items.map((item) => ({
+          PRODUCT_CODE: item.id,
+          QUANTITY: item.quantity,
+          PRICE: item.price,
+          PROMOTIONAL_DISCOUNT: item.promotionalDiscount || 0,
+        })),
+      };
+
+      const responseUpdate = await order_updateOrder(orderDetails.id, body);
+      
+
+      const updatedOrder = {
+        ...orderDetails,
+        status: orderDraft.status,
+        aditionalDiscount: orderDraft.aditionalDiscount,
+        items: orderDraft.items.map((item) => ({ ...item })),
+        subtotal: orderDraft.rawSubtotal,
+        total: orderDraft.totalConIva,
+      };
+
+
+      setOrderDetails(updatedOrder);
+      setOrderDraft(JSON.parse(JSON.stringify(updatedOrder)));
+
+      setHasChanges(false);
+      setEditMode(false);
+      setDeletedItems([]);
+      toast.success("Cambios guardados correctamente");
     } catch (error) {
-      console.error("Error al aplicar descuento:", error);
-      toast.error("Error al aplicar el descuento");
+      console.error("Error al guardar cambios:", error);
+      toast.error("Error al guardar los cambios");
     }
   };
 
@@ -521,100 +591,43 @@ const DetallePedidoCoordinador = () => {
     }
   };
 
-  const handleUpdateQuantity = (productId, newQuantity) => {
-    if (newQuantity < 1) return;
-    setOrderDetails((prev) => {
-      const updatedItems = prev.items.map((item) =>
-        item.id === productId ? { ...item, quantity: newQuantity } : item
-      );
-      const updatedSubtotal = updatedItems.reduce(
-        (acc, item) => acc + item.price * item.quantity,
-        0
-      );
-      const updatedTotalPromotionalDiscount = updatedItems.reduce(
-        (acc, item) =>
-          acc +
-          item.price *
-            item.quantity *
-            ((Number(item.promotionalDiscount) || 0) / 100),
-        0
-      );
-      const updatedSubtotalAfterPromo =
-        updatedSubtotal - updatedTotalPromotionalDiscount;
-      const updatedGeneralDiscount =
-        updatedSubtotalAfterPromo * (Number(prev.discount) / 100);
-      const updatedSubtotalAfterGeneral =
-        updatedSubtotalAfterPromo - updatedGeneralDiscount;
-      const updatedAditionalDiscount =
-        updatedSubtotalAfterGeneral * (Number(prev.aditionalDiscount) / 100);
-      const updatedTotalFinal =
-        updatedSubtotalAfterGeneral - updatedAditionalDiscount;
-      const updatedValorIVA = updatedTotalFinal * (Number(prev.iva) / 100);
-      const updatedTotalConIva = updatedTotalFinal + updatedValorIVA;
+  function calcularTotales(items, aditionalDiscount) {
 
-      return {
-        ...prev,
-        items: updatedItems,
-        rawSubtotal: updatedSubtotal,
-        totalPromotionalDiscount: updatedTotalPromotionalDiscount,
-        subtotalAfterPromo: updatedSubtotalAfterPromo,
-        generalDiscount: updatedGeneralDiscount,
-        subtotalAfterGeneral: updatedSubtotalAfterGeneral,
-        aditionalDiscount: updatedAditionalDiscount,
-        totalFinal: updatedTotalFinal,
-        valorIVA: updatedValorIVA,
-        totalConIva: updatedTotalConIva,
-      };
-    });
-  };
+    const rawSubtotal = items.reduce(
+      (acc, item) => acc + item.price * item.quantity,
+      0
+    );
+    const totalPromotionalDiscount = items.reduce(
+      (acc, item) =>
+        acc +
+        item.price *
+          item.quantity *
+          ((Number(item.promotionalDiscount) || 0) / 100),
+      0
+    );
+    const subtotalAfterPromo = rawSubtotal - totalPromotionalDiscount;
+    const generalDiscount =
+      subtotalAfterPromo * (Number(orderDetails.discount) / 100);
+    const subtotalAfterGeneral = subtotalAfterPromo - generalDiscount;
+    const aditionalDiscountValue =
+      subtotalAfterGeneral * (Number(aditionalDiscount) / 100);
+    let totalFinal = subtotalAfterGeneral - aditionalDiscountValue;
+    if (totalFinal < 0) totalFinal = 0;
+    const valorIVA = totalFinal * (Number(orderDetails.iva) / 100);
+    const totalConIva = totalFinal + valorIVA;
 
-  const handleRemoveProduct = (productId) => {
-    setOrderDetails((prev) => {
-      const updatedItems = prev.items.filter((item) => item.id !== productId);
-      if (updatedItems.length === 0) {
-        return { ...prev, items: [], status: "CANCELADO" };
-      }
-
-      const updatedSubtotal = updatedItems.reduce(
-        (acc, item) => acc + item.price * item.quantity,
-        0
-      );
-      const updatedTotalPromotionalDiscount = updatedItems.reduce(
-        (acc, item) =>
-          acc +
-          item.price *
-            item.quantity *
-            ((Number(item.promotionalDiscount) || 0) / 100),
-        0
-      );
-      const updatedSubtotalAfterPromo =
-        updatedSubtotal - updatedTotalPromotionalDiscount;
-      const updatedGeneralDiscount =
-        updatedSubtotalAfterPromo * (Number(prev.discount) / 100);
-      const updatedSubtotalAfterGeneral =
-        updatedSubtotalAfterPromo - updatedGeneralDiscount;
-      const updatedAditionalDiscount =
-        updatedSubtotalAfterGeneral * (Number(prev.aditionalDiscount) / 100);
-      const updatedTotalFinal =
-        updatedSubtotalAfterGeneral - updatedAditionalDiscount;
-      const updatedValorIVA = updatedTotalFinal * (Number(prev.iva) / 100);
-      const updatedTotalConIva = updatedTotalFinal + updatedValorIVA;
-
-      return {
-        ...prev,
-        items: updatedItems,
-        rawSubtotal: updatedSubtotal,
-        totalPromotionalDiscount: updatedTotalPromotionalDiscount,
-        subtotalAfterPromo: updatedSubtotalAfterPromo,
-        generalDiscount: updatedGeneralDiscount,
-        subtotalAfterGeneral: updatedSubtotalAfterGeneral,
-        aditionalDiscount: updatedAditionalDiscount,
-        totalFinal: updatedTotalFinal,
-        valorIVA: updatedValorIVA,
-        totalConIva: updatedTotalConIva,
-      };
-    });
-  };
+    return {
+      rawSubtotal,
+      totalPromotionalDiscount,
+      subtotalAfterPromo,
+      generalDiscount,
+      subtotalAfterGeneral,
+      aditionalDiscountValue: aditionalDiscountValue,
+      totalFinal,
+      valorIVA,
+      totalConIva,
+    };
+  }
 
   if (loading) {
     return (
@@ -670,6 +683,15 @@ const DetallePedidoCoordinador = () => {
         </OrderTitle>
 
         <OrderActions>
+          {!editMode && (
+            <Button
+              text={"Editar"}
+              leftIconName={"FaEdit"}
+              size="small"
+              variant="outlined"
+              onClick={() => setEditMode(!editMode)}
+            />
+          )}
           <StatusBadge status={orderDetails.status}>
             {translateStatus(orderDetails.status)}
           </StatusBadge>
@@ -704,238 +726,316 @@ const DetallePedidoCoordinador = () => {
       )}
 
       {/* Gestión del pedido dividido en tres cuadros */}
-      <Section>
-        <SectionTitle>
-          <RenderIcon name="FaCog" size={18} /> Gestión del pedido
-        </SectionTitle>
+      {editMode && (
+        <Section>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <SectionTitle>
+              <RenderIcon name="FaCog" size={18} /> Gestión del pedido
+              {hasChanges && (
+                <ChangesBadge>
+                  <RenderIcon name="FaExclamationCircle" size={12} />
+                  Cambios pendientes
+                </ChangesBadge>
+              )}
+            </SectionTitle>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button
+                text="Cancelar"
+                variant="outlined"
+                size="small"
+                leftIconName="FaTimes"
+                onClick={handleCancelEdit}
+              />
+              <Button
+                text="Guardar"
+                variant="solid"
+                size="small"
+                backgroundColor={
+                  hasChanges ? theme.colors.success : theme.colors.textLight
+                }
+                leftIconName="FaSave"
+                disabled={!hasChanges}
+                onClick={handleSaveAllChanges}
+              />
+            </div>
+          </div>
 
-        <TwoColumns>
-          <EditableSection>
-            <EditableSectionTitle>
-              <RenderIcon name="FaEdit" size={16} /> Cambiar estado del pedido
-            </EditableSectionTitle>
+          <TwoColumns>
+            <EditableSection>
+              <EditableSectionTitle>
+                <RenderIcon name="FaEdit" size={16} /> Cambiar estado del pedido
+                {orderDraft.status !== orderDetails.status && (
+                  <ChangesBadge>
+                    <RenderIcon name="FaCircle" size={6} />
+                    Modificado
+                  </ChangesBadge>
+                )}
+              </EditableSectionTitle>
 
-            {editingStatus ? (
               <FormRow>
                 <Select
                   options={statusOptions}
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
+                  value={orderDraft?.status ?? ""}
+                  onChange={(e) => handleStatusChange(e.target.value)}
                   width="200px"
-                  label="Nuevo estado"
+                  label="Estado del pedido"
                 />
-                <Button
-                  text="Guardar"
-                  variant="solid"
-                  size="small"
-                  backgroundColor={theme.colors.success}
-                  leftIconName="FaSave"
-                  onClick={handleSaveStatus}
-                />
-                <Button
-                  text="Cancelar"
-                  variant="outlined"
-                  size="small"
-                  leftIconName="FaTimes"
-                  onClick={() => {
-                    setEditingStatus(false);
-                    setNewStatus(orderDetails.status);
-                  }}
-                />
-              </FormRow>
-            ) : (
-              <FormRow>
                 <div>
-                  <Label>Estado actual:</Label>
+                  <Label>Estado original:</Label>
                   <Value>{translateStatus(orderDetails.status)}</Value>
                 </div>
-                <Button
-                  text="Editar estado"
-                  variant="outlined"
-                  size="small"
-                  leftIconName="FaEdit"
-                  onClick={() => setEditingStatus(true)}
-                />
               </FormRow>
-            )}
-          </EditableSection>
+            </EditableSection>
 
-          <EditableSection>
-            <EditableSectionTitle>
-              <RenderIcon name="FaPercentage" size={16} /> Aplicar descuento
-            </EditableSectionTitle>
+            <EditableSection>
+              <EditableSectionTitle>
+                <RenderIcon name="FaPercentage" size={16} /> Aplicar descuento
+                especial
+                {orderDraft.aditionalDiscount !==
+                  orderDetails.aditionalDiscount && (
+                  <ChangesBadge>
+                    <RenderIcon name="FaCircle" size={6} />
+                    Modificado
+                  </ChangesBadge>
+                )}
+              </EditableSectionTitle>
 
-            {editingDiscount ? (
               <FormRow>
                 <Input
                   type="number"
                   min="0"
-                  max={orderDetails.subtotal}
-                  step="0.01"
-                  value={newDiscount}
-                  onChange={(e) =>
-                    setNewDiscount(parseFloat(e.target.value) || 0)
-                  }
-                  label="Descuento ($)"
+                  max="100"
+                  step="1"
+                  value={orderDraft?.aditionalDiscount}
+                  onChange={(e) => handleDiscountChange(e.target.value)}
+                  label="Descuento (%)"
                   width="150px"
                 />
                 <div>
-                  <Label>Nuevo total:</Label>
-                  <Value>${calculateNewTotal().toFixed(2)}</Value>
+                  <Label>Total actual:</Label>
+                  <Value>${orderDraft.totalConIva.toFixed(2)}</Value>
                 </div>
-                <Button
-                  text="Aplicar"
-                  variant="solid"
-                  size="small"
-                  backgroundColor={theme.colors.success}
-                  leftIconName="FaSave"
-                  onClick={handleSaveDiscount}
-                />
-                <Button
-                  text="Cancelar"
-                  variant="outlined"
-                  size="small"
-                  leftIconName="FaTimes"
-                  onClick={() => {
-                    setEditingDiscount(false);
-                    setNewDiscount(orderDetails.discount);
-                  }}
-                />
               </FormRow>
-            ) : (
-              <FormRow>
-                <div>
-                  <Label>Descuento actual:</Label>
-                  <Value>${orderDetails.discount.toFixed(2)}</Value>
-                </div>
-                <div>
-                  <Label>Total:</Label>
-                  <Value>${orderDetails.total.toFixed(2)}</Value>
-                </div>
-                <Button
-                  text="Editar descuento"
-                  variant="outlined"
-                  size="small"
-                  leftIconName="FaEdit"
-                  onClick={() => setEditingDiscount(true)}
-                />
-              </FormRow>
-            )}
-          </EditableSection>
+            </EditableSection>
 
-          <EditableSection>
-            <EditableSectionTitle>
-              <RenderIcon name="FaBox" size={16} /> Gestión de productos
-            </EditableSectionTitle>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {orderDetails.items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 16,
-                    background: theme.colors.surface,
-                    borderRadius: 8,
-                    boxShadow: `0 1px 4px ${theme.colors.shadow}`,
-                    padding: 16,
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    style={{
-                      width: 60,
-                      height: 60,
-                      objectFit: "cover",
-                      borderRadius: 6,
-                      background: "#f6f6f6",
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
+            <EditableSection>
+              <EditableSectionTitle>
+                <RenderIcon name="FaBox" size={16} /> Gestión de productos
+                {(deletedItems.length > 0 ||
+                  (orderDraft?.items ?? []).some((item) => {
+                    const orig = orderDetails.items.find(
+                      (it) => it.id === item.id
+                    );
+                    return orig && orig.quantity !== item.quantity;
+                  })) && (
+                  <ChangesBadge>
+                    <RenderIcon name="FaCircle" size={6} /> Modificado
+                  </ChangesBadge>
+                )}
+              </EditableSectionTitle>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              >
+                {/* Productos activos */}
+                {(orderDraft?.items ?? []).map((item) => {
+                  const orig = orderDetails.items.find(
+                    (it) => it.id === item.id
+                  );
+                  const cantidadOriginal = orig ? orig.quantity : null;
+                  const cantidadModificada =
+                    cantidadOriginal !== null &&
+                    cantidadOriginal !== item.quantity;
+                  return (
                     <div
+                      key={item.id}
                       style={{
                         display: "flex",
-                        justifyContent: "space-between",
+                        flexDirection: "row",
                         alignItems: "center",
+                        gap: 16,
+                        background: theme.colors.surface,
+                        borderRadius: 8,
+                        boxShadow: `0 1px 4px ${theme.colors.shadow}`,
+                        padding: 16,
+                        border: `1px solid ${theme.colors.border}`,
                       }}
                     >
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span
-                          style={{
-                            fontWeight: 500,
-                            marginBottom: 4,
-                            color: theme.colors.text,
-                            fontSize: "1.08rem",
-                          }}
-                        >
-                          {item.name}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "0.8rem",
-                            color: theme.colors.textLight,
-                          }}
-                        >
-                          SKU: {item.sku}
-                        </span>
-                      </div>
-                      <div style={{ textAlign: "right", minWidth: 110 }}>
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        style={{
+                          width: 60,
+                          height: 60,
+                          objectFit: "cover",
+                          borderRadius: 6,
+                          background: "#f6f6f6",
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
                         <div
                           style={{
-                            fontWeight: 700,
-                            color: theme.colors.primary,
-                            fontSize: "1.08rem",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
                           }}
                         >
-                          ${item.price.toFixed(2)}
+                          <div
+                            style={{ display: "flex", flexDirection: "column" }}
+                          >
+                            <span
+                              style={{
+                                fontWeight: 500,
+                                marginBottom: 4,
+                                color: theme.colors.text,
+                                fontSize: "1.08rem",
+                              }}
+                            >
+                              {item.name}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.8rem",
+                                color: theme.colors.textLight,
+                              }}
+                            >
+                              SKU: {item.sku}
+                            </span>
+                          </div>
+                          <div style={{ textAlign: "right", minWidth: 110 }}>
+                            <div
+                              style={{
+                                fontWeight: 700,
+                                color: theme.colors.primary,
+                                fontSize: "1.08rem",
+                              }}
+                            >
+                              ${item.price.toFixed(2)}/u
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.85rem",
+                                color: theme.colors.textLight,
+                              }}
+                            >
+                              Precio
+                            </div>
+                          </div>
                         </div>
                         <div
                           style={{
-                            fontSize: "0.85rem",
-                            color: theme.colors.textLight,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginTop: 8,
+                            gap: 12,
                           }}
                         >
-                          Precio
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 2,
+                            }}
+                          >
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) =>
+                                handleUpdateQuantity(
+                                  item.id,
+                                  parseInt(e.target.value, 10)
+                                )
+                              }
+                              label="Cantidad"
+                              width="100px"
+                            />
+                            <div
+                              style={{
+                                fontSize: "0.85rem",
+                                color: theme.colors.textLight,
+                                marginTop: 2,
+                              }}
+                            >
+                              Total por cantidad:{" "}
+                              <b>${(item.price * item.quantity).toFixed(2)}</b>
+                            </div>
+                            {cantidadModificada && (
+                              <span
+                                style={{
+                                  fontSize: "0.85rem",
+                                  color: theme.colors.textLight,
+                                }}
+                              >
+                                Cantidad original: <b>{cantidadOriginal}</b>
+                              </span>
+                            )}
+                          </div>
+                          <Button
+                            text="Eliminar"
+                            variant="outlined"
+                            size="small"
+                            leftIconName="FaTrash"
+                            onClick={() => handleRemoveProduct(item.id)}
+                          />
                         </div>
                       </div>
                     </div>
+                  );
+                })}
+                {/* Productos eliminados con opción de deshacer */}
+                {deletedItems.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
                     <div
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginTop: 8,
-                        gap: 12,
+                        color: theme.colors.warning,
+                        fontWeight: 500,
+                        marginBottom: 4,
                       }}
                     >
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          handleUpdateQuantity(item.id, parseInt(e.target.value, 10))
-                        }
-                        label="Cantidad"
-                        width="100px"
-                      />
-                      <Button
-                        text="Eliminar"
-                        variant="outlined"
-                        size="small"
-                        leftIconName="FaTrash"
-                        onClick={() => handleRemoveProduct(item.id)}
-                      />
+                      Productos eliminados (puedes deshacer antes de guardar):
                     </div>
+                    {deletedItems.map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          background: theme.colors.surface,
+                          border: `1px dashed ${theme.colors.warning}`,
+                          borderRadius: 6,
+                          padding: 8,
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span
+                          style={{ flex: 1, color: theme.colors.textLight }}
+                        >
+                          {item.name} (SKU: {item.sku})
+                        </span>
+                        <Button
+                          text="Deshacer"
+                          variant="outlined"
+                          size="small"
+                          leftIconName="FaUndo"
+                          onClick={() => handleUndoRemoveProduct(item.id)}
+                        />
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
-          </EditableSection>
-        </TwoColumns>
-      </Section>
+                )}
+              </div>
+            </EditableSection>
+          </TwoColumns>
+        </Section>
+      )}
 
       {/* Información del pedido */}
       <TwoColumns>
@@ -1228,7 +1328,7 @@ const DetallePedidoCoordinador = () => {
             <>
               <SummaryRow>
                 <SummaryLabel>Descuentos promocionales:</SummaryLabel>
-                <SummaryValue>
+                <SummaryValue $operacion>
                   -${orderDetails.totalPromotionalDiscount.toFixed(2)}
                 </SummaryValue>
               </SummaryRow>
@@ -1244,7 +1344,7 @@ const DetallePedidoCoordinador = () => {
             <>
               <SummaryRow>
                 <SummaryLabel>Descuento general:</SummaryLabel>
-                <SummaryValue>
+                <SummaryValue $operacion>
                   -${orderDetails.generalDiscount.toFixed(2)}
                 </SummaryValue>
               </SummaryRow>
@@ -1260,7 +1360,7 @@ const DetallePedidoCoordinador = () => {
             <>
               <SummaryRow>
                 <SummaryLabel>Descuento especial:</SummaryLabel>
-                <SummaryValue>
+                <SummaryValue $operacion>
                   -${orderDetails.aditionalDiscount.toFixed(2)}
                 </SummaryValue>
               </SummaryRow>

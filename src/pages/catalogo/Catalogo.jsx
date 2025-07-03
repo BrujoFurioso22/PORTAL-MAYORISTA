@@ -186,8 +186,6 @@ const PageButton = styled(Button)`
   }
 `;
 
-
-
 const mapApiProductToAppFormat = (item) => {
   try {
     // Verificar que item no sea null o undefined
@@ -276,14 +274,6 @@ const mapApiProductToAppFormat = (item) => {
       ? parseInt(item.DMA_STOCK)
       : 0;
 
-    if (item.DMA_DESCUENTO_PROMOCIONAL) {
-      console.log(
-        "[MAPEO] Producto con descuento promocional:",
-        item.DMA_DESCUENTO_PROMOCIONAL,
-        name
-      );
-    }
-
     // Crear objeto de producto adaptado al formato esperado usando la plantilla correspondiente
     return {
       id: item.DMA_CODIGO,
@@ -325,6 +315,7 @@ const Catalogo = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true); // Nueva bandera
   const [initMessage, setInitMessage] = useState("Validando permisos..."); // Mensaje de inicialización
+  const [selectedBusinessLine, setSelectedBusinessLine] = useState("DEFAULT");
 
   /**
    * Revisar esto para ver si es necesario ------------------------------------------------------------------------
@@ -342,6 +333,24 @@ const Catalogo = () => {
 
   const searchTimeoutRef = useRef(null);
 
+  const currentSort = searchParams.get("sort") || "default";
+  const currentLimit = parseInt(searchParams.get("limit") || "12");
+  const currentPage = parseInt(searchParams.get("page") || "1");
+  const currentSearch = searchParams.get("search") || "";
+  const currentCategories = searchParams.get("cat")?.split(",") || [];
+  const currentBrands = searchParams.get("brands")?.split(",") || [];
+  const currentRin = searchParams.get("rin") || "";
+  const currentAncho = searchParams.get("ancho") || "";
+  const currentAlto = searchParams.get("alto") || "";
+
+  const currentLine = searchParams.get("line") || "DEFAULT";
+  const currentPriceRange = searchParams.get("price")
+    ? (() => {
+        const [min, max] = searchParams.get("price").split("-").map(Number);
+        return { min, max };
+      })()
+    : null; // No establecer valores por defecto
+
   /**
    * fin de bloque ------------------------------------------------------------------------
    */ const searchParamsValues = useMemo(
@@ -353,6 +362,9 @@ const Catalogo = () => {
       categories: searchParams.get("cat")?.split(",") || [],
       brands: searchParams.get("brands")?.split(",") || [],
       line: searchParams.get("line") || "DEFAULT",
+      rin: searchParams.get("rin") || "",
+      ncho: searchParams.get("ancho") || "",
+      alto: searchParams.get("alto") || "",
       price: searchParams.get("price")
         ? (() => {
             const [min, max] = searchParams.get("price").split("-").map(Number);
@@ -409,6 +421,19 @@ const Catalogo = () => {
         if (!(nameMatch || descMatch || idMatch || barcodeMatch)) {
           return false;
         }
+      }
+
+      // Filtro especial para LLANTAS por medidas
+      if (lineToMatch === "llantas") {
+        if (currentRin && String(product.specs.rin) !== String(currentRin))
+          return false;
+        if (
+          currentAncho &&
+          String(product.specs.ancho) !== String(currentAncho)
+        )
+          return false;
+        if (currentAlto && String(product.specs.serie) !== String(currentAlto))
+          return false;
       }
 
       // 2. Filtro de línea de negocio
@@ -538,6 +563,18 @@ const Catalogo = () => {
             if (value !== "DEFAULT") params.set("line", value);
             else params.delete("line");
             break;
+          case "rin":
+            if (value) params.set("rin", value);
+            else params.delete("rin");
+            break;
+          case "ancho":
+            if (value) params.set("ancho", value);
+            else params.delete("ancho");
+            break;
+          case "alto":
+            if (value) params.set("alto", value);
+            else params.delete("alto");
+            break;
           case "price":
             if (value && (value.min > 0 || value.max < Infinity)) {
               params.set("price", `${value.min}-${value.max}`);
@@ -612,6 +649,9 @@ const Catalogo = () => {
           ? filters.price
           : null, // No incluir precio si es el rango completo
       line: filters.businessLine || "DEFAULT",
+      rin: filters.rin || "",
+      ancho: filters.ancho || "",
+      alto: filters.alto || "",
       page: 1,
     });
   };
@@ -645,9 +685,6 @@ const Catalogo = () => {
         // Si no hay líneas específicas, usar DEFAULT
         setAvailableBusinessLines(["DEFAULT"]);
       }
-
-      // Log para diagnóstico
-      // console.log("[DEBUG] Líneas de negocio detectadas:", lines);
     }
   }, [allProducts]);
 
@@ -802,20 +839,6 @@ const Catalogo = () => {
     handleNavigate();
   };
 
-  const currentSort = searchParams.get("sort") || "default";
-  const currentLimit = parseInt(searchParams.get("limit") || "12");
-  const currentPage = parseInt(searchParams.get("page") || "1");
-  const currentSearch = searchParams.get("search") || "";
-  const currentCategories = searchParams.get("cat")?.split(",") || [];
-  const currentBrands = searchParams.get("brands")?.split(",") || [];
-  const currentLine = searchParams.get("line") || "DEFAULT";
-  const currentPriceRange = searchParams.get("price")
-    ? (() => {
-        const [min, max] = searchParams.get("price").split("-").map(Number);
-        return { min, max };
-      })()
-    : null; // No establecer valores por defecto
-
   useEffect(() => {
     // Extraer el número de página de searchParams
     const pageParam = searchParams.get("page");
@@ -827,7 +850,7 @@ const Catalogo = () => {
       processedProducts.currentPage !== currentPageNumber &&
       currentPageNumber <= processedProducts.totalPages
     ) {
-      // No hacer nada más, solo asegurarse de que processedProducts use el valor correcto      console.log("Ajustando a página:", currentPageNumber);
+      // No hacer nada más, solo asegurarse de que processedProducts use el valor correcto
     }
   }, [searchParams, processedProducts]);
 
@@ -848,11 +871,30 @@ const Catalogo = () => {
       newSearchParams.delete("brands");
       newSearchParams.delete("price");
       newSearchParams.delete("page");
+      newSearchParams.delete("rin");
+      newSearchParams.delete("ancho");
+      newSearchParams.delete("alto");
 
       setSearchParams(newSearchParams);
     },
     [searchParams, setSearchParams]
   );
+
+  // Cuando cambian las líneas disponibles, ajusta el valor seleccionado
+  useEffect(() => {
+    // Lee la línea de negocio actual desde la URL
+    const urlLine = searchParams.get("line");
+    if (urlLine && availableBusinessLines.includes(urlLine)) {
+      setSelectedBusinessLine(urlLine);
+    } else if (availableBusinessLines.length === 1) {
+      setSelectedBusinessLine(availableBusinessLines[0]);
+    } else if (
+      availableBusinessLines.length > 1 &&
+      selectedBusinessLine === "DEFAULT"
+    ) {
+      setSelectedBusinessLine(availableBusinessLines[0]);
+    }
+  }, [availableBusinessLines, searchParams]);
 
   // --- Renderizado modularizado ---
 
@@ -883,7 +925,7 @@ const Catalogo = () => {
         <ContentLayout>
           <FilterSidebar
             allProducts={allProducts}
-            lineaNegocio={currentLine}
+            lineaNegocio={selectedBusinessLine}
             availableBusinessLines={availableBusinessLines}
             onBusinessLineChange={handleBusinessLineChange}
             selectedCategories={currentCategories}
@@ -983,12 +1025,14 @@ const Catalogo = () => {
                         No se encontraron productos que coincidan con "
                         <strong>{currentSearch}</strong>".
                       </p>
-                      <p>Intenta con otros términos o elimina algunos filtros.</p>
+                      <p>
+                        Intenta con otros términos o elimina algunos filtros.
+                      </p>
                     </>
                   ) : (
                     <p>
-                      No se encontraron productos que coincidan con los criterios
-                      seleccionados.
+                      No se encontraron productos que coincidan con los
+                      criterios seleccionados.
                     </p>
                   )}
                 </div>
@@ -1053,8 +1097,8 @@ const Catalogo = () => {
     <NoAccessContainer>
       <h2>Solicitar acceso a {empresaInfo.nombre}</h2>
       <p>
-        Actualmente no tienes acceso a los productos de esta empresa. Por
-        favor, completa el formulario para solicitar acceso.
+        Actualmente no tienes acceso a los productos de esta empresa. Por favor,
+        completa el formulario para solicitar acceso.
       </p>
       <FormContainer>
         <form onSubmit={handleSubmitRequest}>
@@ -1134,7 +1178,7 @@ const Catalogo = () => {
     if (!hasAccess) return renderAccessRequestForm();
     return renderCatalog();
   };
-  
+
   return renderMainContent();
 };
 
