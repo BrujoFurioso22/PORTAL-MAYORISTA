@@ -260,6 +260,7 @@ const SearchResults = () => {
   const initialPage = parseInt(searchParams.get("page") || "1", 10);
   const { user, navigateToHomeByRole } = useAuth();
   const { loadProductsBySearchTerm } = useProductCatalog();
+  const { isClient } = useAuth(); // Obtener el estado de cliente
 
   // Cambiar el estado inicial a null para diferenciar entre "sin búsqueda" y "búsqueda sin resultados"
   const [results, setResults] = useState(null);
@@ -278,7 +279,8 @@ const SearchResults = () => {
     const params = {};
     if (query) params.q = query;
     if (priceRange && priceRange !== "all") params.priceRange = priceRange;
-    if (sortOption && sortOption !== "relevance") params.sortOption = sortOption;
+    if (sortOption && sortOption !== "relevance")
+      params.sortOption = sortOption;
     if (currentPage && currentPage !== 1) params.page = currentPage;
     setSearchParams(params, { replace: true });
   }, [query, priceRange, sortOption, currentPage, setSearchParams]);
@@ -323,7 +325,12 @@ const SearchResults = () => {
               product.specs.disenio.toLowerCase().includes(queryLower)
             )
               relevanceScore += 2;
-            const hasAccess = userAccess.includes(product.empresaId);
+            let hasAccess = false;
+            if (isClient) {
+              hasAccess = userAccess.includes(product.empresaId);
+            } else {
+              hasAccess = true; // Administradores y coordinadoras tienen acceso a todos los productos
+            }
             return {
               ...product,
               relevanceScore,
@@ -579,6 +586,7 @@ const SearchResults = () => {
                 <RestrictedProductCard
                   key={`${product.empresaId}-${product.id}`}
                 >
+                  {console.log(product)}
                   <RestrictedImageContainer>
                     <RestrictedImage src={product.image} alt={product.name} />
                   </RestrictedImageContainer>
@@ -593,7 +601,7 @@ const SearchResults = () => {
                       </RestrictedIcon>
                       <RestrictedText>Acceso restringido</RestrictedText>
                       <Button
-                        text={`Solicitar acceso a ${product.empresaNombre}`}
+                        text={`Solicitar acceso a ${product.empresaId}`}
                         variant="solid" // Cambiado de outline a solid para mayor visibilidad
                         size="small"
                         onClick={() => handleRequestAccess(product.empresaId)}

@@ -8,6 +8,7 @@ import Seguridad from "./components/Seguridad";
 import Direcciones from "./components/Direcciones";
 import Preferencias from "./components/Preferencias";
 import Telefonos from "./components/Telefonos";
+import { useAuth } from "../../context/AuthContext";
 
 // Estilos para el componente
 const PageContainer = styled.div`
@@ -54,6 +55,7 @@ const TabContent = styled.div`
 
 // Componente Principal
 const Perfil = () => {
+  const { isClient } = useAuth();
   const [activeTab, setActiveTab] = useState("personal");
 
   return (
@@ -73,18 +75,22 @@ const Perfil = () => {
           text={"Seguridad"}
           size="small"
         />
-        <TabButton
-          $active={activeTab === "addresses"}
-          onClick={() => setActiveTab("addresses")}
-          text={"Direcciones"}
-          size="small"
-        />
-        <TabButton
-          $active={activeTab === "telefonos"}
-          onClick={() => setActiveTab("telefonos")}
-          text={"Teléfonos"}
-          size="small"
-        />
+        {isClient && (
+          <TabButton
+            $active={activeTab === "addresses"}
+            onClick={() => setActiveTab("addresses")}
+            text={"Direcciones"}
+            size="small"
+          />
+        )}
+        {isClient && (
+          <TabButton
+            $active={activeTab === "telefonos"}
+            onClick={() => setActiveTab("telefonos")}
+            text={"Teléfonos"}
+            size="small"
+          />
+        )}
         <TabButton
           $active={activeTab === "preferences"}
           onClick={() => setActiveTab("preferences")}
