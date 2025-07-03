@@ -258,17 +258,17 @@ const PageButton = styled(Button)`
   font-size: 0.9rem;
   transition: all 0.2s ease;
 
-  background-color: ${({ active, theme }) =>
-    active ? theme.colors.primary : theme.colors.surface};
-  color: ${({ active, theme }) =>
-    active ? theme.colors.white : theme.colors.text};
+  background-color: ${({ $active, theme }) =>
+    $active ? theme.colors.primary : theme.colors.surface};
+  color: ${({ $active, theme }) =>
+    $active ? theme.colors.white : theme.colors.text};
   border: 1px solid
-    ${({ active, theme }) =>
-      active ? theme.colors.primary : theme.colors.border};
+    ${({ $active, theme }) =>
+      $active ? theme.colors.primary : theme.colors.border};
 
   &:hover {
-    background-color: ${({ active, theme }) =>
-      active ? theme.colors.primary : theme.colors.primaryLight};
+    background-color: ${({ $active, theme }) =>
+      $active ? theme.colors.primary : theme.colors.primaryLight};
     border-color: ${({ theme }) => theme.colors.primary};
   }
 
@@ -276,10 +276,10 @@ const PageButton = styled(Button)`
     opacity: 0.5;
     cursor: not-allowed;
     &:hover {
-      background-color: ${({ active, theme }) =>
-        active ? theme.colors.primary : theme.colors.surface};
-      border-color: ${({ active, theme }) =>
-        active ? theme.colors.primary : theme.colors.border};
+      background-color: ${({ $active, theme }) =>
+        $active ? theme.colors.primary : theme.colors.surface};
+      border-color: ${({ $active, theme }) =>
+        $active ? theme.colors.primary : theme.colors.border};
     }
   }
 `;
@@ -661,7 +661,7 @@ const SearchResults = () => {
                   return (
                     <PageButton
                       key={index + 1}
-                      active={currentPage === index + 1}
+                      $active={currentPage === index + 1}
                       onClick={() => handlePageChange(index + 1)}
                       text={index + 1}
                       size="small"

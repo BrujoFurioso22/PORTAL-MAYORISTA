@@ -153,13 +153,13 @@ const UserGreeting = styled.div`
   }
 `;
 
-export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
-  const { user, logout } = useAuth();
-  const { itemCount, isAdminOrCoord } = useCart();
-  const { theme, isDarkMode, toggleTheme } = useAppTheme();
+export default function Header() {
+  const { user, logout, isClient } = useAuth();
+  const { itemCount } = useCart();
+  const { isDarkMode, toggleTheme } = useAppTheme();
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");  
 
   // Agrega esta función para manejar la búsqueda
   const handleSearch = (e) => {
@@ -222,7 +222,7 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
       <FlexBoxComponent width="auto" alignItems="center">
         <UserGreeting>Hola, {user?.NAME_USER}</UserGreeting>
 
-        {!isAdminOrCoord && (
+        {isClient && (
           <IconButton
             text={itemCount > 0 && <CartCount>{itemCount}</CartCount>}
             leftIconName={"FaShoppingCart"}
@@ -244,7 +244,7 @@ export default function Header({ onToggleSidebar, showSidebarToggle = true }) {
               Perfil
             </UserMenuItem>
 
-            {!isAdminOrCoord && (
+            {isClient && (
               <UserMenuItem onClick={handleOrderHistory}>
                 <FaHistory />
                 Mis Pedidos

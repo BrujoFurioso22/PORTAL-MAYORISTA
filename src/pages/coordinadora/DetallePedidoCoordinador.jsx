@@ -552,7 +552,6 @@ const DetallePedidoCoordinador = () => {
       };
 
       const responseUpdate = await order_updateOrder(orderDetails.id, body);
-      
 
       const updatedOrder = {
         ...orderDetails,
@@ -562,7 +561,6 @@ const DetallePedidoCoordinador = () => {
         subtotal: orderDraft.rawSubtotal,
         total: orderDraft.totalConIva,
       };
-
 
       setOrderDetails(updatedOrder);
       setOrderDraft(JSON.parse(JSON.stringify(updatedOrder)));
@@ -592,7 +590,6 @@ const DetallePedidoCoordinador = () => {
   };
 
   function calcularTotales(items, aditionalDiscount) {
-
     const rawSubtotal = items.reduce(
       (acc, item) => acc + item.price * item.quantity,
       0

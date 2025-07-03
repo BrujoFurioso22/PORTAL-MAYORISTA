@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const navigate = useNavigate();
 
   // Función auxiliar para enmascarar el email
@@ -114,6 +115,7 @@ export function AuthProvider({ children }) {
         // Actualizar el estado
         setUser(userData);
         setIsAuthenticated(true);
+        setIsClient(userData.ROLE_NAME === ROLES.CLIENTE);
 
         toast.success("Inicio de sesión exitoso");
 
@@ -360,6 +362,7 @@ export function AuthProvider({ children }) {
     }
   };
 
+
   // ========== INICIALIZACIÓN ==========
 
   // Verificar estado de autenticación al cargar
@@ -388,7 +391,6 @@ export function AuthProvider({ children }) {
         // Si el token actual falló, intentar refrescarlo
         try {
           const refreshResponse = await auth_refresh();
-          
 
           if (refreshResponse && refreshResponse.token) {
             // Segundo intento: verificar con el token refrescado
@@ -440,6 +442,7 @@ export function AuthProvider({ children }) {
         logout,
         loading,
         isAuthenticated,
+        isClient,
         // Registro
         verifyIdentification,
         registerUser,
