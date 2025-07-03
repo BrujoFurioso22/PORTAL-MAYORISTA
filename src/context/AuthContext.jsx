@@ -362,7 +362,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-
   // ========== INICIALIZACIÓN ==========
 
   // Verificar estado de autenticación al cargar
@@ -382,6 +381,7 @@ export function AuthProvider({ children }) {
         if (response && response.user) {
           // Token válido, establecer usuario
           setUser(response.user);
+          setIsClient(response.user.ROLE_NAME === ROLES.CLIENTE);
           setIsAuthenticated(true);
           localStorage.setItem("auth", "true");
         }
@@ -400,6 +400,7 @@ export function AuthProvider({ children }) {
               if (newResponse && newResponse.user) {
                 // Token refrescado válido, establecer usuario
                 setUser(newResponse.user);
+                setIsClient(newResponse.user.ROLE_NAME === ROLES.CLIENTE);
                 setIsAuthenticated(true);
                 localStorage.setItem("auth", "true");
               } else {

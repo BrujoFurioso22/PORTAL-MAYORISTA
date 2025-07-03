@@ -1,22 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { empresas, productosPorEmpresa } from "../../mock/products"; // Ajusta la ruta según tu estructura
-import FlexBoxComponent from "../../components/common/FlexBox";
 import Button from "../../components/ui/Button";
-import ProductCard from "../../components/ui/ProductCard";
-import {
-  FaFilter,
-  FaSort,
-  FaSearch,
-  FaArrowLeft,
-  FaLock,
-} from "react-icons/fa";
-import { useAuth } from "../../context/AuthContext";
-import RenderIcon from "../../components/ui/RenderIcon";
-import { products_searchProducts } from "../../services/products/products";
 import Select from "../../components/ui/Select";
-import { baseLinkImages } from "../../constants/links";
+import ProductCard from "../../components/ui/ProductCard";
+import RenderIcon from "../../components/ui/RenderIcon";
+import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
+import { useAuth } from "../../context/AuthContext";
+import { useProductCatalog } from "../../context/ProductCatalogContext";
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -85,30 +76,6 @@ const FilterLabel = styled.label`
   display: flex;
   align-items: center;
   gap: 6px;
-`;
-
-const SelectWrapper = styled.div`
-  position: relative;
-`;
-
-const FilterSelect = styled.select`
-  padding: 8px 12px;
-  padding-right: 32px;
-  border-radius: 4px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text};
-  appearance: none;
-  cursor: pointer;
-`;
-
-const SelectIcon = styled.div`
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const ProductsGrid = styled.div`
@@ -285,39 +252,36 @@ const PageButton = styled(Button)`
 `;
 
 const SearchResults = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get("q") || "";
+  const initialPriceRange = searchParams.get("priceRange") || "all";
+  const initialSortOption = searchParams.get("sortOption") || "relevance";
+  const initialPage = parseInt(searchParams.get("page") || "1", 10);
   const { user, navigateToHomeByRole } = useAuth();
+  const { loadProductsBySearchTerm } = useProductCatalog();
 
   // Cambiar el estado inicial a null para diferenciar entre "sin búsqueda" y "búsqueda sin resultados"
   const [results, setResults] = useState(null);
   const [filteredResults, setFilteredResults] = useState([]);
-  const [sortOption, setSortOption] = useState("relevance");
-  const [priceRange, setPriceRange] = useState("all");
-  // Añadir estado de carga
+  const [sortOption, setSortOption] = useState(initialSortOption);
+  const [priceRange, setPriceRange] = useState(initialPriceRange);
   const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const productsPerPage = 12; // Mostrar 12 productos por página
 
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = filteredResults.slice(
-    indexOfFirstProduct,
-    indexOfLastProduct
-  );
-  const totalPages = Math.ceil(filteredResults.length / productsPerPage);
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-    // Hacer scroll hacia arriba cuando cambia de página
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // userAccess con useMemo para evitar advertencia de dependencias
+  const userAccess = React.useMemo(() => user?.EMPRESAS || [], [user]);
 
-  const userAccess = user?.EMPRESAS || [];
-
-  const handleNavigate = () => {
-    navigateToHomeByRole();
-  };
+  // Actualizar la URL cuando cambian los filtros o la página
+  useEffect(() => {
+    const params = {};
+    if (query) params.q = query;
+    if (priceRange && priceRange !== "all") params.priceRange = priceRange;
+    if (sortOption && sortOption !== "relevance") params.sortOption = sortOption;
+    if (currentPage && currentPage !== 1) params.page = currentPage;
+    setSearchParams(params, { replace: true });
+  }, [query, priceRange, sortOption, currentPage, setSearchParams]);
 
   // Buscar productos cuando cambia la query
   useEffect(() => {
@@ -333,62 +297,39 @@ const SearchResults = () => {
       setLoading(true);
 
       try {
-        // Llamar a la API de búsqueda
-        const response = await products_searchProducts(query);
-
-        console.log(response);
+        // Usar la función del contexto para buscar productos
+        const response = await loadProductsBySearchTerm(query);
 
         if (response.success && response.data) {
-          // Transformar los resultados de la API
+          // Agregar hasAccess y relevanceScore aquí si es necesario
+          const queryLower = query.toLowerCase();
           const apiResults = response.data.map((product) => {
-            // Calcular puntuación de relevancia (similar a la lógica anterior)
             let relevanceScore = 0;
-            const queryLower = query.toLowerCase();
-
-            if (product.DMA_NOMBREITEM.toLowerCase().includes(queryLower))
+            if (product.name && product.name.toLowerCase().includes(queryLower))
               relevanceScore += 10;
-            if (product.DMA_NOMBREITEM.toLowerCase().startsWith(queryLower))
+            if (
+              product.name &&
+              product.name.toLowerCase().startsWith(queryLower)
+            )
               relevanceScore += 5;
             if (
-              product.DMA_MARCA &&
-              product.DMA_MARCA.toLowerCase().includes(queryLower)
+              product.brand &&
+              product.brand.toLowerCase().includes(queryLower)
             )
               relevanceScore += 3;
             if (
-              product.DMA_DISENIO &&
-              product.DMA_DISENIO.toLowerCase().includes(queryLower)
+              product.specs &&
+              product.specs.disenio &&
+              product.specs.disenio.toLowerCase().includes(queryLower)
             )
               relevanceScore += 2;
-
-            // Verificar si el usuario tiene acceso a esta empresa
-            const hasAccess = userAccess.includes(product.DMA_EMPRESA);
-
-            // Formatear el producto según la estructura que espera el componente
+            const hasAccess = userAccess.includes(product.empresaId);
             return {
-              id: product.DMA_CODIGO,
-              name: product.DMA_NOMBREITEM,
-              brand: product.DMA_MARCA || "Sin marca",
-              price: product.DMA_COSTO || 0,
-              discount: product.DESCUENTO || 0,
-              image: product.DMA_RUTAIMAGEN
-                ? `${baseLinkImages}${product.DMA_RUTAIMAGEN}`
-                : "https://placehold.co/300x200/png",
-              stock: product.DMA_STOCK || 0,
-              description: `${product.DMA_MARCA || ""} ${
-                product.DMA_DISENIO || ""
-              } ${product.DMA_ANCHO || ""}`,
-              categories: [
-                product.DMA_CATEGORIA,
-                product.DMA_LINEANEGOCIO,
-                product.DMA_SEGMENTO,
-              ].filter(Boolean),
-              empresaId: product.DMA_EMPRESA,
-              empresaNombre: product.DMA_EMPRESA,
+              ...product,
               relevanceScore,
               hasAccess,
             };
           });
-
           setResults(apiResults);
           setFilteredResults(apiResults);
         } else {
@@ -407,7 +348,7 @@ const SearchResults = () => {
     };
 
     fetchSearchResults();
-  }, [query, navigate, userAccess]);
+  }, [query, navigate, userAccess, loadProductsBySearchTerm]);
 
   // Aplicar filtros y ordenamiento
   useEffect(() => {
@@ -417,21 +358,21 @@ const SearchResults = () => {
     // Filtrar por rango de precio
     if (priceRange !== "all") {
       switch (priceRange) {
-        case "under-500":
-          filtered = filtered.filter((item) => item.price < 500);
+        case "under-100":
+          filtered = filtered.filter((item) => item.price < 100);
           break;
-        case "500-1000":
+        case "100-200":
           filtered = filtered.filter(
-            (item) => item.price >= 500 && item.price <= 1000
+            (item) => item.price >= 100 && item.price <= 200
           );
           break;
-        case "1000-2000":
+        case "200-300":
           filtered = filtered.filter(
-            (item) => item.price > 1000 && item.price <= 2000
+            (item) => item.price > 200 && item.price <= 300
           );
           break;
-        case "over-2000":
-          filtered = filtered.filter((item) => item.price > 2000);
+        case "over-300":
+          filtered = filtered.filter((item) => item.price > 300);
           break;
         default:
           break;
@@ -461,12 +402,39 @@ const SearchResults = () => {
     setFilteredResults(filtered);
   }, [results, sortOption, priceRange]);
 
+  // Cuando cambian los filtros o la página desde la URL, actualiza el estado local
+  useEffect(() => {
+    setSortOption(initialSortOption);
+    setPriceRange(initialPriceRange);
+    setCurrentPage(initialPage);
+  }, [initialSortOption, initialPriceRange, initialPage]);
+
   const handleSortChange = (e) => {
     setSortOption(e.target.value);
+    setCurrentPage(1); // Reiniciar a la primera página al cambiar filtro
   };
 
   const handlePriceRangeChange = (e) => {
     setPriceRange(e.target.value);
+    setCurrentPage(1); // Reiniciar a la primera página al cambiar filtro
+  };
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Variables de paginación y acceso
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = filteredResults.slice(
+    indexOfFirstProduct,
+    indexOfLastProduct
+  );
+  const totalPages = Math.ceil(filteredResults.length / productsPerPage);
+
+  const handleNavigate = () => {
+    navigateToHomeByRole();
   };
 
   // Función para solicitar acceso a una empresa
@@ -539,15 +507,16 @@ const SearchResults = () => {
           <FiltersBar>
             <FilterGroup>
               <FilterLabel>
-                <FaFilter /> Filtrar por:
+                <RenderIcon name="FaFilter" size={18} />
+                Filtrar por:
               </FilterLabel>
               <Select
                 options={[
                   { value: "all", label: "Todos los precios" },
-                  { value: "under-500", label: "Menos de $500" },
-                  { value: "500-1000", label: "$500 - $1,000" },
-                  { value: "1000-2000", label: "$1,000 - $2,000" },
-                  { value: "over-2000", label: "Más de $2,000" },
+                  { value: "under-100", label: "Menos de $100" },
+                  { value: "100-200", label: "$100 - $200" },
+                  { value: "200-300", label: "$200 - $300" },
+                  { value: "over-300", label: "Más de $300" },
                 ]}
                 value={priceRange}
                 onChange={handlePriceRangeChange}
@@ -559,7 +528,8 @@ const SearchResults = () => {
 
             <FilterGroup>
               <FilterLabel>
-                <FaSort /> Ordenar por:
+                <RenderIcon name="FaSort" size={18} />
+                Ordenar por:
               </FilterLabel>
               <Select
                 options={[
@@ -585,7 +555,6 @@ const SearchResults = () => {
                 color: ({ theme }) => theme.colors.textLight,
                 marginBottom: "10px",
                 fontSize: "0.9rem",
-                
               }}
             >
               Mostrando {indexOfFirstProduct + 1}-
@@ -600,6 +569,10 @@ const SearchResults = () => {
                 <ProductCard
                   key={`${product.empresaId}-${product.id}`}
                   product={product}
+                  lineConfig={
+                    PRODUCT_LINE_CONFIG[product.lineaNegocio] ||
+                    PRODUCT_LINE_CONFIG.DEFAULT
+                  }
                 />
               ) : (
                 // Producto restringido sin acceso
@@ -616,7 +589,7 @@ const SearchResults = () => {
                   <RestrictedOverlay>
                     <RestrictedMessageContainer>
                       <RestrictedIcon>
-                        <FaLock />
+                        <RenderIcon name="FaLock" size={18} />
                       </RestrictedIcon>
                       <RestrictedText>Acceso restringido</RestrictedText>
                       <Button

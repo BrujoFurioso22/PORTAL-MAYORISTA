@@ -5,10 +5,11 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../../context/AuthContext";
-import { productosPorEmpresa, empresas } from "../../mock/products";
+import { empresas } from "../../mock/products";
+import { useProductCatalog } from "../../context/ProductCatalogContext";
 import ProductCard from "../../components/ui/ProductCard";
 import FilterSidebar from "../../components/ui/FilterSidebar";
 import { toast } from "react-toastify";
@@ -316,12 +317,11 @@ const Catalogo = () => {
   const [isInitializing, setIsInitializing] = useState(true); // Nueva bandera
   const [initMessage, setInitMessage] = useState("Validando permisos..."); // Mensaje de inicialización
   const [selectedBusinessLine, setSelectedBusinessLine] = useState("DEFAULT");
+  const { loadProductsForEmpresa } = useProductCatalog();
 
   /**
    * Revisar esto para ver si es necesario ------------------------------------------------------------------------
    */
-  // Hook del caché
-  const { isCacheValid, getCachedProducts, cacheProducts } = useProductCache();
   // Inicializar filteredProducts como null para indicar que los datos están en carga
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -688,87 +688,6 @@ const Catalogo = () => {
     }
   }, [allProducts]);
 
-  // Función para obtener productos desde la API
-  const fetchProductsFromAPI = async () => {
-    setIsLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simular retardo de 1 segundo
-
-      const respProductos = await products_getProductByField({
-        field: "empresa",
-        value: empresaName,
-      });
-
-      if (respProductos.success) {
-        const productos = respProductos.data || [];
-
-        // Mapear los productos con seguimiento de errores
-        const mappedProducts = [];
-        const failedProducts = [];
-
-        productos.forEach((item) => {
-          try {
-            const mappedItem = mapApiProductToAppFormat(item);
-            if (mappedItem && mappedItem.id) {
-              mappedProducts.push(mappedItem);
-            } else {
-              failedProducts.push({
-                original: item,
-                reason: "Producto mapeado pero sin ID válido",
-              });
-            }
-          } catch (error) {
-            failedProducts.push({
-              original: item,
-              reason: `Error en mapeo: ${error.message}`,
-            });
-          }
-        });
-
-        if (failedProducts.length > 0) {
-          console.warn(
-            `[DIAGNÓSTICO] ${failedProducts.length} productos fallaron en el mapeo:`,
-            failedProducts.slice(0, 3)
-          ); // Mostrar solo los primeros 3 para no saturar la consola
-        }
-
-        // Verificar duplicados por ID
-        const uniqueIds = new Set();
-        const duplicateIds = [];
-
-        mappedProducts.forEach((product) => {
-          if (uniqueIds.has(product.id)) {
-            duplicateIds.push(product.id);
-          } else {
-            uniqueIds.add(product.id);
-          }
-        });
-
-        if (duplicateIds.length > 0) {
-          console.warn(
-            `[DIAGNÓSTICO] Se encontraron ${duplicateIds.length} IDs duplicados:`,
-            [...new Set(duplicateIds)].slice(0, 5)
-          );
-        }
-
-        // Guardar productos en caché
-        cacheProducts(empresaName, mappedProducts); // Guardar todos los productos originales
-
-        setAllProducts(mappedProducts);
-      } else {
-        console.error("Error al cargar productos:", respProductos.message);
-        toast.error("No se pudieron cargar los productos");
-        // En caso de error, establecer una lista vacía para evitar loader infinito
-      }
-    } catch (error) {
-      console.error("Error en fetchProducts:", error);
-      toast.error("Error al obtener los productos");
-      // En caso de error, establecer una lista vacía para evitar loader infinito
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Efecto para cargar productos cuando cambia la empresa o el usuario
   useEffect(() => {
     // Limpiar cualquier búsqueda pendiente al cambiar de empresa
@@ -785,21 +704,10 @@ const Catalogo = () => {
 
     if (userHasAccess) {
       setInitMessage("Cargando productos...");
-      if (isCacheValid(empresaName)) {
-        const cachedProducts = getCachedProducts(empresaName);
-        setAllProducts(cachedProducts);
-        setIsLoading(false);
-        setInitMessage(
-          empresaInfo
-            ? `Cargando información de ${empresaInfo.nombre}...`
-            : empresaName
-            ? `Cargando información de ${empresaName}...`
-            : "Cargando información..."
-        );
-        setIsInitializing(false);
-      } else {
-        setInitMessage("Cargando productos desde el servidor...");
-        fetchProductsFromAPI().finally(() => {
+      loadProductsForEmpresa(empresaName)
+        .then((productos) => {
+          setAllProducts(productos);
+          setIsLoading(false);
           setInitMessage(
             empresaInfo
               ? `Cargando información de ${empresaInfo.nombre}...`
@@ -807,9 +715,16 @@ const Catalogo = () => {
               ? `Cargando información de ${empresaName}...`
               : "Cargando información..."
           );
+        })
+        .catch((error) => {
+          console.error("Error al cargar productos:", error);
+          toast.error("No se pudieron cargar los productos");
+          setAllProducts([]);
+          setIsLoading(false);
+        })
+        .finally(() => {
           setIsInitializing(false);
         });
-      }
     } else {
       setIsLoading(false);
       setInitMessage(

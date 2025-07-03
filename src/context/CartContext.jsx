@@ -16,7 +16,7 @@ export function CartProvider({ children }) {
   });
 
   const [cartTotal, setCartTotal] = useState(0);
-  const { user } = useAuth(); // Obtener el usuario actual
+  const { user, isClient } = useAuth(); // Obtener el usuario actual
 
   const calculateCartTotal = (cart) => {
     // Agrupa los productos por empresa
@@ -57,7 +57,7 @@ export function CartProvider({ children }) {
       const aditionalDiscount = 0;
       const subtotalAfterAditional = subtotalAfterGeneral - aditionalDiscount;
       // 7. IVA (si tienes un valor por empresa, úsalo, si no, pon 0)
-      const ivaPct = user?.IVA || 15;      
+      const ivaPct = user?.IVA || 15;
       const valorIVA =
         (subtotalAfterAditional < 0 ? 0 : subtotalAfterAditional) *
         (ivaPct / 100);
@@ -69,12 +69,6 @@ export function CartProvider({ children }) {
     });
 
     return total;
-  };
-
-  // Verificar si el usuario es admin o coordinadora
-  const isAdminOrCoord = () => {
-    if (!user || !user.ROLE) return false;
-    return user.ROLE === ROLES.ADMIN || user.ROLE === ROLES.COORDINADOR;
   };
 
   useEffect(() => {
@@ -93,7 +87,7 @@ export function CartProvider({ children }) {
   // Agregar producto al carrito con verificación de rol
   const addToCart = (product, quantity = 1) => {
     // Si el usuario es admin o coordinadora, no permitir añadir al carrito
-    if (isAdminOrCoord()) {
+    if (!isClient) {
       console.warn(
         "Administradores y coordinadores no pueden realizar compras"
       );
@@ -169,7 +163,6 @@ export function CartProvider({ children }) {
     clearCart,
     removeItemsByCompany,
     itemCount: cart.reduce((count, item) => count + item.quantity, 0),
-    isAdminOrCoord: isAdminOrCoord(), // Exportar esta función para usar en componentes
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

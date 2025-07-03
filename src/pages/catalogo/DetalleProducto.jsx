@@ -315,11 +315,12 @@ const DetalleProducto = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { navigateToHomeByRole } = useAuth();
-  const { addToCart, isAdminOrCoord, cart } = useCart();
+  const { navigateToHomeByRole, isClient } = useAuth();  
+  const { addToCart, cart } = useCart();
   const [quantity, setQuantity] = useState(1);
   // Intentar obtener el producto del estado de navegación primero
   const [product, setProduct] = useState(location.state?.product || null);
+
   const [empresaId, setEmpresaId] = useState(
     location.state?.product?.empresaId || null
   );
@@ -531,9 +532,12 @@ const DetalleProducto = () => {
           </MainImageContainer>
         </ImageSection>
 
-        <InfoSection>          {/* Mostrar categorías desde filtersByType de forma amigable */}
+        <InfoSection>
+          {" "}
+          {/* Mostrar categorías desde filtersByType de forma amigable */}
           <Category>
-            {product.filtersByType && Object.keys(product.filtersByType).length > 0
+            {product.filtersByType &&
+            Object.keys(product.filtersByType).length > 0
               ? Object.values(product.filtersByType)
                   .flat() // Aplanar el array de arrays
                   .join(", ")
@@ -572,11 +576,8 @@ const DetalleProducto = () => {
               )}
             </StockMessage>
           </StockIndicator>
-
           <Description>{product.description}</Description>
-
           {renderSpecifications(product)}
-
           <PriceContainer>
             <CurrentPrice>${(discountedPrice || 0).toFixed(2)}</CurrentPrice>
             {product.discount > 0 && (
@@ -588,8 +589,7 @@ const DetalleProducto = () => {
               </>
             )}
           </PriceContainer>
-
-          {!isAdminOrCoord && (
+          {isClient && (
             <div
               style={{
                 marginTop: "16px",
@@ -635,8 +635,7 @@ const DetalleProducto = () => {
               )}
             </div>
           )}
-
-          {!isAdminOrCoord && (
+          {isClient && (
             <ButtonsContainer>
               <Button
                 text={

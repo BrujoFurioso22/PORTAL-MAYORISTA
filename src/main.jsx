@@ -7,19 +7,20 @@ import { AppThemeProvider, useAppTheme } from "./context/AppThemeContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
 import { ProductCacheProvider } from "./context/ProductCacheContext.jsx";
+import { ProductCatalogProvider } from "./context/ProductCatalogContext.jsx";
 
 function Root() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <ProductCacheProvider>
+          <ProductCatalogProvider>
             <AppThemeProvider>
               <ThemeWrapper>
                 <App />
               </ThemeWrapper>
             </AppThemeProvider>
-          </ProductCacheProvider>
+          </ProductCatalogProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

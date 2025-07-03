@@ -5,6 +5,7 @@ import { useCart } from "../../context/CartContext";
 import Button from "../ui/Button";
 import { toast } from "react-toastify";
 import { useAppTheme } from "../../context/AppThemeContext";
+import { useAuth } from "../../context/AuthContext";
 
 const StyledCard = styled.div`
   background-color: ${({ theme }) =>
@@ -193,7 +194,8 @@ const PRODUCT_LINE_CONFIG = {
 const ProductCard = ({ product, lineConfig }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { addToCart, isAdminOrCoord } = useCart();
+  const { isClient } = useAuth();
+  const { addToCart } = useCart();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const discountedPrice =
@@ -212,7 +214,6 @@ const ProductCard = ({ product, lineConfig }) => {
 
     const currentUrl = `${location.pathname}${location.search}`;
 
-    console.log("Navegando al detalle del producto:", product.id);
     // Navegar al detalle del producto pasando la URL anterior
     navigate(`/productos/${product.id}`, {
       state: {
@@ -295,7 +296,7 @@ const ProductCard = ({ product, lineConfig }) => {
             size="small"
             onClick={handleViewDetails}
           />
-          {!isAdminOrCoord && (
+          {isClient && (
             <Button
               text={isAddingToCart ? "Agregando..." : "Agregar al carrito"}
               variant="solid"
