@@ -275,7 +275,7 @@ const ProductCard = ({ product, lineConfig }) => {
             {product.stock > 0
               ? `${
                   product.stock > 100
-                    ? "En stock"
+                    ? "+100 disponibles"
                     : `${product.stock} disponibles`
                 }`
               : "Agotado"}
