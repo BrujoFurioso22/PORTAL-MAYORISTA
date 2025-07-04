@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { ROUTES } from "../constants/routes";
 import { ROLES } from "../constants/roles";
-import { auth_login } from "../services/auth/login";
-import { auth_me, auth_refresh } from "../services/auth/auth";
+import { auth_login, auth_logout } from "../services/auth/login";
+import { auth_me } from "../services/auth/auth";
 
 import { users_create, users_getByAccount } from "../services/users/users";
 import {
@@ -13,7 +13,7 @@ import {
   resetPassword_setNewPassword,
 } from "../services/auth/password";
 import { performLogout } from "../utils/authUtils";
-import { guardarRefreshToken, guardarToken } from "../utils/encryptToken";
+import { guardarSessionID, obtenerSessionID } from "../utils/encryptToken";
 
 const AuthContext = createContext(null);
 
@@ -100,16 +100,17 @@ export function AuthProvider({ children }) {
 
       if (response.success) {
         const userData = response.data.user;
+        const idSession = response.data.idSession;
 
-        // Guardar tokens si están en la respuesta
-        if (response.data.accessToken) {
-          guardarToken(response.data.accessToken);
+        if (!userData || !idSession) {
+          toast.error("Datos de usuario o sesión inválidos");
+          return {
+            success: false,
+            message: "Datos de usuario o sesión inválidos",
+          };
         }
 
-        if (response.data.refreshToken) {
-          guardarRefreshToken(response.data.refreshToken);
-        }
-
+        guardarSessionID(idSession);
         localStorage.setItem("auth", "true");
 
         // Actualizar el estado
@@ -147,7 +148,8 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const limpiarDatosUsuario = () => {
+  const limpiarDatosUsuario = async () => {
+    await auth_logout();
     performLogout();
     // Limpiar estado
     setUser(null);
@@ -366,71 +368,37 @@ export function AuthProvider({ children }) {
 
   // Verificar estado de autenticación al cargar
   useEffect(() => {
-    const validateToken = async () => {
-      // Si no hay token almacenado, no hacer nada
-      if (!localStorage.getItem("accessToken")) {
-        console.log("No hay token disponible");
+    const validateSession = async () => {
+      const sessionId = obtenerSessionID();
+      // Si no hay sessionId almacenado, no hacer nada
+      if (!sessionId) {
         setLoading(false);
         return;
       }
-
       try {
-        // Primer intento: verificar el token actual
+        // El backend maneja la sesión y los tokens, solo validamos la sesión
         const response = await auth_me();
-
         if (response && response.user) {
-          // Token válido, establecer usuario
           setUser(response.user);
           setIsClient(response.user.ROLE_NAME === ROLES.CLIENTE);
           setIsAuthenticated(true);
           localStorage.setItem("auth", "true");
-        }
-      } catch (error) {
-        console.error("Error con token actual:", error);
-
-        // Si el token actual falló, intentar refrescarlo
-        try {
-          const refreshResponse = await auth_refresh();
-
-          if (refreshResponse && refreshResponse.token) {
-            // Segundo intento: verificar con el token refrescado
-            try {
-              const newResponse = await auth_me();
-
-              if (newResponse && newResponse.user) {
-                // Token refrescado válido, establecer usuario
-                setUser(newResponse.user);
-                setIsClient(newResponse.user.ROLE_NAME === ROLES.CLIENTE);
-                setIsAuthenticated(true);
-                localStorage.setItem("auth", "true");
-              } else {
-                throw new Error("Verificación fallida con token refrescado");
-              }
-            } catch (secondError) {
-              console.error("Error con token refrescado:", secondError);
-              // Limpiar estado si incluso el token refrescado falla
-              setUser(null);
-              setIsAuthenticated(false);
-              localStorage.removeItem("auth");
-              localStorage.removeItem("user");
-            }
-          } else {
-            throw new Error("No se pudo obtener un nuevo token");
-          }
-        } catch (refreshError) {
-          console.error("Error al refrescar token:", refreshError);
-          // Limpiar estado de autenticación si el refresco falla
+        } else {
+          // Si la sesión no es válida, limpiar estado
           setUser(null);
           setIsAuthenticated(false);
-          localStorage.removeItem("auth");
-          localStorage.removeItem("user");
+          limpiarDatosUsuario();
         }
+      } catch (error) {
+        console.error("Error al validar sesión:", error);
+        setUser(null);
+        setIsAuthenticated(false);
+        performLogout();
       } finally {
         setLoading(false);
       }
     };
-
-    validateToken();
+    validateSession();
   }, []); // Dependencias vacías
 
   // Proveedor de contexto

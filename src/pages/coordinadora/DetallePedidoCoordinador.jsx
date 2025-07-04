@@ -532,8 +532,6 @@ const DetallePedidoCoordinador = () => {
   // Guardar todos los cambios
   const handleSaveAllChanges = async () => {
     try {
-      console.log(orderDetails);
-
       const body = {
         ENTERPRISE: orderDetails.empresaInfo.id,
         ACCOUNT_USER: orderDetails.customer.account,
@@ -553,7 +551,7 @@ const DetallePedidoCoordinador = () => {
         })),
       };
 
-      const responseUpdate = await order_updateOrder(orderDetails.id, body);
+      await order_updateOrder(orderDetails.id, body);
 
       const updatedOrder = {
         ...orderDetails,
