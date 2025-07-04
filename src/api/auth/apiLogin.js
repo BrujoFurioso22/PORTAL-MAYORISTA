@@ -1,12 +1,11 @@
 import api from "../../constants/api";
 import { guardarSessionID } from "../../utils/encryptToken";
 
-export const auth_login = async ({ email, password }) => {
+export const api_auth_login = async ({ email, password }) => {
   try {
     const response = await api.post("/auth/login", { email, password });
 
     if (response.status === 200 || response.status === 201) {
-      console.log(response.data);
       const sessionId = response.data.idSession || null;
 
       // Guardar tokens si existen
@@ -40,7 +39,7 @@ export const auth_login = async ({ email, password }) => {
  * Realiza el logout del usuario y limpia los datos de sesión.
  * @return {Promise<void>} Promesa que se resuelve al completar el logout.
  */
-export const auth_logout = async () => {
+export const api_auth_logout = async () => {
   try {
     // Realizar la petición de logout
     await api.post("/auth/logout");

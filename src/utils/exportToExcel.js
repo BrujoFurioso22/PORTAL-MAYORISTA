@@ -8,8 +8,6 @@ export const exportToExcel = async ({
   fileName,
   sheetName,
 }) => {
-  console.log(filteredData);
-
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(sheetName || "Sheet1");
 

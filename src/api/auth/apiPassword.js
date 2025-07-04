@@ -5,11 +5,9 @@ import api from "../../constants/api";
  * @param {string} email - Correo electrónico del usuario
  * @returns {Promise<Object>} - Respuesta de la API
  */
-export const resetPassword_requestPasswordReset = async (email) => {
+export const api_resetPassword_requestPasswordReset = async (email) => {
   try {
     const response = await api.post("/reset-password/request", { email });
-    console.log(response);
-
     localStorage.setItem("resetToken", response.data.resetToken);
     return {
       success: true,
@@ -36,7 +34,7 @@ export const resetPassword_requestPasswordReset = async (email) => {
  * @param {string} code - Código de verificación
  * @returns {Promise<Object>} - Respuesta de la API incluyendo el token de reset
  */
-export const resetPassword_verifyResetCode = async (token, otp) => {
+export const api_resetPassword_verifyResetCode = async (token, otp) => {
   try {
     const response = await api.post("/reset-password/verify-otp", {
       token,
@@ -67,16 +65,12 @@ export const resetPassword_verifyResetCode = async (token, otp) => {
  * @param {string} newPassword - Nueva contraseña del usuario
  * @returns {Promise<Object>} - Respuesta de la API
  */
-export const resetPassword_setNewPassword = async (resetToken, newPassword) => {
+export const api_resetPassword_setNewPassword = async (resetToken, newPassword) => {
   try {
-    console.log(resetToken, newPassword);
-    
     const response = await api.post("/reset-password/resPss", {
       token: resetToken,
       newPassword,
-    });
-    console.log(response);
-    
+    });    
     localStorage.removeItem("resetToken");
 
     return {

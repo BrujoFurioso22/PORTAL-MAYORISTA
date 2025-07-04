@@ -5,7 +5,7 @@ import api from "../../constants/api";
  * @param {Object} addressData - Datos de la dirección a crear
  * @returns {Promise<Object>} Objeto con información de éxito/error y datos
  */
-export const addresses_createAddress = async (addressData) => {
+export const api_addresses_createAddress = async (addressData) => {
   try {
     const response = await api.post("/usuarios/createDireccion", addressData);
 
@@ -29,7 +29,7 @@ export const addresses_createAddress = async (addressData) => {
  * @param {Object} addressData - Datos de la dirección a actualizar
  * @returns {Promise<Object>} Objeto con información de éxito/error y datos
  */
-export const addresses_updateAddress = async (id, addressData) => {
+export const api_addresses_updateAddress = async (id, addressData) => {
   try {
     const response = await api.post(
       `/usuarios/updateDireccion/${id}`,

@@ -10,15 +10,9 @@ import Select from "../../components/ui/Select";
 import SearchBar from "../../components/ui/SearchBar";
 import { differenceInHours, format, formatDistance } from "date-fns";
 import { es } from "date-fns/locale";
-import {
-  FaSearch,
-  FaEye,
-  FaCheck,
-  FaExclamationTriangle,
-  FaClock,
-} from "react-icons/fa";
+
 import { toast } from "react-toastify";
-import { order_getOrdersByEnterprises } from "../../services/order/order";
+import { api_order_getOrdersByEnterprises } from "../../api/order/apiOrder";
 
 // Estilos
 const PageContainer = styled.div`
@@ -227,10 +221,9 @@ const CoordinadorHomeComponent = () => {
           return;
         }
 
-        const ordersResponse = await order_getOrdersByEnterprises(
+        const ordersResponse = await api_order_getOrdersByEnterprises(
           user.EMPRESAS
         );
-        console.log("Respuesta de pedidos:", ordersResponse);
         if (ordersResponse.success && ordersResponse.data) {
           // Transformar los datos agrupados por empresa en una lista plana
           const allOrders = [];
@@ -248,7 +241,6 @@ const CoordinadorHomeComponent = () => {
                 (sum, item) => sum + item.QUANTITY,
                 0
               );
-              console.log(order);
 
               // Detectar si tiene direcciones nuevas (CLIENT origin)
               const hasNewAddress =
@@ -311,8 +303,7 @@ const CoordinadorHomeComponent = () => {
         return;
       }
 
-      const ordersResponse = await order_getOrdersByEnterprises(user.EMPRESAS);
-      console.log("Recargando pedidos:", ordersResponse);
+      const ordersResponse = await api_order_getOrdersByEnterprises(user.EMPRESAS);
 
       if (ordersResponse.success && ordersResponse.data) {
         // Transformar los datos agrupados por empresa en una lista plana
@@ -320,7 +311,6 @@ const CoordinadorHomeComponent = () => {
 
         Object.keys(ordersResponse.data).forEach((empresa) => {
           const empresaOrders = ordersResponse.data[empresa];
-          console.log(empresaOrders);
 
           empresaOrders.forEach((order) => {
             // Calcular el total si está vacío
@@ -456,7 +446,6 @@ const CoordinadorHomeComponent = () => {
       dataType: "date",
       width: "180px",
       render: (row) => {
-        console.log(row);
         const date = new Date(row.date);
         const now = new Date();
         const hoursAgo = differenceInHours(now, date);

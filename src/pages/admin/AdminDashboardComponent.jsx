@@ -6,8 +6,8 @@ import { useAuth } from "../../context/AuthContext";
 import styled from "styled-components";
 import { ROUTES } from "../../constants/routes";
 import { ROLES } from "../../constants/roles";
-import { users_getAll } from "../../services/users/users";
-import { roles_getAll } from "../../services/users/roles";
+import { api_users_getAll } from "../../api/users/apiUsers";
+import { api_roles_getAll } from "../../api/users/apiRoles";
 
 import RenderLoader from "../../components/ui/RenderLoader";
 import Button from "../../components/ui/Button";
@@ -248,13 +248,13 @@ const AdminDashboardComponent = () => {
     const fetchData = async () => {
       try {
         // Obtener usuarios
-        const usersResponse = await users_getAll();
+        const usersResponse = await api_users_getAll();
         if (!usersResponse.success) {
           throw new Error(usersResponse.message || "Error al cargar usuarios");
         }
 
         // Obtener roles
-        const rolesResponse = await roles_getAll();
+        const rolesResponse = await api_roles_getAll();
         if (!rolesResponse.success) {
           throw new Error(rolesResponse.message || "Error al cargar roles");
         }

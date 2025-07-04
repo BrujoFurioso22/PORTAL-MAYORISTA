@@ -79,7 +79,6 @@ const Seguridad = () => {
 
     // Aquí iría la lógica para cambiar la contraseña
     toast.success("Contraseña actualizada correctamente");
-    console.log("Password changed");
 
     // Limpiar el formulario
     setPasswordInfo({

@@ -6,7 +6,7 @@ import api from "../../constants/api";
  * @return {Promise<Object>} Respuesta de la API
  *
  */
-export const order_getOrdersByAccount = async (account) => {
+export const api_order_getOrdersByAccount = async (account) => {
   try {
     const response = await api.get(`/pedidos/getPedidos/${account}`);
     return {
@@ -32,7 +32,7 @@ export const order_getOrdersByAccount = async (account) => {
  * @param {Object} orderData - Datos del pedido
  * @return {Promise<Object>} Respuesta de la API
  */
-export const order_createOrder = async (orderData) => {
+export const api_order_createOrder = async (orderData) => {
   try {
     const response = await api.post("/pedidos/createPedido", orderData);
     return {
@@ -57,7 +57,7 @@ export const order_createOrder = async (orderData) => {
  * @param {string} orderId - ID del pedido
  * @return {Promise<Object>} Respuesta de la API
  */
-export const order_getOrderById = async (orderId) => {
+export const api_order_getOrderById = async (orderId) => {
   try {
     const response = await api.get(`/pedidos/getPedidosByOrder/${orderId}`);
     return {
@@ -82,7 +82,7 @@ export const order_getOrderById = async (orderId) => {
  * @param {Array} enterprises - arreglo de empresas
  * @return {Promise<Object>} Respuesta de la API
  */
-export const order_getOrdersByEnterprises = async (enterprises) => {
+export const api_order_getOrdersByEnterprises = async (enterprises) => {
   try {
     const response = await api.post(`/pedidos/getPedidosByEnterprise`, {
       empresas: enterprises,
@@ -111,7 +111,7 @@ export const order_getOrdersByEnterprises = async (enterprises) => {
  * @param {Object} orderData - Datos del pedido a actualizar
  * @return {Promise<Object>} Respuesta de la API
  */
-export const order_updateOrder = async (orderId, orderData) => {
+export const api_order_updateOrder = async (orderId, orderData) => {
   try {
     const response = await api.patch(
       `/pedidos/updateOrder/${orderId}`,

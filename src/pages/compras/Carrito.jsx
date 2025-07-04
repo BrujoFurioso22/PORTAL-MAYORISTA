@@ -9,7 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import Input from "../../components/ui/Input";
 import { ROUTES } from "../../constants/routes";
 import RenderIcon from "../../components/ui/RenderIcon";
-import { order_createOrder } from "../../services/order/order";
+import { api_order_createOrder } from "../../api/order/apiOrder";
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -852,7 +852,7 @@ const Carrito = () => {
 
     await new Promise((resolve) => setTimeout(resolve, 3000)); // Simular un delay para el procesamiento
 
-    const responseOrder = await order_createOrder(orderToProcess);
+    const responseOrder = await api_order_createOrder(orderToProcess);
 
     if (!responseOrder.success) {
       throw new Error(responseOrder.message || "Error al procesar el pedido");

@@ -6,7 +6,7 @@ import DataTable from "../../components/ui/Table";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { differenceInHours, format, formatDistance } from "date-fns";
 import { es } from "date-fns/locale";
-import { order_getOrdersByAccount } from "../../services/order/order";
+import { api_order_getOrdersByAccount } from "../../api/order/apiOrder";
 import { useAuth } from "../../context/AuthContext";
 import Select from "../../components/ui/Select";
 import SearchBar from "../../components/ui/SearchBar";
@@ -147,9 +147,7 @@ const MisPedidos = () => {
   const handleObtainOrders = async () => {
     try {
       setLoading(true);
-      const response = await order_getOrdersByAccount(user.ACCOUNT_USER);
-      console.log(user);
-
+      const response = await api_order_getOrdersByAccount(user.ACCOUNT_USER);
       if (response.success && response.data) {
         // Transformar los datos de la API al formato que espera nuestro componente
         const formattedOrders = response.data.map((order) => {
@@ -192,8 +190,7 @@ const MisPedidos = () => {
 
       try {
         setLoading(true);
-        const response = await order_getOrdersByAccount(user.ACCOUNT_USER);
-        console.log(response);
+        const response = await api_order_getOrdersByAccount(user.ACCOUNT_USER);
 
         if (response.success && response.data) {
           // Transformar los datos de la API al formato que espera nuestro componente

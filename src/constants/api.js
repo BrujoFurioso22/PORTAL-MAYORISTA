@@ -13,8 +13,6 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const idSession = obtenerSessionID();
-    console.log(idSession);
-
     if (idSession) {
       config.headers["id-session"] = `${idSession}`;
     }

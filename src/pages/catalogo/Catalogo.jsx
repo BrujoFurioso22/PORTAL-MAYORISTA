@@ -14,9 +14,7 @@ import ProductCard from "../../components/ui/ProductCard";
 import FilterSidebar from "../../components/ui/FilterSidebar";
 import { toast } from "react-toastify";
 
-import { products_getProductByField } from "../../services/products/products";
 import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
-import { useProductCache } from "../../context/ProductCacheContext";
 import RenderLoader from "../../components/ui/RenderLoader"; // Importar RenderLoader
 import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";

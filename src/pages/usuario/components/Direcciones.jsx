@@ -8,10 +8,10 @@ import Select from "../../../components/ui/Select";
 import RenderIcon from "../../../components/ui/RenderIcon";
 import { toast } from "react-toastify";
 import {
-  addresses_createAddress,
-  addresses_updateAddress,
-} from "../../../services/users/addresses";
-import { auth_me } from "../../../services/auth/auth";
+  api_addresses_createAddress,
+  api_addresses_updateAddress,
+} from "../../../api/users/apiAddresses";
+import { api_auth_me } from "../../../api/auth/apiAuth";
 import { useLocation } from "react-router-dom";
 
 const Card = styled.div`
@@ -340,7 +340,7 @@ const Direcciones = () => {
       );
 
       for (const otherAddress of otherAddressesOfSameType) {
-        await addresses_updateAddress(otherAddress.ID, {
+        await api_addresses_updateAddress(otherAddress.ID, {
           ...otherAddress,
           PREDETERMINED: false,
         });
@@ -365,12 +365,12 @@ const Direcciones = () => {
         EMPRESA: selectedEmpresa,
       };
 
-      let result = await addresses_createAddress(addressData);
+      let result = await api_addresses_createAddress(addressData);
 
       if (result.success) {
         try {
           await new Promise((resolve) => setTimeout(resolve, 300));
-          const resultAuthMe = await auth_me();
+          const resultAuthMe = await api_auth_me();
           if (resultAuthMe && resultAuthMe.user) {
             setUser(resultAuthMe.user);
             toast.update(toastId, {
@@ -448,19 +448,19 @@ const Direcciones = () => {
 
       if (otherAddressesOfSameType.length > 0) {
         for (const otherAddress of otherAddressesOfSameType) {
-          await addresses_updateAddress(otherAddress.ID, {
+          await api_addresses_updateAddress(otherAddress.ID, {
             ...otherAddress,
             PREDETERMINED: false,
           });
         }
       }
 
-      const result = await addresses_updateAddress(id, addressData);
+      const result = await api_addresses_updateAddress(id, addressData);
 
       if (result.success) {
         try {
           await new Promise((resolve) => setTimeout(resolve, 300));
-          const resultAuthMe = await auth_me();
+          const resultAuthMe = await api_auth_me();
           if (resultAuthMe && resultAuthMe.user) {
             setUser(resultAuthMe.user);
             toast.update(toastId, {

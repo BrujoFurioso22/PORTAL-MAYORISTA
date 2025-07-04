@@ -6,11 +6,9 @@ import api from "../../constants/api";
  * @param {string} value - valor del campo personalizado
  * @returns {Promise<Object>} - Respuesta de la API
  */
-export const products_getProductByField = async ({ field, value }) => {
+export const api_products_getProductByField = async ({ field, value }) => {
   try {
     const response = await api.get(`/productos/getProductos/${field}/${value}`);
-    // console.log(response);
-
     return {
       success: true,
       message: response.data.message || "Producto obtenido correctamente",
@@ -34,11 +32,9 @@ export const products_getProductByField = async ({ field, value }) => {
  * @param {string} search - Cadena de búsqueda
  * @return {Promise<Object>} - Respuesta de la API
  */
-export const products_searchProducts = async (search) => {
+export const api_products_searchProducts = async (search) => {
   try {
     const response = await api.get(`/productos/search/${search}`);
-    // console.log(response);
-
     return {
       success: true,
       message: response.data.message || "Productos obtenidos correctamente",

@@ -9,12 +9,12 @@ import { useAuth } from "../../context/AuthContext";
 import RenderIcon from "../../components/ui/RenderIcon";
 import DataTable from "../../components/ui/Table";
 import {
-  users_create,
-  users_getAll,
-  users_updateRole,
-  users_updatePassword,
-} from "../../services/users/users";
-import { roles_getAll } from "../../services/users/roles";
+  api_users_create,
+  api_users_getAll,
+  api_users_updateRole,
+  api_users_updatePassword,
+} from "../../api/users/apiUsers";
+import { api_roles_getAll } from "../../api/users/apiRoles";
 import RenderLoader from "../../components/ui/RenderLoader";
 import { ROLES } from "../../constants/roles";
 
@@ -213,7 +213,7 @@ const UsersAdministration = () => {
     const fetchData = async () => {
       try {
         // Cargar roles primero para obtener los IDs de los roles necesarios
-        const rolesResponse = await roles_getAll();
+        const rolesResponse = await api_roles_getAll();
         if (rolesResponse.success) {
           setRoles(rolesResponse.data);
 
@@ -228,7 +228,7 @@ const UsersAdministration = () => {
 
           if (clienteRole || adminRole) {
             // Ahora cargar los usuarios con rol cliente o admin
-            const usersResponse = await users_getAll();
+            const usersResponse = await api_users_getAll();
             if (usersResponse.success) {
               const userList = usersResponse.data.filter(
                 (user) =>
@@ -344,7 +344,7 @@ const UsersAdministration = () => {
       role: parseInt(formData.role),
     };
 
-    const response = await users_create(newUser);
+    const response = await api_users_create(newUser);
     if (!response.success) {
       toast.error(response.message || "Error al crear usuario");
       return;
@@ -352,7 +352,7 @@ const UsersAdministration = () => {
 
     // Recargar la lista de usuarios para obtener los datos actualizados
     const fetchUsers = async () => {
-      const response = await users_getAll();
+      const response = await api_users_getAll();
       if (response.success) {
         setUsers(response.data);
         setFilteredUsers(response.data);
@@ -385,7 +385,7 @@ const UsersAdministration = () => {
       // Verificar si ha cambiado el rol
       if (currentUser.ROLE_USER.toString() !== formData.role.toString()) {
         // Actualizar el rol
-        const roleResponse = await users_updateRole(
+        const roleResponse = await api_users_updateRole(
           currentUser.ID_USER,
           formData.role
         );
@@ -401,7 +401,7 @@ const UsersAdministration = () => {
       // Verificar si hay nueva contraseña
       if (formData.password) {
         // Actualizar la contraseña
-        const passwordResponse = await users_updatePassword(
+        const passwordResponse = await api_users_updatePassword(
           currentUser.ID_USER,
           formData.password
         );
@@ -425,7 +425,7 @@ const UsersAdministration = () => {
 
       // Recargar lista de usuarios para obtener datos actualizados
       const fetchUsers = async () => {
-        const response = await users_getAll();
+        const response = await api_users_getAll();
         if (response.success) {
           setUsers(response.data);
           setFilteredUsers(response.data);

@@ -8,7 +8,7 @@ import { ROUTES } from "../../constants/routes";
 import styled from "styled-components";
 import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { users_getByEmail } from "../../services/users/users";
+import { api_users_getByEmail } from "../../api/users/apiUsers";
 
 // Styled Components (reutilizando algunos del Login)
 const Container = styled(FlexBoxComponent)`
@@ -163,7 +163,7 @@ const ForgotPassword = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const response = await users_getByEmail(email);
+      const response = await api_users_getByEmail(email);
       if (response.success) {
         // Enviar código de verificación
         const codeResponse = await sendVerificationCode(email);

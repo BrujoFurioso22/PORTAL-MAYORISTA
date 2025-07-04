@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAppTheme } from "../../context/AppThemeContext";
 import Button from "../../components/ui/Button";
-import { order_getOrderById } from "../../services/order/order";
+import { api_order_getOrderById } from "../../api/order/apiOrder";
 import RenderIcon from "../../components/ui/RenderIcon";
 import { baseLinkImages } from "../../constants/links";
 import ContactModal from "../../components/ui/ContactModal";
@@ -349,10 +349,9 @@ const DetallePedido = () => {
     const fetchOrderDetails = async () => {
       setLoading(true);
       try {
-        const response = await order_getOrderById(orderId);
+        const response = await api_order_getOrderById(orderId);
 
         if (response.success && response.data && response.data.length > 0) {
-          console.log("Detalles del pedido:", response.data); // Para depuración
           // Transformar los datos de la API al formato que necesita nuestro componente
 
           const apiOrder = response.data[0];
@@ -372,14 +371,12 @@ const DetallePedido = () => {
             const found = statusHistory.find((s) => s.VALUE_CATALOG === status);
             return found ? new Date(found.createdAt) : null;
           };
-          console.log(currentStatus);
 
           // Calcular el subtotal
           const subtotal = detalle.reduce(
             (sum, item) => sum + item.PRICE * item.QUANTITY,
             0
           ); // Crear un objeto con la estructura que espera nuestro componente
-          console.log(cabecera);
           const userDiscount = user?.DESCUENTOS?.[cabecera.ENTERPRISE] || 0;
 
           const formattedOrder = {

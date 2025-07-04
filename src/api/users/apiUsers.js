@@ -1,10 +1,8 @@
 import api from "../../constants/api";
 
-export const users_getAll = async () => {
+export const api_users_getAll = async () => {
   try {
     const response = await api.get("/usuarios/getUsers");
-    // console.log(response);
-
     return {
       success: true,
       message: "Usuarios obtenidos exitosamente",
@@ -23,7 +21,7 @@ export const users_getAll = async () => {
 };
 
 // CREAR USUARIO
-export const users_create = async (userData) => {
+export const api_users_create = async (userData) => {
   try {
     const response = await api.post("/usuarios/createUser", userData);
     return {
@@ -44,7 +42,7 @@ export const users_create = async (userData) => {
 };
 
 // ACTUALIZAR USUARIO
-export const users_update = async (userData) => {
+export const api_users_update = async (userData) => {
   try {
     const response = await api.patch(
       `/usuarios/updateUser/${userData.id}`,
@@ -69,7 +67,7 @@ export const users_update = async (userData) => {
 };
 
 // Actualizar SOLO el rol del usuario
-export const users_updateRole = async (userId, roleId) => {
+export const api_users_updateRole = async (userId, roleId) => {
   try {
     const response = await api.patch(`/usuarios/updateRole/${userId}`, {
       role: parseInt(roleId),
@@ -92,7 +90,7 @@ export const users_updateRole = async (userId, roleId) => {
 };
 
 // Actualizar SOLO la contraseña del usuario
-export const users_updatePassword = async (userId, password) => {
+export const api_users_updatePassword = async (userId, password) => {
   try {
     const response = await api.patch(`/usuarios/updatePass/${userId}`, {
       password,
@@ -120,7 +118,7 @@ export const users_updatePassword = async (userId, password) => {
  * @param {string|number} userId - ID del usuario a actualizar
  * @param {boolean} status - Nuevo estado del usuario (true/false)
  */
-export const users_updateStatus = async (userId, status) => {
+export const api_users_updateStatus = async (userId, status) => {
   try {
     const response = await api.patch(`/usuarios/updateStatus/${userId}`, {
       status,
@@ -149,7 +147,7 @@ export const users_updateStatus = async (userId, status) => {
  * @param {string|number} codigoSocio - ID de la cuenta a consultar
  * @returns {Promise<Object>} Objeto con información de éxito/error y datos
  */
-export const users_getByAccount = async (codigoSocio) => {
+export const api_users_getByAccount = async (codigoSocio) => {
   try {
     const response = await api.get(`/usuarios/getInfoAccount/${codigoSocio}`);
 
@@ -177,7 +175,7 @@ export const users_getByAccount = async (codigoSocio) => {
  * @param {string|number} email - correo de la cuenta a consultar
  * @returns {Promise<Object>} Objeto con información de éxito/error y datos
  */
-export const users_getByEmail = async (email) => {
+export const api_users_getByEmail = async (email) => {
   try {
     const response = await api.get(`/usuarios/getUser/email/${email}`);
 

@@ -1,7 +1,7 @@
 import api from "../../constants/api";
 
 // OBTENER ROLES
-export const roles_getAll = async () => {
+export const api_roles_getAll = async () => {
   try {
     const response = await api.get("/roles/getRoles");
     return {

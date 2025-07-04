@@ -11,9 +11,9 @@ import Select from "../../components/ui/Select";
 import Input from "../../components/ui/Input";
 import RenderIcon from "../../components/ui/RenderIcon";
 import {
-  order_getOrderById,
-  order_updateOrder,
-} from "../../services/order/order";
+  api_order_getOrderById,
+  api_order_updateOrder,
+} from "../../api/order/apiOrder";
 import { baseLinkImages } from "../../constants/links";
 
 // Estilos del componente
@@ -302,7 +302,7 @@ const DetallePedidoCoordinador = () => {
     const fetchOrderDetails = async () => {
       setLoading(true);
       try {
-        const response = await order_getOrderById(orderId);
+        const response = await api_order_getOrderById(orderId);
 
         if (response.success && response.data && response.data.length > 0) {
           const apiOrder = response.data[0];
@@ -551,7 +551,7 @@ const DetallePedidoCoordinador = () => {
         })),
       };
 
-      await order_updateOrder(orderDetails.id, body);
+      await api_order_updateOrder(orderDetails.id, body);
 
       const updatedOrder = {
         ...orderDetails,

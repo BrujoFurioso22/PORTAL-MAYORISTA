@@ -4,7 +4,7 @@ import api from "../../constants/api";
  * Verifica el token actual y obtiene información del usuario
  * @returns {Promise<Object>} Respuesta con los datos del usuario
  */
-export const auth_me = async () => {
+export const api_auth_me = async () => {
   try {
     const response = await api.get("/auth/me");
     return response.data;

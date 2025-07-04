@@ -8,13 +8,13 @@ import { useAuth } from "../../context/AuthContext";
 import RenderIcon from "../../components/ui/RenderIcon";
 import DataTable from "../../components/ui/Table";
 import {
-  users_create,
-  users_getAll,
-  users_updatePassword,
-  users_update,
-  users_updateStatus,
-} from "../../services/users/users";
-import { roles_getAll } from "../../services/users/roles";
+  api_users_create,
+  api_users_getAll,
+  api_users_updatePassword,
+  api_users_update,
+  api_users_updateStatus,
+} from "../../api/users/apiUsers";
+import { api_roles_getAll } from "../../api/users/apiRoles";
 import RenderLoader from "../../components/ui/RenderLoader";
 import { ROLES } from "../../constants/roles";
 
@@ -337,7 +337,7 @@ const CoordinadorAdminComponent = () => {
     const fetchData = async () => {
       try {
         // Cargar roles primero para obtener el ID del rol coordinador
-        const rolesResponse = await roles_getAll();
+        const rolesResponse = await api_roles_getAll();
         if (rolesResponse.success) {
           setRoles(rolesResponse.data);
 
@@ -350,7 +350,7 @@ const CoordinadorAdminComponent = () => {
             setRolCoordinador(coordinadorRole.ID_ROLE);
 
             // Ahora cargar solo los usuarios con rol de coordinador
-            const usersResponse = await users_getAll();
+            const usersResponse = await api_users_getAll();
             if (usersResponse.success) {
               const coordinadoresList = usersResponse.data.filter(
                 (user) => user.ROLE_USER === coordinadorRole.ID_ROLE
@@ -485,14 +485,14 @@ const CoordinadorAdminComponent = () => {
         enterprises: formData.empresas.join(","),
       };
 
-      const response = await users_create(newCoordinador);
+      const response = await api_users_create(newCoordinador);
       if (!response.success) {
         toast.error(response.message || "Error al crear coordinador");
         return;
       }
 
       // Recargar la lista de coordinadores
-      const usersResponse = await users_getAll();
+      const usersResponse = await api_users_getAll();
       if (usersResponse.success) {
         const coordinadoresList = usersResponse.data.filter(
           (user) => user.ROLE_USER === rolCoordinador
@@ -553,7 +553,7 @@ const CoordinadorAdminComponent = () => {
         };
 
         // Llamar al servicio de actualización de datos
-        const userResponse = await users_update(userData);
+        const userResponse = await api_users_update(userData);
 
         if (!userResponse.success) {
           toast.error(
@@ -567,7 +567,7 @@ const CoordinadorAdminComponent = () => {
 
       // 2. Actualizar contraseña si se proporcionó una nueva
       if (formData.password) {
-        const passwordResponse = await users_updatePassword(
+        const passwordResponse = await api_users_updatePassword(
           currentCoordinador.ID_USER,
           formData.password
         );
@@ -590,7 +590,7 @@ const CoordinadorAdminComponent = () => {
       }
 
       // Recargar lista de coordinadores para reflejar los cambios
-      const usersResponse = await users_getAll();
+      const usersResponse = await api_users_getAll();
       if (usersResponse.success) {
         const coordinadoresList = usersResponse.data.filter(
           (user) => user.ROLE_USER === rolCoordinador
@@ -640,7 +640,7 @@ const CoordinadorAdminComponent = () => {
       const newStatus = !coordinador.STATUS_USER;
 
       // Llamar al servicio para actualizar el estado
-      const response = await users_updateStatus(coordinador.ID_USER, newStatus);
+      const response = await api_users_updateStatus(coordinador.ID_USER, newStatus);
 
       if (!response.success) {
         throw new Error(

@@ -97,7 +97,6 @@ export function CartProvider({ children }) {
       };
     }
 
-    console.log("CartContext - Añadiendo:", product.id, "cantidad:", quantity);
 
     setCart((prevCart) => {
       // Buscar si el producto ya está en el carrito

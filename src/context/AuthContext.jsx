@@ -3,15 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { ROUTES } from "../constants/routes";
 import { ROLES } from "../constants/roles";
-import { auth_login, auth_logout } from "../services/auth/login";
-import { auth_me } from "../services/auth/auth";
+import { api_auth_login, api_auth_logout } from "../api/auth/apiLogin";
+import { api_auth_me } from "../api/auth/apiAuth";
 
-import { users_create, users_getByAccount } from "../services/users/users";
+import { api_users_create, api_users_getByAccount } from "../api/users/apiUsers";
 import {
-  resetPassword_requestPasswordReset,
-  resetPassword_verifyResetCode,
-  resetPassword_setNewPassword,
-} from "../services/auth/password";
+  api_resetPassword_requestPasswordReset,
+  api_resetPassword_verifyResetCode,
+  api_resetPassword_setNewPassword,
+} from "../api/auth/apiPassword";
 import { performLogout } from "../utils/authUtils";
 import { guardarSessionID, obtenerSessionID } from "../utils/encryptToken";
 
@@ -96,7 +96,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const response = await auth_login({ email, password });
+      const response = await api_auth_login({ email, password });
 
       if (response.success) {
         const userData = response.data.user;
@@ -149,7 +149,7 @@ export function AuthProvider({ children }) {
   };
 
   const limpiarDatosUsuario = async () => {
-    await auth_logout();
+    await api_auth_logout();
     performLogout();
     // Limpiar estado
     setUser(null);
@@ -183,7 +183,7 @@ export function AuthProvider({ children }) {
   const verifyIdentification = async (identification) => {
     try {
       // Llamar al servicio que verifica la identificación (RUC/cédula)
-      const response = await users_getByAccount(identification);
+      const response = await api_users_getByAccount(identification);
 
       if (response.success && response.data.length > 0) {
         if (response.data) {
@@ -233,7 +233,7 @@ export function AuthProvider({ children }) {
 
   const registerUser = async (userData) => {
     try {
-      const response = await users_create(userData);
+      const response = await api_users_create(userData);
 
       if (response.success) {
         return {
@@ -259,7 +259,7 @@ export function AuthProvider({ children }) {
 
   const sendVerificationCode = async (email) => {
     try {
-      const response = await resetPassword_requestPasswordReset(email);
+      const response = await api_resetPassword_requestPasswordReset(email);
 
       if (response.success) {
         // El token viene en la respuesta y ya se guarda en localStorage
@@ -298,7 +298,7 @@ export function AuthProvider({ children }) {
         };
       }
 
-      const response = await resetPassword_verifyResetCode(token, otp);
+      const response = await api_resetPassword_verifyResetCode(token, otp);
       localStorage.removeItem("resetToken");
 
       if (response.success) {
@@ -337,7 +337,7 @@ export function AuthProvider({ children }) {
         };
       }
 
-      const response = await resetPassword_setNewPassword(
+      const response = await api_resetPassword_setNewPassword(
         resetToken,
         newPassword
       );
@@ -377,7 +377,7 @@ export function AuthProvider({ children }) {
       }
       try {
         // El backend maneja la sesión y los tokens, solo validamos la sesión
-        const response = await auth_me();
+        const response = await api_auth_me();
         if (response && response.user) {
           setUser(response.user);
           setIsClient(response.user.ROLE_NAME === ROLES.CLIENTE);

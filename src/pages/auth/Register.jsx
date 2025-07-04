@@ -322,9 +322,6 @@ const Register = () => {
       enterprises: userCompanies.join(","),
     };
 
-    // Solo imprimir por ahora, como pedido
-    console.log("Datos de usuario:", userData);
-
     const response = await registerUser(userData);
 
     if (response.success) {

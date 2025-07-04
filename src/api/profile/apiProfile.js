@@ -7,7 +7,7 @@ import api from "../../constants/api";
  * @return {Promise<Object>} - Respuesta de la API con las direcciones del usuario
  *
  */
-export const profile_getAddresses = async ({ account, company }) => {
+export const api_profile_getAddresses = async ({ account, company }) => {
   try {
     const response = await api.get(
       `/usuarios/getDirecciones/${account}/${company}`
