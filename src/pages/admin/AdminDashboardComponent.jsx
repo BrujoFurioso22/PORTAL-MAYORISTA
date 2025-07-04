@@ -522,34 +522,6 @@ const AdminDashboardComponent = () => {
           </div>
         </SectionCard>
       </SectionsGrid>
-
-      {/* Notificaciones y alertas */}
-      <SectionCard>
-        <SectionTitle>
-          <RenderIcon
-            name="FaExclamationTriangle"
-            size={18}
-            library={4}
-            color={theme.colors.warning}
-          />{" "}
-          Alertas y Notificaciones
-        </SectionTitle>
-
-        <RecentActivityList>
-          <ActivityItem>
-            <ActivityIcon color={theme.colors.error}>
-              <RenderIcon name="FaExclamationTriangle" size={16} />
-            </ActivityIcon>
-            <ActivityContent>
-              <ActivityTitle>3 productos con stock crítico</ActivityTitle>
-              <ActivityMeta>
-                <div>Requieren atención</div>
-                <Button text="Ver productos" variant="outlined" size="small" />
-              </ActivityMeta>
-            </ActivityContent>
-          </ActivityItem>
-        </RecentActivityList>
-      </SectionCard>
     </PageContainer>
   );
 };
