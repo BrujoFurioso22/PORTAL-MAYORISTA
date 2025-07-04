@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, id } from "date-fns/locale";
 import { toast } from "react-toastify";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { useAuth } from "../../context/AuthContext";
@@ -15,6 +15,8 @@ import {
   api_order_updateOrder,
 } from "../../api/order/apiOrder";
 import { baseLinkImages } from "../../constants/links";
+import { api_optionsCatalog_getStates } from "../../api/optionsCatalog/apiOptionsCatalog";
+import { copyToClipboard } from "../../utils/utils";
 
 // Estilos del componente
 const PageContainer = styled.div`
@@ -277,25 +279,7 @@ const DetallePedidoCoordinador = () => {
   const [editMode, setEditMode] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [deletedItems, setDeletedItems] = useState([]);
-
-  // Opciones de estado disponibles para coordinador
-  const statusOptions = [
-    { value: "PENDIENTE", label: "Pendiente" },
-    { value: "CONFIRMADO", label: "Confirmado" },
-    { value: "ENTREGADO", label: "Entregado" },
-    { value: "CANCELADO", label: "Cancelado" },
-  ];
-
-  // Traducir estado a español para mostrar
-  const translateStatus = (status) => {
-    const statusMap = {
-      PENDIENTE: "Pendiente",
-      CONFIRMADO: "Confirmado",
-      ENTREGADO: "Entregado",
-      CANCELADO: "Cancelado",
-    };
-    return statusMap[status] || status;
-  };
+  const [statusOptionsApi, setStatusOptionsApi] = useState([]);
 
   // Cargar datos del pedido
   useEffect(() => {
@@ -305,17 +289,26 @@ const DetallePedidoCoordinador = () => {
         const response = await api_order_getOrderById(orderId);
 
         if (response.success && response.data && response.data.length > 0) {
+          const statusOptionsResponse = await api_optionsCatalog_getStates();
+          let mapStatusOptions = [];
+          if (statusOptionsResponse.success) {
+            mapStatusOptions = statusOptionsResponse.data.map((item) => ({
+              value: item.VALUE_CATALOG,
+              label: item.LABEL_CATALOG,
+              id: item.ID_CATALOG,
+            }));
+            setStatusOptionsApi(mapStatusOptions);
+          }
+
           const apiOrder = response.data[0];
+          console.log(apiOrder);
+
           const cabecera = apiOrder.CABECERA;
           const detalle = apiOrder.DETALLE || [];
 
-          const statusHistory = Array.isArray(cabecera.STATUS)
-            ? cabecera.STATUS
-            : [];
-          const currentStatusObj =
-            statusHistory[statusHistory.length - 1] || {};
-          const currentStatus =
-            currentStatusObj.VALUE_CATALOG || cabecera.STATUS;
+          const currentStatus = mapStatusOptions.find(
+            (opt) => opt.id === cabecera.STATUS
+          )?.value;
 
           // Calcular descuentos y totales igual que en DetallePedido.jsx
           const items = detalle.map((item) => ({
@@ -532,6 +525,11 @@ const DetallePedidoCoordinador = () => {
   // Guardar todos los cambios
   const handleSaveAllChanges = async () => {
     try {
+      const newStatus = orderDraft.status;
+      const newStatusObj = statusOptionsApi.find(
+        (opt) => opt.value === newStatus
+      );
+
       const body = {
         ENTERPRISE: orderDetails.empresaInfo.id,
         ACCOUNT_USER: orderDetails.customer.account,
@@ -541,7 +539,7 @@ const DetallePedidoCoordinador = () => {
         DISCOUNT: orderDetails.discount,
         ADITIONAL_DISCOUNT: orderDraft.aditionalDiscount,
         TOTAL: orderDraft.totalConIva,
-        STATUS: orderDraft.status,
+        STATUS: newStatusObj.id,
 
         PRODUCTOS: orderDraft.items.map((item) => ({
           PRODUCT_CODE: item.id,
@@ -550,12 +548,14 @@ const DetallePedidoCoordinador = () => {
           PROMOTIONAL_DISCOUNT: item.promotionalDiscount || 0,
         })),
       };
+      console.log(body);
+      // return
 
       await api_order_updateOrder(orderDetails.id, body);
 
       const updatedOrder = {
         ...orderDetails,
-        status: orderDraft.status,
+        status: newStatusObj.value,
         aditionalDiscount: orderDraft.aditionalDiscount,
         items: orderDraft.items.map((item) => ({ ...item })),
         subtotal: orderDraft.rawSubtotal,
@@ -676,6 +676,12 @@ const DetallePedidoCoordinador = () => {
         <OrderTitle>
           <OrderNumber>
             Pedido #{orderDetails.id.substring(0, 12)}...
+            <RenderIcon
+              name="FaCopy"
+              size={16}
+              style={{ marginLeft: "8px", cursor: "pointer" }}
+              onClick={() => copyToClipboard(orderDetails.id)}
+            />
           </OrderNumber>
           <OrderDate>
             Realizado el{" "}
@@ -694,7 +700,10 @@ const DetallePedidoCoordinador = () => {
             />
           )}
           <StatusBadge status={orderDetails.status}>
-            {translateStatus(orderDetails.status)}
+            {
+              statusOptionsApi.find((opt) => opt.value === orderDetails.status)
+                ?.label
+            }
           </StatusBadge>
         </OrderActions>
       </PageHeader>
@@ -780,17 +789,55 @@ const DetallePedidoCoordinador = () => {
               </EditableSectionTitle>
 
               <FormRow>
-                <Select
-                  options={statusOptions}
-                  value={orderDraft?.status ?? ""}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  width="200px"
-                  label="Estado del pedido"
-                />
-                <div>
-                  <Label>Estado original:</Label>
-                  <Value>{translateStatus(orderDetails.status)}</Value>
-                </div>
+                {(() => {
+                  // Estado numérico actual
+                  const statusNum = orderDetails.CABECERA.STATUS;
+                  let filteredOptions = [];
+                  if (statusNum === 1) {
+                    // PENDIENTE: solo CONFIRMADO (2) y CANCELADO (4)
+                    filteredOptions = statusOptionsApi.filter(
+                      (opt) => opt.value === 2 || opt.value === 4
+                    );
+                  } else if (statusNum === 2) {
+                    // CONFIRMADO: solo ENTREGADO (3)
+                    filteredOptions = statusOptionsApi.filter(
+                      (opt) => opt.value === 3
+                    );
+                  }
+
+                  if (statusNum === 3 || statusNum === 4) {
+                    // ENTREGADO o CANCELADO: no mostrar select, solo mensaje
+                    return (
+                      <div
+                        style={{ fontWeight: 500, color: theme.colors.success }}
+                      >
+                        El pedido ha finalizado.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <Select
+                        options={filteredOptions}
+                        value={orderDraft?.status ?? ""}
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                        width="200px"
+                        label="Estado del pedido"
+                      />
+                      <div>
+                        <Label>Estado original:</Label>
+                        <Value>
+                          {
+                            statusOptionsApi.find(
+                              (opt) => opt.value === orderDetails.status
+                            )?.label
+                          }
+                        </Value>
+                      </div>
+                    </>
+                  );
+                })()}
               </FormRow>
             </EditableSection>
 

@@ -11,6 +11,7 @@ import { baseLinkImages } from "../../constants/links";
 import ContactModal from "../../components/ui/ContactModal";
 import { copyToClipboard } from "../../utils/utils";
 import { useAuth } from "../../context/AuthContext";
+import { api_optionsCatalog_getStates } from "../../api/optionsCatalog/apiOptionsCatalog";
 
 // Estilos para el componente
 const PageContainer = styled.div`
@@ -333,17 +334,14 @@ const DetallePedido = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [statusOptionsApi, setStatusOptionsApi] = useState([]);
 
-  // Traducir estado a español para mostrar
-  const translateStatus = (status) => {
-    const statusMap = {
-      PENDIENTE: "Pendiente",
-      CONFIRMADO: "Confirmado",
-      ENTREGADO: "Entregado",
-      CANCELADO: "Cancelado",
-    };
-    return statusMap[status] || status;
-  };
+  const estadosTracking = [
+    { key: "PENDIENTE", label: "Pedido recibido" },
+    { key: "CONFIRMADO", label: "Pedido confirmado" },
+    { key: "ENTREGADO", label: "Entregado" },
+    { key: "CANCELADO", label: "Pedido cancelado" },
+  ];
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -352,25 +350,27 @@ const DetallePedido = () => {
         const response = await api_order_getOrderById(orderId);
 
         if (response.success && response.data && response.data.length > 0) {
-          // Transformar los datos de la API al formato que necesita nuestro componente
+          const statusOptionsResponse = await api_optionsCatalog_getStates();
+          let mapStatusOptions = [];
+          if (statusOptionsResponse.success) {
+            mapStatusOptions = statusOptionsResponse.data.map((item) => ({
+              value: item.VALUE_CATALOG,
+              label: item.LABEL_CATALOG,
+              id: item.ID_CATALOG,
+            }));
+            setStatusOptionsApi(mapStatusOptions);
+          }
 
           const apiOrder = response.data[0];
           const cabecera = apiOrder.CABECERA;
           const detalle = apiOrder.DETALLE || [];
 
-          const statusHistory = Array.isArray(cabecera.STATUS)
-            ? cabecera.STATUS
+          const statusHistory = Array.isArray(cabecera.STATUS_HISTORY)
+            ? cabecera.STATUS_HISTORY
             : [];
-          const currentStatusObj =
-            statusHistory[statusHistory.length - 1] || {};
-          const currentStatus =
-            currentStatusObj.VALUE_CATALOG || cabecera.STATUS;
-
-          // Fechas de cada estado
-          const getStatusDate = (status) => {
-            const found = statusHistory.find((s) => s.VALUE_CATALOG === status);
-            return found ? new Date(found.createdAt) : null;
-          };
+          const currentStatus = mapStatusOptions.find(
+            (opt) => opt.id === cabecera.STATUS
+          )?.value;
 
           // Calcular el subtotal
           const subtotal = detalle.reduce(
@@ -379,10 +379,28 @@ const DetallePedido = () => {
           ); // Crear un objeto con la estructura que espera nuestro componente
           const userDiscount = user?.DESCUENTOS?.[cabecera.ENTERPRISE] || 0;
 
+          const tracking = estadosTracking
+            .map((estado) => {
+              const found = statusHistory.find(
+                (s) => s.VALUE_CATALOG === estado.key
+              );
+              return {
+                step: estado.label,
+                date: found ? new Date(found.createdAt) : null,
+                completed: !!found,
+                key: estado.key,
+              };
+            })
+            // Si el pedido no está cancelado, no muestres el paso cancelado
+            .filter(
+              (step) =>
+                step.key !== "CANCELADO" || currentStatus === "CANCELADO"
+            );
+
           const formattedOrder = {
             id: cabecera.ID_CART_HEADER,
             date: new Date(cabecera.createdAt),
-            status: currentStatus, // Mantener el valor original de la API
+            status: currentStatus,
             aditionalDiscount: cabecera.ADITIONAL_DISCOUNT || 0,
             discount: userDiscount,
             iva: cabecera.IVA_DETAIL?.IVA_PERCENTAGE || 15,
@@ -421,76 +439,12 @@ const DetallePedido = () => {
             })),
             subtotal: subtotal,
             total: cabecera.TOTAL || subtotal, // Si no hay total, usar subtotal
-            tracking: [
-              {
-                step: "Pedido recibido",
-                date:
-                  getStatusDate("PENDIENTE") || new Date(cabecera.createdAt),
-                completed: !!getStatusDate("PENDIENTE"),
-              },
-              {
-                step: "Pedido confirmado",
-                date: getStatusDate("CONFIRMADO"),
-                completed: !!getStatusDate("CONFIRMADO"),
-              },
-              {
-                step: "Entregado",
-                date: getStatusDate("ENTREGADO"),
-                completed: !!getStatusDate("ENTREGADO"),
-              },
-              ...(getStatusDate("CANCELADO")
-                ? [
-                    {
-                      step: "Pedido cancelado",
-                      date: getStatusDate("CANCELADO"),
-                      completed: true,
-                    },
-                  ]
-                : []),
-            ],
+            tracking,
             empresaInfo: {
               id: cabecera.ENTERPRISE,
               name: cabecera.ENTERPRISE,
             },
-          }; // Actualizar el estado de tracking según el status del pedido
-          if (formattedOrder.status === "PENDIENTE") {
-            // Solo el primer paso está completo - fecha de creación del pedido
-          } else if (formattedOrder.status === "CONFIRMADO") {
-            // Pedido confirmado
-            const creationDate = new Date(cabecera.createdAt);
-
-            formattedOrder.tracking[1].completed = true;
-            const confirmDate = new Date(creationDate);
-            confirmDate.setDate(creationDate.getDate() + 1);
-            formattedOrder.tracking[1].date = confirmDate;
-          } else if (formattedOrder.status === "ENTREGADO") {
-            // Todos los pasos están completos
-            const creationDate = new Date(cabecera.createdAt);
-
-            // Establecer fechas para cada paso del proceso
-            const dates = [
-              creationDate, // Pedido recibido: fecha de creación
-              new Date(creationDate.getTime() + 24 * 60 * 60 * 1000), // Pedido confirmado: +1 día
-              new Date(creationDate.getTime() + 5 * 24 * 60 * 60 * 1000), // Entregado: +5 días
-            ];
-
-            // Aplicar las fechas al tracking
-            formattedOrder.tracking.forEach((step, index) => {
-              step.completed = true;
-              step.date = dates[index];
-            });
-          } else if (formattedOrder.status === "CANCELADO") {
-            // Si el pedido está cancelado, solo el primer paso está completo
-            // y se añade un paso adicional de cancelación con la fecha actual
-            formattedOrder.tracking = [
-              formattedOrder.tracking[0], // Mantener "Pedido recibido"
-              {
-                step: "Pedido cancelado",
-                date: new Date(),
-                completed: true,
-              },
-            ];
-          }
+          };
           setOrderDetails(formattedOrder);
           setError(null);
         } else {
@@ -563,10 +517,7 @@ const DetallePedido = () => {
   const canCancel = orderDetails.status === "PENDIENTE";
 
   // 1. Subtotal sin descuentos
-  const rawSubtotal = orderDetails.items.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0
-  );
+  const rawSubtotal = orderDetails.subtotal;
 
   // 2. Total de descuentos promocionales (por producto)
   const totalPromotionalDiscount = orderDetails.items.reduce(
@@ -598,7 +549,6 @@ const DetallePedido = () => {
   // IVA como porcentaje (por ejemplo, 19 para 19%)
   const ivaPct = Number(orderDetails.iva || orderDetails.IVA || 0);
   const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
-  const totalConIva = (totalFinal < 0 ? 0 : totalFinal) + valorIVA;
 
   return (
     <PageContainer>
@@ -660,29 +610,51 @@ const DetallePedido = () => {
         <SectionTitle>
           Estado del pedido:
           <StatusBadge status={orderDetails.status}>
-            {translateStatus(orderDetails.status)}
+            {
+              statusOptionsApi.find((opt) => opt.value === orderDetails.status)
+                ?.label
+            }
           </StatusBadge>
         </SectionTitle>
-        {orderDetails.status !== "CANCELADO" && (
+        {orderDetails.status !== "CANCELADO" ? (
           <TrackingSteps>
-            {orderDetails.tracking.map((step, index) => (
-              <TrackingStep key={index}>
-                <StepIconContainer $completed={step.completed}>
-                  {step.completed ? "✓" : index + 1}
-                </StepIconContainer>
-                <StepContent>
-                  <StepTitle>{step.step}</StepTitle>
-                  <StepDate>
-                    {step.date
-                      ? format(step.date, "d 'de' MMMM, yyyy 'a las' HH:mm", {
-                          locale: es,
-                        })
-                      : "Pendiente"}
-                  </StepDate>
-                </StepContent>
-              </TrackingStep>
-            ))}
+            {orderDetails.tracking
+              .filter((step) => step.key !== "CANCELADO")
+              .map((step, index) => (
+                <TrackingStep key={index}>
+                  <StepIconContainer $completed={step.completed}>
+                    {step.completed ? "✓" : index + 1}
+                  </StepIconContainer>
+                  <StepContent>
+                    <StepTitle>{step.step}</StepTitle>
+                    <StepDate>
+                      {step.date
+                        ? format(step.date, "d 'de' MMMM, yyyy 'a las' HH:mm", {
+                            locale: es,
+                          })
+                        : "Pendiente"}
+                    </StepDate>
+                  </StepContent>
+                </TrackingStep>
+              ))}
           </TrackingSteps>
+        ) : (
+          <div style={{ marginTop: 20 }}>
+            {orderDetails.tracking
+              .filter(
+                (step) => step.key === "PENDIENTE" || step.key === "CANCELADO"
+              )
+              .map((step, index) => (
+                <div key={index} style={{ marginBottom: 8 }}>
+                  <b>{step.step}:</b>{" "}
+                  {step.date
+                    ? format(step.date, "d 'de' MMMM, yyyy 'a las' HH:mm", {
+                        locale: es,
+                      })
+                    : "Pendiente"}
+                </div>
+              ))}
+          </div>
         )}
       </Section>
 
@@ -916,7 +888,7 @@ const DetallePedido = () => {
         <OrderSummary>
           <SummaryRow>
             <SummaryLabel>Subtotal:</SummaryLabel>
-            <SummaryValue>${rawSubtotal.toFixed(2)}</SummaryValue>
+            <SummaryValue>${orderDetails.subtotal.toFixed(2)}</SummaryValue>
           </SummaryRow>
           {totalPromotionalDiscount > 0 && (
             <>
@@ -950,7 +922,9 @@ const DetallePedido = () => {
             <>
               <SummaryRow>
                 <SummaryLabel>Descuento especial:</SummaryLabel>
-                <SummaryValue $operacion>-${aditionalDiscount.toFixed(2)}</SummaryValue>
+                <SummaryValue $operacion>
+                  -${aditionalDiscount.toFixed(2)}
+                </SummaryValue>
               </SummaryRow>
               <SummaryRow>
                 <SummaryLabel>Subtotal tras descuento especial:</SummaryLabel>
@@ -969,7 +943,7 @@ const DetallePedido = () => {
           )}
           <SummaryRow>
             <SummaryLabel>Total:</SummaryLabel>
-            <SummaryValue>${totalConIva.toFixed(2)}</SummaryValue>
+            <SummaryValue>${orderDetails.total.toFixed(2)}</SummaryValue>
           </SummaryRow>
         </OrderSummary>
       </Section>
