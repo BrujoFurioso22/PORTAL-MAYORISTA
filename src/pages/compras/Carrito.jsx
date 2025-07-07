@@ -574,6 +574,31 @@ const Carrito = () => {
   const [totalOrdersToProcess, setTotalOrdersToProcess] = useState(0);
   const [lastProcessedCompanies, setLastProcessedCompanies] = useState([]);
 
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [companyToCheckout, setCompanyToCheckout] = useState(null);
+  const [isCheckoutAll, setIsCheckoutAll] = useState(false);
+
+  // Nueva función para confirmar el pago de una empresa
+  const handleCompanyCheckoutClick = (company) => {
+    setCompanyToCheckout(company);
+    setShowConfirmModal(true);
+  };
+
+  // Cuando el usuario confirma en el modal
+  const handleConfirmCheckout = async () => {
+    setShowConfirmModal(false);
+    if (companyToCheckout) {
+      await handleCheckoutSingleCompany(companyToCheckout);
+      setCompanyToCheckout(null);
+    }
+  };
+
+  // Cuando el usuario cancela el modal
+  const handleCancelCheckout = () => {
+    setShowConfirmModal(false);
+    setCompanyToCheckout(null);
+  };
+
   // Función para validar que todas las direcciones estén seleccionadas
   const isAllAddressesSelected = () => {
     return Object.values(groupedCart).every((companyData) => {
@@ -1208,7 +1233,6 @@ const Carrito = () => {
 
         <OrderSummary>
           <SummaryTitle>Resumen del pedido</SummaryTitle>
-
           {/* Resumen por empresa */}
           {Object.entries(groupedCart).map(([company, data]) => {
             // 1. Subtotal sin descuentos
@@ -1300,7 +1324,7 @@ const Carrito = () => {
                   leftIconName={"FaShoppingCart"}
                   backgroundColor={theme.colors.primary}
                   style={{ width: "100%" }}
-                  onClick={() => handleCheckoutSingleCompany(company)}
+                  onClick={() => handleCompanyCheckoutClick(company)}
                   disabled={
                     !data.shippingAddressId ||
                     !data.billingAddressId ||
@@ -1310,14 +1334,61 @@ const Carrito = () => {
               </CompanySummary>
             );
           })}
-
+          {/* Modal de confirmación */}
+          {showConfirmModal && (
+            <ProcessingOverlay>
+              <ProcessingCard>
+                <ProcessingTitle>
+                  ¿Está seguro que desea confirmar{" "}
+                  {isCheckoutAll ? "todas las órdenes" : "esta orden"}?
+                </ProcessingTitle>
+                <ProcessingMessage>
+                  {isCheckoutAll ? (
+                    "Se generarán pedidos independientes para cada empresa en tu carrito."
+                  ) : (
+                    <>
+                      Se generará el pedido para la empresa{" "}
+                      <b>{companyToCheckout}</b>.
+                    </>
+                  )}
+                </ProcessingMessage>
+                <Button
+                  text="Confirmar"
+                  variant="solid"
+                  backgroundColor={theme.colors.success}
+                  style={{ width: "100%", marginBottom: "12px" }}
+                  onClick={async () => {
+                    setShowConfirmModal(false);
+                    if (isCheckoutAll) {
+                      setIsCheckoutAll(false);
+                      await handleCheckoutAll();
+                    } else if (companyToCheckout) {
+                      await handleCheckoutSingleCompany(companyToCheckout);
+                      setCompanyToCheckout(null);
+                    }
+                  }}
+                  leftIconName="FaCheck"
+                />
+                <Button
+                  text="Cancelar"
+                  variant="outlined"
+                  style={{ width: "100%" }}
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setIsCheckoutAll(false);
+                    setCompanyToCheckout(null);
+                  }}
+                  leftIconName="FaTimes"
+                />
+              </ProcessingCard>
+            </ProcessingOverlay>
+          )}
           {Object.keys(groupedCart).length > 1 && (
             <TotalRow>
               <SummaryLabel>Total General</SummaryLabel>
               <SummaryValue $bold>${cartTotal.toFixed(2)}</SummaryValue>
             </TotalRow>
           )}
-
           {/* Mostrar alerta solo si hay más de una empresa */}
           {Object.keys(groupedCart).length > 1 && (
             <StockAlertBanner style={{ marginBottom: 12 }}>
@@ -1327,7 +1398,6 @@ const Carrito = () => {
               empresas.
             </StockAlertBanner>
           )}
-
           {/* Botón para pagar todo junto, solo si hay más de una empresa */}
           {Object.keys(groupedCart).length > 1 && (
             <Button
@@ -1335,11 +1405,13 @@ const Carrito = () => {
               variant="solid"
               backgroundColor={theme.colors.success}
               style={{ width: "100%", marginTop: "20px" }}
-              onClick={handleCheckoutAll}
+              onClick={() => {
+                setIsCheckoutAll(true);
+                setShowConfirmModal(true);
+              }}
               disabled={!isAllAddressesSelected() || hasInsufficientStock}
             />
           )}
-
           <Button
             text="Seguir comprando"
             variant="outlined"
