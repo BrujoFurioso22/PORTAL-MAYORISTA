@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useCart } from "../../context/CartContext";
@@ -6,7 +6,6 @@ import Button from "../../components/ui/Button";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import Input from "../../components/ui/Input";
 import { ROUTES } from "../../constants/routes";
 import RenderIcon from "../../components/ui/RenderIcon";
 import { api_order_createOrder } from "../../api/order/apiOrder";
@@ -1265,7 +1264,7 @@ const Carrito = () => {
                 )}
                 {userDiscount > 0 && (
                   <SummaryRow>
-                    <SummaryLabel>Descuento general:</SummaryLabel>
+                    <SummaryLabel>Descuento empresa:</SummaryLabel>
                     <SummaryValue>-${generalDiscount.toFixed(2)}</SummaryValue>
                   </SummaryRow>
                 )}
@@ -1312,20 +1311,34 @@ const Carrito = () => {
             );
           })}
 
-          <TotalRow>
-            <SummaryLabel>Total General</SummaryLabel>
-            <SummaryValue $bold>${cartTotal.toFixed(2)}</SummaryValue>
-          </TotalRow>
+          {Object.keys(groupedCart).length > 1 && (
+            <TotalRow>
+              <SummaryLabel>Total General</SummaryLabel>
+              <SummaryValue $bold>${cartTotal.toFixed(2)}</SummaryValue>
+            </TotalRow>
+          )}
 
-          {/* Botón para pagar todo junto */}
-          <Button
-            text="Pedir todo junto"
-            variant="solid"
-            backgroundColor={theme.colors.success}
-            style={{ width: "100%", marginTop: "20px" }}
-            onClick={handleCheckoutAll}
-            disabled={!isAllAddressesSelected() || hasInsufficientStock}
-          />
+          {/* Mostrar alerta solo si hay más de una empresa */}
+          {Object.keys(groupedCart).length > 1 && (
+            <StockAlertBanner style={{ marginBottom: 12 }}>
+              <b>¡Importante!</b> Al pedir todo junto se generará un pedido
+              independiente por cada empresa. Antes de continuar, revisa que las
+              direcciones de envío y facturación estén correctas para todas las
+              empresas.
+            </StockAlertBanner>
+          )}
+
+          {/* Botón para pagar todo junto, solo si hay más de una empresa */}
+          {Object.keys(groupedCart).length > 1 && (
+            <Button
+              text="Pedir todo junto"
+              variant="solid"
+              backgroundColor={theme.colors.success}
+              style={{ width: "100%", marginTop: "20px" }}
+              onClick={handleCheckoutAll}
+              disabled={!isAllAddressesSelected() || hasInsufficientStock}
+            />
+          )}
 
           <Button
             text="Seguir comprando"

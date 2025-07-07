@@ -99,8 +99,6 @@ export function CartProvider({ children }) {
       brand: product.brand || "Sin marca",
     }
     
-    console.log(product);
-    
     // Si el usuario es admin o coordinadora, no permitir añadir al carrito
     if (!isClient) {
       console.warn(

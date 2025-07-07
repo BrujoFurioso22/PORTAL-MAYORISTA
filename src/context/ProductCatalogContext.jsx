@@ -105,7 +105,6 @@ export const ProductCatalogProvider = ({ children }) => {
         field: "empresa",
         value: empresaName,
       });
-      console.log(resp.data);
 
       if (resp.success) {
         const productos = (resp.data || [])
