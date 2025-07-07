@@ -218,6 +218,7 @@ const ProductCard = ({ product, lineConfig }) => {
     navigate(`/productos/${product.id}`, {
       state: {
         product,
+        empresaId: product.empresaId,
         prevUrl: currentUrl, // Guardar la URL anterior para poder volver
       },
     });

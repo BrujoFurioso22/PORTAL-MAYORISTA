@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 import {
+  api_products_getProductByCodigo,
   api_products_getProductByField,
   api_products_searchProducts,
 } from "../api/products/apiProducts";
@@ -104,6 +105,8 @@ export const ProductCatalogProvider = ({ children }) => {
         field: "empresa",
         value: empresaName,
       });
+      console.log(resp.data);
+
       if (resp.success) {
         const productos = (resp.data || [])
           .map(mapApiProductToAppFormat)
@@ -122,6 +125,18 @@ export const ProductCatalogProvider = ({ children }) => {
       return [];
     } finally {
       setLoadingByEmpresa((prev) => ({ ...prev, [empresaName]: false }));
+    }
+  };
+
+  const loadProductByCodigo = async (codigo, empresaId) => {
+    try {
+      const resp = await api_products_getProductByCodigo(codigo, empresaId);
+      if (resp.success && resp.data) {
+        return mapApiProductToAppFormat(resp.data);
+      }
+      return null;
+    } catch (error) {
+      return null;
     }
   };
 
@@ -196,6 +211,7 @@ export const ProductCatalogProvider = ({ children }) => {
         compareProducts,
         mapApiProductToAppFormat, // Exportar el mapeo para uso externo si se requiere
         loadProductsBySearchTerm, // Nueva función para búsqueda
+        loadProductByCodigo,
       }}
     >
       {children}

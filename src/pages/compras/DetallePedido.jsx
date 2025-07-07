@@ -12,6 +12,9 @@ import ContactModal from "../../components/ui/ContactModal";
 import { copyToClipboard } from "../../utils/utils";
 import { useAuth } from "../../context/AuthContext";
 import { api_optionsCatalog_getStates } from "../../api/optionsCatalog/apiOptionsCatalog";
+import { useCart } from "../../context/CartContext";
+import { ROUTES } from "../../constants/routes";
+import { useProductCatalog } from "../../context/ProductCatalogContext";
 
 // Estilos para el componente
 const PageContainer = styled.div`
@@ -330,11 +333,25 @@ const DetallePedido = () => {
   const { theme } = useAppTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { loadProductByCodigo } = useProductCatalog();
   const [orderDetails, setOrderDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showContactModal, setShowContactModal] = useState(false);
   const [statusOptionsApi, setStatusOptionsApi] = useState([]);
+  const { addToCart } = useCart();
+
+  const handleRepeatOrder = async () => {
+    // Agrega cada producto del pedido anterior
+    const empresaId = orderDetails.empresaInfo.id;
+    for (const item of orderDetails.items) {
+      // Puedes ajustar aquí si necesitas pasar más props
+      const itemToAdd = await loadProductByCodigo(item.id, empresaId);
+      addToCart(itemToAdd, item.quantity);
+    }
+    // Redirige al carrito
+    navigate(ROUTES.ECOMMERCE.CARRITO);
+  };
 
   const estadosTracking = [
     { key: "PENDIENTE", label: "Pedido recibido" },
@@ -596,13 +613,23 @@ const DetallePedido = () => {
             />
           )}
           <Button
-            text="Contactar soporte"
+            text="Soporte"
             variant="solid"
             backgroundColor={theme.colors.primary}
             leftIconName="FaHeadset"
             onClick={handleContactSupport}
             disabled={orderDetails.status === "CANCELADO"}
           />
+          {(orderDetails.status === "CANCELADO" ||
+            orderDetails.status === "ENTREGADO") && (
+            <Button
+              text="Pedir Nuevamente"
+              variant="solid"
+              backgroundColor={theme.colors.success}
+              leftIconName="FaRedo"
+              onClick={handleRepeatOrder}
+            />
+          )}
         </OrderActions>
       </PageHeader>
 

@@ -52,3 +52,31 @@ export const api_products_searchProducts = async (search) => {
     };
   }
 };
+
+
+/**
+ * Obtiene producto por Código
+ * @param {string} value - Código del producto
+ * @param {string} empresaId - ID de la empresa 
+ * @return {Promise<Object>} - Respuesta de la API
+ */
+export const api_products_getProductByCodigo = async (value, empresaId) => {
+  try {
+    const response = await api.get(`/productos/getProductoByCodigo/${value}/${empresaId}`);    
+    return {
+      success: true,
+      message: response.data.message || "Producto obtenido correctamente",
+      data: response.data.data || {},
+    };
+  } catch (error) {
+    const message =
+      error.response?.data?.message ||
+      "Ocurrió un error al obtener el producto por código";
+
+    return {
+      success: false,
+      message,
+      error: error.response?.data || null,
+    };
+  }
+}

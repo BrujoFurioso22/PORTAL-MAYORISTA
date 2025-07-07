@@ -86,6 +86,21 @@ export function CartProvider({ children }) {
 
   // Agregar producto al carrito con verificación de rol
   const addToCart = (product, quantity = 1) => {
+    
+    const dataToSave = {
+      id: product.id,
+      name: product.name,
+      discount: product.discount || 0,
+      price: product.price,
+      image: product.image,
+      empresaId: product.empresaId,
+      stock: product.stock || 0,
+      quantity: quantity,
+      brand: product.brand || "Sin marca",
+    }
+    
+    console.log(product);
+    
     // Si el usuario es admin o coordinadora, no permitir añadir al carrito
     if (!isClient) {
       console.warn(
@@ -101,7 +116,7 @@ export function CartProvider({ children }) {
     setCart((prevCart) => {
       // Buscar si el producto ya está en el carrito
       const existingProductIndex = prevCart.findIndex(
-        (item) => item.id === product.id
+        (item) => item.id === dataToSave.id
       );
 
       if (existingProductIndex >= 0) {
@@ -115,7 +130,7 @@ export function CartProvider({ children }) {
         return updatedCart;
       } else {
         // Si es un producto nuevo, añadirlo al carrito
-        return [...prevCart, { ...product, quantity }];
+        return [...prevCart, { ...dataToSave, quantity }];
       }
     });
 

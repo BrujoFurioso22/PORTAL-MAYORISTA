@@ -3,10 +3,10 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useCart } from "../../context/CartContext";
 import Button from "../../components/ui/Button";
-import { productosPorEmpresa } from "../../mock/products";
 import { useAuth } from "../../context/AuthContext";
 import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
 import { toast } from "react-toastify";
+import { useProductCatalog } from "../../context/ProductCatalogContext";
 
 const PageContainer = styled.div`
   /* padding: 24px; */
@@ -315,15 +315,14 @@ const DetalleProducto = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { navigateToHomeByRole, isClient } = useAuth();  
+  const { loadProductByCodigo } = useProductCatalog();
+  const { navigateToHomeByRole, isClient } = useAuth();
   const { addToCart, cart } = useCart();
   const [quantity, setQuantity] = useState(1);
   // Intentar obtener el producto del estado de navegación primero
   const [product, setProduct] = useState(location.state?.product || null);
 
-  const [empresaId, setEmpresaId] = useState(
-    location.state?.product?.empresaId || null
-  );
+  const empresaId = location.state?.empresaId || null;
 
   const [isHovering, setIsHovering] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -411,35 +410,21 @@ const DetalleProducto = () => {
   }, [availableStock]);
 
   useEffect(() => {
-    // Si ya tenemos el producto del state, no necesitamos buscarlo
-    if (product) {
-      return;
-    }
+    const cargarProducto = async () => {
+      const productoApi = await loadProductByCodigo(id, empresaId);
 
-    // Implementación de búsqueda existente como fallback
-    let foundProduct = null;
-    let foundEmpresaId = null;
-
-    // Recorrer todas las empresas y buscar el producto
-    Object.entries(productosPorEmpresa).forEach(([empresaId, productos]) => {
-      const found = productos.find(
-        (p) => p.id.toString() === id.toString() || p.id === parseInt(id)
-      );
-
-      if (found) {
-        foundProduct = found;
-        foundEmpresaId = empresaId;
+      if (productoApi) {
+        setProduct(productoApi);
+      } else {
+        handleNavigate();
       }
-    });
+    };
 
-    if (foundProduct) {
-      setProduct(foundProduct);
-      setEmpresaId(foundEmpresaId);
-    } else {
-      console.log("Producto no encontrado, redirigiendo al home");
-      handleNavigate();
+    // Solo buscar si no hay producto en el state
+    if (!product) {
+      cargarProducto();
     }
-  }, [id, navigate, product]);
+  }, [id, empresaId]);
 
   if (!product) {
     return <div>Cargando...</div>;
