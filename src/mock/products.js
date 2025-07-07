@@ -31,7 +31,7 @@ export const empresas = [
     id: "AUTOMAX",
     nombre: "AUTOMAX",
     descripcion: "Accesorios y repuestos para vehículos",
-    logo: "https://via.placeholder.com/300x200?text=Automax",
+    logo: "/src/assets/enterprises/AutomaxLogo.png",
     color: "#fd7e14",
     marcas: ["Cost"],
     products: 200,
