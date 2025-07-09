@@ -1339,7 +1339,7 @@ const Carrito = () => {
             <ProcessingOverlay>
               <ProcessingCard>
                 <ProcessingTitle>
-                  ¿Está seguro que desea confirmar{" "}
+                  ¿Está seguro que desea confirmar
                   {isCheckoutAll ? "todas las órdenes" : "esta orden"}?
                 </ProcessingTitle>
                 <ProcessingMessage>
