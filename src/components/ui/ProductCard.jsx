@@ -6,6 +6,7 @@ import Button from "../ui/Button";
 import { toast } from "react-toastify";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { useAuth } from "../../context/AuthContext";
+import { TAXES, calculatePriceWithIVA } from "../../constants/taxes";
 
 const StyledCard = styled.div`
   background-color: ${({ theme }) =>
@@ -73,12 +74,20 @@ const Brand = styled.span`
   display: block;
   font-size: 0.8rem;
   color: ${({ theme }) => theme.colors.textLight};
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   /* padding: 4px 8px;
   border-radius: 20px;
   border: 1px solid ${({ theme }) => theme.colors.primary};
   width: fit-content;
   background-color: ${({ theme }) => `${theme.colors.primary}20`}; */
+`;
+
+const Enterprise = styled.span`
+  display: block;
+  font-size: 0.7rem;
+  color: ${({ theme }) => theme.colors.textLight};
+  margin-bottom: 8px;
+  opacity: 0.8;
 `;
 
 const Price = styled.div`
@@ -98,6 +107,12 @@ const OriginalPrice = styled.span`
   font-size: 0.9rem;
   text-decoration: line-through;
   color: ${({ theme }) => theme.colors.textLight};
+`;
+
+const IVAIndicator = styled.span`
+  font-size: 0.7rem;
+  color: ${({ theme }) => theme.colors.textLight};
+  font-style: italic;
 `;
 
 const ButtonContainer = styled.div`
@@ -198,10 +213,17 @@ const ProductCard = ({ product, lineConfig }) => {
   const { addToCart } = useCart();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
+  // Calcular precio con descuento aplicado
   const discountedPrice =
     product.discount && product.price !== null
       ? product.price * (1 - product.discount / 100)
       : product.price || 0;
+
+  // Calcular precio con IVA incluido (aplicado al precio con descuento)
+  const priceWithIVA = calculatePriceWithIVA(
+    discountedPrice, 
+    product.iva || TAXES.IVA_PERCENTAGE
+  );
 
   // Añade verificación para asegurar que product.id exista
   const handleViewDetails = () => {
@@ -269,14 +291,15 @@ const ProductCard = ({ product, lineConfig }) => {
       </ImageContainer>
       <ContentContainer>
         <Brand>{product.brand}</Brand>
+        <Enterprise>{product.empresa || product.empresaId}</Enterprise>
         {/* Indicador de stock */}
         <StockIndicator>
           <StockDot $inStock={product.stock > 0} />
           <StockText>
             {product.stock > 0
               ? `${
-                  product.stock > 100
-                    ? "+100 disponibles"
+                  product.stock >= 100
+                    ? "Disponible"
                     : `${product.stock} disponibles`
                 }`
               : "Agotado"}
@@ -285,7 +308,10 @@ const ProductCard = ({ product, lineConfig }) => {
         <ProductName>{product.name}</ProductName>
         {renderSpecs(config)}
         <Price>
-          <CurrentPrice>${(discountedPrice || 0).toFixed(2)}</CurrentPrice>
+          <div>
+            <CurrentPrice>${(priceWithIVA || 0).toFixed(2)}</CurrentPrice>
+            <IVAIndicator>IVA incluido</IVAIndicator>
+          </div>
           {product.discount > 0 && product.price != null && (
             <OriginalPrice>${product.price.toFixed(2)}</OriginalPrice>
           )}
@@ -297,7 +323,7 @@ const ProductCard = ({ product, lineConfig }) => {
             size="small"
             onClick={handleViewDetails}
           />
-          {isClient && (
+          {isClient && product.stock > 0 && (
             <Button
               text={isAddingToCart ? "Agregando..." : "Agregar al carrito"}
               variant="solid"

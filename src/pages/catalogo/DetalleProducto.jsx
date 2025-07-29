@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
 import { toast } from "react-toastify";
 import { useProductCatalog } from "../../context/ProductCatalogContext";
+import { TAXES, calculatePriceWithIVA } from "../../constants/taxes";
 
 const PageContainer = styled.div`
   /* padding: 24px; */
@@ -49,6 +50,14 @@ const ProductTitle = styled.h1`
 const Brand = styled.div`
   font-weight: 500;
   color: ${({ theme }) => theme.colors.textLight};
+  margin-bottom: 4px;
+`;
+
+const Enterprise = styled.div`
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.textLight};
+  margin-bottom: 8px;
+  opacity: 0.8;
 `;
 
 const PriceContainer = styled.div`
@@ -63,6 +72,14 @@ const CurrentPrice = styled.span`
   font-size: 2rem;
   font-weight: bold;
   color: ${({ theme }) => theme.colors.primary};
+`;
+
+const IVAIndicator = styled.span`
+  font-size: 0.8rem;
+  color: ${({ theme }) => theme.colors.textLight};
+  font-style: italic;
+  display: block;
+  margin-top: 4px;
 `;
 
 const OriginalPrice = styled.span`
@@ -445,7 +462,8 @@ const DetalleProducto = () => {
 
   const handleQuantityChange = (e) => {
     const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0 && value <= availableStock) {
+    const max = availableStock > 100 ? 5000 : availableStock;
+    if (!isNaN(value) && value > 0 && value <= max) {
       setQuantity(value);
     }
   };
@@ -472,10 +490,17 @@ const DetalleProducto = () => {
     }
   };
 
+  // Calcular precio con descuento aplicado
   const discountedPrice =
     product.discount && product.price !== null
       ? product.price * (1 - product.discount / 100)
       : product.price || 0;
+
+  // Calcular precio con IVA incluido (aplicado al precio con descuento)
+  const priceWithIVA = calculatePriceWithIVA(
+    discountedPrice, 
+    product.iva || TAXES.IVA_PERCENTAGE
+  );
 
   return (
     <PageContainer>
@@ -530,6 +555,7 @@ const DetalleProducto = () => {
           </Category>
           <ProductTitle>{product.name}</ProductTitle>
           <Brand>Marca: {product.brand}</Brand>
+          <Enterprise>Empresa: {product.empresa || product.empresaId}</Enterprise>
           {/* Nuevo indicador de stock posicionado debajo del nombre y marca */}
           <StockIndicator $inStock={availableStock > 0}>
             <StockBadge $inStock={availableStock > 0}>
@@ -538,10 +564,12 @@ const DetalleProducto = () => {
             <StockMessage $inStock={availableStock > 0}>
               {availableStock > 0 ? (
                 <>
-                  {availableStock}{" "}
+                  {availableStock < 100 && `${availableStock}`}{" "}
                   {availableStock === 1
                     ? "unidad disponible"
-                    : "unidades disponibles"}
+                    : availableStock < 100
+                    ? "unidades disponibles"
+                    : ""}
                   {currentInCart > 0 && (
                     <span
                       style={{
@@ -557,14 +585,17 @@ const DetalleProducto = () => {
               ) : currentInCart > 0 ? (
                 "Producto ya en tu carrito (sin stock adicional)"
               ) : (
-                "Producto temporalmente sin stock"
+                "Producto temporalmente sin stock. Si desea comprobar el stock, por favor, contacte con nosotros."
               )}
             </StockMessage>
           </StockIndicator>
           <Description>{product.description}</Description>
           {renderSpecifications(product)}
           <PriceContainer>
-            <CurrentPrice>${(discountedPrice || 0).toFixed(2)}</CurrentPrice>
+            <div>
+              <CurrentPrice>${(priceWithIVA || 0).toFixed(2)}</CurrentPrice>
+              <IVAIndicator>IVA incluido</IVAIndicator>
+            </div>
             {product.discount > 0 && (
               <>
                 {product.discount > 0 && product.price != null && (
@@ -596,7 +627,7 @@ const DetalleProducto = () => {
                 <QuantityInput
                   type="number"
                   min="1"
-                  max={availableStock}
+                  max={availableStock > 100 ? 5000 : availableStock}
                   value={quantity}
                   onChange={handleQuantityChange}
                   disabled={availableStock <= 0}

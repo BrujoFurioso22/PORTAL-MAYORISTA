@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
+import { TAXES } from "../constants/taxes";
 import { ROLES } from "../constants/roles";
 
 const CartContext = createContext();
@@ -57,7 +58,7 @@ export function CartProvider({ children }) {
       const aditionalDiscount = 0;
       const subtotalAfterAditional = subtotalAfterGeneral - aditionalDiscount;
       // 7. IVA (si tienes un valor por empresa, úsalo, si no, pon 0)
-      const ivaPct = user?.IVA || 15;
+      const ivaPct = user?.IVA || TAXES.IVA_PERCENTAGE;
       const valorIVA =
         (subtotalAfterAditional < 0 ? 0 : subtotalAfterAditional) *
         (ivaPct / 100);

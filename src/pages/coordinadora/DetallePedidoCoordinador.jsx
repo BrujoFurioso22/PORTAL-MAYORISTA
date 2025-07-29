@@ -17,6 +17,7 @@ import {
 import { baseLinkImages } from "../../constants/links";
 import { api_optionsCatalog_getStates } from "../../api/optionsCatalog/apiOptionsCatalog";
 import { copyToClipboard } from "../../utils/utils";
+import { TAXES } from "../../constants/taxes";
 
 // Estilos del componente
 const PageContainer = styled.div`
@@ -352,7 +353,7 @@ const DetallePedidoCoordinador = () => {
           // 7. Total final antes de IVA
           const totalFinal = subtotalAfterGeneral - aditionalDiscount;
           // IVA como porcentaje
-          const ivaPct = Number(cabecera.IVA_DETAIL?.IVA_PERCENTAGE || 15);
+          const ivaPct = Number(cabecera.IVA_DETAIL?.IVA_PERCENTAGE || TAXES.IVA_PERCENTAGE);
           const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
           const totalConIva = (totalFinal < 0 ? 0 : totalFinal) + valorIVA;
 
@@ -791,17 +792,17 @@ const DetallePedidoCoordinador = () => {
               <FormRow>
                 {(() => {
                   // Estado numérico actual
-                  const statusNum = orderDetails.CABECERA.STATUS;
+                  const statusNum = orderDetails.originalData?.CABECERA?.STATUS;
                   let filteredOptions = [];
                   if (statusNum === 1) {
                     // PENDIENTE: solo CONFIRMADO (2) y CANCELADO (4)
                     filteredOptions = statusOptionsApi.filter(
-                      (opt) => opt.value === 2 || opt.value === 4
+                      (opt) => opt.id === 2 || opt.id === 4
                     );
                   } else if (statusNum === 2) {
                     // CONFIRMADO: solo ENTREGADO (3)
                     filteredOptions = statusOptionsApi.filter(
-                      (opt) => opt.value === 3
+                      (opt) => opt.id === 3
                     );
                   }
 

@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { ROUTES } from "../../constants/routes";
 import RenderIcon from "../../components/ui/RenderIcon";
 import { api_order_createOrder } from "../../api/order/apiOrder";
+import { TAXES, calculatePriceWithIVA } from "../../constants/taxes";
 
 const PageContainer = styled.div`
   padding: 24px;
@@ -96,6 +97,12 @@ const ItemName = styled.h3`
   margin: 0 0 8px 0;
   font-size: 1rem;
   color: ${({ theme }) => theme.colors.text};
+  cursor: pointer;
+  
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+    text-decoration: underline;
+  }
 `;
 
 const ItemBrand = styled.span`
@@ -448,20 +455,34 @@ const CompanyCheckoutButton = styled(Button)`
   }
 `;
 
-const CartItem = ({ item, handleQuantityChange, removeFromCart, theme }) => {
+const CartItem = ({ item, handleQuantityChange, removeFromCart, theme, navigate }) => {
   const discount = item?.discount || 0;
   const maxStock = item?.stock || 0;
-  const subTotal = item?.price * item.quantity;
-  const discountedPrice = discount ? subTotal * (discount / 100) : 0;
-  const itemTotal = subTotal - discountedPrice;
+  
+  // Calcular precio con descuento aplicado
+  const discountedPrice = discount ? item.price * (1 - discount / 100) : item.price;
+  
+  // Calcular precio con IVA incluido
+  const priceWithIVA = calculatePriceWithIVA(discountedPrice, item.iva || TAXES.IVA_PERCENTAGE);
+  
+  const subTotal = priceWithIVA * item.quantity;
   const isOverStock = item.quantity > maxStock;
+
+  const handleItemClick = () => {
+    navigate(`/productos/${item.id}`, {
+      state: {
+        empresaId: item.empresaId,
+        prevUrl: "/carrito", // URL del carrito para el botón de regreso
+      },
+    });
+  };
 
   return (
     <CartItemContainer>
       <ItemImage src={item?.image} alt={item?.name} />
 
       <ItemDetails>
-        <ItemName>{item?.name}</ItemName>
+        <ItemName onClick={handleItemClick}>{item?.name}</ItemName>
         <ItemBrand>{item?.brand}</ItemBrand>
 
         {isOverStock && (
@@ -499,20 +520,20 @@ const CartItem = ({ item, handleQuantityChange, removeFromCart, theme }) => {
         </StockInfo>
       </ItemDetails>
 
-      <ItemPricing>
-        <ItemPrice>${subTotal.toFixed(2)}</ItemPrice>
-        {discount > 0 && (
-          <ItemPrice $subtotal>${itemTotal.toFixed(2)}</ItemPrice>
-        )}
-        <Button
-          onClick={() => removeFromCart(item.id)}
-          text={"Eliminar"}
-          color={theme.colors.error}
-          size="small"
-          backgroundColor={"transparent"}
-          style={{ marginTop: "auto" }}
-        />
-      </ItemPricing>
+              <ItemPricing>
+          <ItemPrice>${subTotal.toFixed(2)}</ItemPrice>
+          {discount > 0 && (
+            <ItemPrice $subtotal>${(item.price * item.quantity).toFixed(2)}</ItemPrice>
+          )}
+          <Button
+            onClick={() => removeFromCart(item.id)}
+            text={"Eliminar"}
+            color={theme.colors.error}
+            size="small"
+            backgroundColor={"transparent"}
+            style={{ marginTop: "auto" }}
+          />
+        </ItemPricing>
     </CartItemContainer>
   );
 };
@@ -823,37 +844,25 @@ const Carrito = () => {
       (addr) => addr.id === companyData.billingAddressId
     );
 
-    // 1. Subtotal sin descuentos
-    const rawSubtotal = companyData.items.reduce(
-      (acc, item) => acc + item.price * item.quantity,
-      0
-    );
-    // 2. Total de descuentos promocionales (por producto)
-    const totalPromotionalDiscount = companyData.items.reduce(
-      (acc, item) =>
-        acc +
-        item.price *
-          item.quantity *
-          ((Number(item.promotionalDiscount) || 0) / 100),
-      0
-    );
-    // 3. Subtotal después de descuentos promocionales
-    const subtotalAfterPromo = rawSubtotal - totalPromotionalDiscount;
-    // 4. Descuento general (usuario)
+    // Calcular total con IVA incluido para cada item
+    const itemsWithIVA = companyData.items.map(item => {
+      const discount = item?.discount || 0;
+      const discountedPrice = discount ? item.price * (1 - discount / 100) : item.price;
+      const priceWithIVA = calculatePriceWithIVA(discountedPrice, item.iva || TAXES.IVA_PERCENTAGE);
+      return {
+        ...item,
+        priceWithIVA,
+        totalWithIVA: priceWithIVA * item.quantity
+      };
+    });
+
+    // Subtotal con IVA incluido
+    const subtotalWithIVA = itemsWithIVA.reduce((acc, item) => acc + item.totalWithIVA, 0);
+    
+    // Aplicar descuento de empresa (userDiscount)
     const userDiscount = user?.DESCUENTOS?.[company] || 0;
-    const generalDiscount = subtotalAfterPromo * (Number(userDiscount) / 100);
-    // 5. Subtotal después de descuento general
-    const subtotalAfterGeneral = subtotalAfterPromo - generalDiscount;
-    // 6. Descuento especial (coordinadora)
-    const aditionalDiscount =
-      subtotalAfterGeneral * (Number(companyData.aditionalDiscount) / 100 || 0);
-    // 7. Total final antes de IVA
-    const totalFinal = subtotalAfterGeneral - aditionalDiscount;
-    // 8. IVA
-    const ivaPct = user?.IVA || 15;
-    const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
-    // 9. Total con IVA
-    const totalConIva = (totalFinal < 0 ? 0 : totalFinal) + valorIVA;
+    const discountAmount = subtotalWithIVA * (userDiscount / 100);
+    const totalConIva = subtotalWithIVA - discountAmount;
 
     const productsToProcess = companyData.items.map((item) => ({
       PRODUCT_CODE: item.id,
@@ -867,9 +876,9 @@ const Carrito = () => {
       ACCOUNT_USER: user.ACCOUNT_USER,
       SHIPPING_ADDRESS_ID: parseInt(shippingAddress.id),
       BILLING_ADDRESS_ID: parseInt(billingAddress.id),
-      SUBTOTAL: rawSubtotal,
-      DISCOUNT: userDiscount,
-      TOTAL: totalConIva,
+      SUBTOTAL: subtotalWithIVA, // Subtotal con IVA incluido
+      DISCOUNT: userDiscount, // Descuento de empresa
+      TOTAL: totalConIva, // Total final después del descuento
       STATUS: "PENDIENTE",
       PRODUCTOS: productsToProcess,
     };
@@ -977,6 +986,7 @@ const Carrito = () => {
                   handleQuantityChange={handleQuantityChange}
                   removeFromCart={removeFromCart}
                   theme={theme}
+                  navigate={navigate}
                 />
               ))}
           </CartItemsList>
@@ -1235,39 +1245,25 @@ const Carrito = () => {
           <SummaryTitle>Resumen del pedido</SummaryTitle>
           {/* Resumen por empresa */}
           {Object.entries(groupedCart).map(([company, data]) => {
-            // 1. Subtotal sin descuentos
-            const rawSubtotal = data.items.reduce(
-              (acc, item) => acc + item.price * item.quantity,
-              0
-            );
-            // 2. Total de descuentos promocionales (por producto)
-            const totalPromotionalDiscount = data.items.reduce(
-              (acc, item) =>
-                acc +
-                item.price *
-                  item.quantity *
-                  ((Number(item.promotionalDiscount) || 0) / 100),
-              0
-            );
-            // 3. Subtotal después de descuentos promocionales
-            const subtotalAfterPromo = rawSubtotal - totalPromotionalDiscount;
-            // 4. Descuento general (usuario) sobre el subtotal con promo
+            // Calcular total con IVA incluido para cada item
+            const itemsWithIVA = data.items.map(item => {
+              const discount = item?.discount || 0;
+              const discountedPrice = discount ? item.price * (1 - discount / 100) : item.price;
+              const priceWithIVA = calculatePriceWithIVA(discountedPrice, item.iva || TAXES.IVA_PERCENTAGE);
+              return {
+                ...item,
+                priceWithIVA,
+                totalWithIVA: priceWithIVA * item.quantity
+              };
+            });
+
+            // Subtotal con IVA incluido
+            const subtotalWithIVA = itemsWithIVA.reduce((acc, item) => acc + item.totalWithIVA, 0);
+            
+            // Aplicar descuento de empresa (userDiscount)
             const userDiscount = user?.DESCUENTOS?.[company] || 0;
-            const generalDiscount =
-              subtotalAfterPromo * (Number(userDiscount) / 100);
-            // 5. Subtotal después de descuento general
-            const subtotalAfterGeneral = subtotalAfterPromo - generalDiscount;
-            // 6. Descuento especial (coordinadora) sobre el subtotal con promo y general
-            const aditionalDiscount =
-              subtotalAfterGeneral *
-              (Number(data.aditionalDiscount) / 100 || 0);
-            // 7. Total final antes de IVA
-            const totalFinal = subtotalAfterGeneral - aditionalDiscount;
-            // 8. IVA (puedes ajustar el porcentaje según tu lógica)
-            const ivaPct = user?.IVA || 15;
-            const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
-            // 9. Total con IVA
-            const totalConIva = (totalFinal < 0 ? 0 : totalFinal) + valorIVA;
+            const discountAmount = subtotalWithIVA * (userDiscount / 100);
+            const totalConIva = subtotalWithIVA - discountAmount;
 
             return (
               <CompanySummary key={company}>
@@ -1276,28 +1272,19 @@ const Carrito = () => {
                   <SummaryLabel>
                     Subtotal ({data.items.length} productos)
                   </SummaryLabel>
-                  <SummaryValue>${rawSubtotal.toFixed(2)}</SummaryValue>
+                  <SummaryValue>${subtotalWithIVA.toFixed(2)}</SummaryValue>
                 </SummaryRow>
-                {totalPromotionalDiscount > 0 && (
-                  <SummaryRow>
-                    <SummaryLabel>Descuentos promocionales:</SummaryLabel>
-                    <SummaryValue>
-                      -${totalPromotionalDiscount.toFixed(2)}
-                    </SummaryValue>
-                  </SummaryRow>
-                )}
                 {userDiscount > 0 && (
                   <SummaryRow>
                     <SummaryLabel>Descuento empresa:</SummaryLabel>
-                    <SummaryValue>-${generalDiscount.toFixed(2)}</SummaryValue>
+                    <SummaryValue>-${discountAmount.toFixed(2)}</SummaryValue>
                   </SummaryRow>
                 )}
-                {ivaPct > 0 && (
-                  <SummaryRow>
-                    <SummaryLabel>IVA ({ivaPct}%):</SummaryLabel>
-                    <SummaryValue>+${valorIVA.toFixed(2)}</SummaryValue>
-                  </SummaryRow>
-                )}
+                <SummaryRow>
+                  <SummaryLabel style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
+                    * Precios con IVA incluido
+                  </SummaryLabel>
+                </SummaryRow>
                 <TotalRow>
                   <SummaryLabel>Total</SummaryLabel>
                   <SummaryValue $bold>${totalConIva.toFixed(2)}</SummaryValue>

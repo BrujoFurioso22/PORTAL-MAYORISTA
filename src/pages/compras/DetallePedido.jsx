@@ -10,6 +10,7 @@ import RenderIcon from "../../components/ui/RenderIcon";
 import { baseLinkImages } from "../../constants/links";
 import ContactModal from "../../components/ui/ContactModal";
 import { copyToClipboard } from "../../utils/utils";
+import { TAXES } from "../../constants/taxes";
 import { useAuth } from "../../context/AuthContext";
 import { api_optionsCatalog_getStates } from "../../api/optionsCatalog/apiOptionsCatalog";
 import { useCart } from "../../context/CartContext";
@@ -420,7 +421,7 @@ const DetallePedido = () => {
             status: currentStatus,
             aditionalDiscount: cabecera.ADITIONAL_DISCOUNT || 0,
             discount: userDiscount,
-            iva: cabecera.IVA_DETAIL?.IVA_PERCENTAGE || 15,
+            iva: cabecera.IVA_DETAIL?.IVA_PERCENTAGE || TAXES.IVA_PERCENTAGE,
             customer: {
               name: cabecera.USER.NAME_USER,
               email: cabecera.USER.EMAIL,
