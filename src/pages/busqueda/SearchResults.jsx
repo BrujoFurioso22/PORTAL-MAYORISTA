@@ -3,18 +3,13 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import Button from "../../components/ui/Button";
 import Select from "../../components/ui/Select";
+import Input from "../../components/ui/Input";
 import ProductCard from "../../components/ui/ProductCard";
 import RenderIcon from "../../components/ui/RenderIcon";
 import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
 import { useAuth } from "../../context/AuthContext";
 import { useProductCatalog } from "../../context/ProductCatalogContext";
-
-const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
+import PageContainer from "../../components/layout/PageContainer";
 
 const PageHeader = styled.div`
   margin-bottom: 24px;
@@ -51,23 +46,116 @@ const SearchInfo = styled.p`
   color: ${({ theme }) => theme.colors.textLight};
 `;
 
-const FiltersBar = styled.div`
+const SearchBarContainer = styled.div`
   background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
   box-shadow: 0 2px 4px ${({ theme }) => theme.colors.shadow};
+`;
+
+const SearchForm = styled.form`
   display: flex;
-  justify-content: space-between;
+  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const SearchInputContainer = styled.div`
+  flex: 1;
+  min-width: 300px;
+`;
+
+const SearchButtonContainer = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const FiltersBar = styled.div`
+  background-color: ${({ theme }) => theme.colors.surface};
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px ${({ theme }) => theme.colors.shadow};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const FiltersContent = styled.div`
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+`;
+
+const FiltersHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 35px;
+`;
+
+const FiltersTitle = styled.h3`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const FiltersControls = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  
+  flex-grow: 1;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
 `;
 
 const FilterGroup = styled.div`
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+
+  @media (max-width: 768px) {
+    min-width: 100%;
+  }
+`;
+
+const RestrictedProductsNotice = styled.div`
+  background-color: ${({ theme }) => `${theme.colors.primary}08`};
+  border: 1px solid ${({ theme }) => `${theme.colors.primary}25`};
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.primary};
+  line-height: 1.4;
+  width: 100%;
+
+  svg {
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  span {
+    flex: 1;
+  }
 `;
 
 const FilterLabel = styled.label`
@@ -109,101 +197,6 @@ const NoResultsText = styled.p`
   max-width: 500px;
   margin-left: auto;
   margin-right: auto;
-`;
-
-// Nuevos estilos para productos sin acceso
-const RestrictedProductCard = styled.div`
-  background-color: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  position: relative;
-  opacity: 0.75;
-  filter: grayscale(40%);
-`;
-
-const RestrictedOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6); // Fondo más oscuro para mejor contraste
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-  z-index: 2;
-  padding: 16px;
-  padding-top: 8%;
-  text-align: center;
-`;
-
-const RestrictedMessageContainer = styled.div`
-  background-color: ${({ theme }) => theme.colors.surface};
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  width: 85%;
-  max-width: 250px;
-  border: 2px solid ${({ theme }) => theme.colors.primary}; // Borde destacado
-`;
-
-const RestrictedIcon = styled.div`
-  background-color: ${({ theme }) => theme.colors.primary};
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  color: ${({ theme }) => theme.colors.white}; // Texto blanco para contraste
-  font-size: 1.5rem;
-`;
-const RestrictedText = styled.p`
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: 600; // Más negrita
-  font-size: 1.1rem; // Más grande
-  margin: 0 0 16px 0;
-`;
-
-const RestrictedImageContainer = styled.div`
-  position: relative;
-  padding-top: 75%; /* 4:3 Aspect Ratio */
-`;
-
-const RestrictedImage = styled.img`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-`;
-
-const RestrictedContent = styled.div`
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-`;
-
-const RestrictedName = styled.h3`
-  margin: 0 0 8px 0;
-  font-size: 1rem;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const RestrictedBrand = styled.p`
-  margin: 0;
-  font-size: 0.8rem;
-  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const PaginationContainer = styled.div`
@@ -269,7 +262,9 @@ const SearchResults = () => {
   const [priceRange, setPriceRange] = useState(initialPriceRange);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(initialPage);
-  const productsPerPage = 12; // Mostrar 12 productos por página
+  const [searchInput, setSearchInput] = useState(query); // Estado para el input de búsqueda
+  const [productsPerPage, setProductsPerPage] = useState(12); // Estado para productos por página
+  const [currentLimit, setCurrentLimit] = useState(12); // Estado para el límite actual
 
   // userAccess con useMemo para evitar advertencia de dependencias
   const userAccess = React.useMemo(() => user?.EMPRESAS || [], [user]);
@@ -282,8 +277,17 @@ const SearchResults = () => {
     if (sortOption && sortOption !== "relevance")
       params.sortOption = sortOption;
     if (currentPage && currentPage !== 1) params.page = currentPage;
+    if (productsPerPage && productsPerPage !== 12)
+      params.limit = productsPerPage;
     setSearchParams(params, { replace: true });
-  }, [query, priceRange, sortOption, currentPage, setSearchParams]);
+  }, [
+    query,
+    priceRange,
+    sortOption,
+    currentPage,
+    productsPerPage,
+    setSearchParams,
+  ]);
 
   // Buscar productos cuando cambia la query
   useEffect(() => {
@@ -362,51 +366,58 @@ const SearchResults = () => {
     if (results === null) return; // No hacer nada si no hay resultados
     let filtered = [...results];
 
-    // Filtrar por rango de precio
+    // Separar productos con acceso y sin acceso
+    const accessibleProducts = filtered.filter((product) => product.hasAccess);
+    const restrictedProducts = filtered.filter((product) => !product.hasAccess);
+
+    // Aplicar filtro de precio solo a productos con acceso
     if (priceRange !== "all") {
-      switch (priceRange) {
-        case "under-100":
-          filtered = filtered.filter((item) => item.price < 100);
-          break;
-        case "100-200":
-          filtered = filtered.filter(
-            (item) => item.price >= 100 && item.price <= 200
-          );
-          break;
-        case "200-300":
-          filtered = filtered.filter(
-            (item) => item.price > 200 && item.price <= 300
-          );
-          break;
-        case "over-300":
-          filtered = filtered.filter((item) => item.price > 300);
-          break;
-        default:
-          break;
-      }
+      const filteredAccessible = accessibleProducts.filter((item) => {
+        switch (priceRange) {
+          case "under-100":
+            return item.price < 100;
+          case "100-200":
+            return item.price >= 100 && item.price <= 200;
+          case "200-300":
+            return item.price > 200 && item.price <= 300;
+          case "over-300":
+            return item.price > 300;
+          default:
+            return true;
+        }
+      });
+      accessibleProducts.length = 0; // Limpiar el array
+      accessibleProducts.push(...filteredAccessible); // Agregar los filtrados
     }
 
-    // Ordenar los resultados
+    // Ordenar productos con acceso según la opción seleccionada
     switch (sortOption) {
       case "price-low":
-        filtered.sort((a, b) => a.price - b.price);
+        accessibleProducts.sort((a, b) => a.price - b.price);
         break;
       case "price-high":
-        filtered.sort((a, b) => b.price - a.price);
+        accessibleProducts.sort((a, b) => b.price - a.price);
         break;
       case "name":
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        accessibleProducts.sort((a, b) => a.name.localeCompare(b.name));
         break;
       case "discount":
-        filtered.sort((a, b) => (b.discount || 0) - (a.discount || 0));
+        accessibleProducts.sort(
+          (a, b) => (b.discount || 0) - (a.discount || 0)
+        );
         break;
       case "relevance":
       default:
-        filtered.sort((a, b) => b.relevanceScore - a.relevanceScore);
+        accessibleProducts.sort((a, b) => b.relevanceScore - a.relevanceScore);
         break;
     }
 
-    setFilteredResults(filtered);
+    // Ordenar productos restringidos por relevancia
+    restrictedProducts.sort((a, b) => b.relevanceScore - a.relevanceScore);
+
+    // Combinar productos con acceso primero, luego los restringidos
+    const finalResults = [...accessibleProducts, ...restrictedProducts];
+    setFilteredResults(finalResults);
   }, [results, sortOption, priceRange]);
 
   // Cuando cambian los filtros o la página desde la URL, actualiza el estado local
@@ -415,6 +426,18 @@ const SearchResults = () => {
     setPriceRange(initialPriceRange);
     setCurrentPage(initialPage);
   }, [initialSortOption, initialPriceRange, initialPage]);
+
+  // Sincronizar searchInput con la query de la URL
+  useEffect(() => {
+    setSearchInput(query);
+  }, [query]);
+
+  // Sincronizar estados con parámetros de URL al cargar la página
+  useEffect(() => {
+    const limitFromUrl = parseInt(searchParams.get("limit") || "12", 10);
+    setProductsPerPage(limitFromUrl);
+    setCurrentLimit(limitFromUrl);
+  }, [searchParams]);
 
   const handleSortChange = (e) => {
     setSortOption(e.target.value);
@@ -429,6 +452,29 @@ const SearchResults = () => {
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleItemsPerPageChange = (e) => {
+    const newLimit = Number(e.target.value);
+    setProductsPerPage(newLimit);
+    setCurrentLimit(newLimit);
+    setCurrentPage(1); // Reiniciar a la primera página al cambiar el límite
+  };
+
+  // Función para manejar el envío del formulario de búsqueda
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      const params = new URLSearchParams();
+      params.set("q", searchInput.trim());
+      setSearchParams(params);
+    }
+  };
+
+  // Función para limpiar la búsqueda
+  const handleClearSearch = () => {
+    setSearchInput("");
+    setSearchParams({});
   };
 
   // Variables de paginación y acceso
@@ -449,14 +495,34 @@ const SearchResults = () => {
     navigate(`/catalogo/${empresaId}`);
   };
 
+  // Función para obtener las opciones de ordenamiento
+  const getSortOptions = () => {
+    return [
+      { value: "relevance", label: "Relevancia" },
+      { value: "price-low", label: "Precio: Menor a Mayor" },
+      { value: "price-high", label: "Precio: Mayor a Menor" },
+      { value: "name", label: "Nombre" },
+      { value: "discount", label: "Mayor descuento" },
+    ];
+  };
+
+  // Función para obtener las opciones de filtro de precio
+  const getPriceFilterOptions = () => {
+    return [
+      { value: "all", label: "Todos los precios" },
+      { value: "under-100", label: "Menos de $100" },
+      { value: "100-200", label: "$100 - $200" },
+      { value: "200-300", label: "$200 - $300" },
+      { value: "over-300", label: "Más de $300" },
+    ];
+  };
+
   return (
-    <PageContainer>
+    <PageContainer
+      backButtonText="Inicio"
+      backButtonOnClick={handleNavigate}
+    >
       <PageHeader>
-        <BackButton
-          onClick={handleNavigate}
-          leftIconName={"FaChevronLeft"}
-          text={"Volver al inicio"}
-        />
 
         <div
           style={{
@@ -491,20 +557,49 @@ const SearchResults = () => {
         </NoResultsContainer>
       )}
 
+      {/* Barra de búsqueda */}
+      <SearchBarContainer>
+        <SearchForm onSubmit={handleSearchSubmit}>
+          <SearchInputContainer>
+            <Input
+              type="text"
+              placeholder="Buscar productos en todas las empresas..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              leftIconName="FaSearch"
+              fullWidth={true}
+            />
+          </SearchInputContainer>
+          <SearchButtonContainer>
+            <Button
+              text="Buscar"
+              variant="solid"
+              type="submit"
+              leftIconName="FaSearch"
+              disabled={!searchInput.trim()}
+            />
+            {query && (
+              <Button
+                text="Limpiar"
+                variant="outlined"
+                onClick={handleClearSearch}
+                leftIconName="FaTimes"
+              />
+            )}
+          </SearchButtonContainer>
+        </SearchForm>
+      </SearchBarContainer>
+
       {/* Estado: No hay consulta de búsqueda */}
       {!loading && results === null && (
         <NoResultsContainer>
           <RenderIcon name="FaSearch" size={30} />
-          <NoResultsTitle>Ingresa una búsqueda</NoResultsTitle>
+          <NoResultsTitle>Busca en todas las empresas</NoResultsTitle>
           <NoResultsText>
-            Escribe en el buscador para encontrar los productos que necesitas.
+            Escribe el nombre del producto, marca o características que buscas
+            para encontrar los mejores resultados en todas las empresas
+            disponibles.
           </NoResultsText>
-          <Button
-            text="Ir al catálogo"
-            variant="solid"
-            backgroundColor={({ theme }) => theme.colors.primary}
-            onClick={handleNavigate}
-          />
         </NoResultsContainer>
       )}
 
@@ -512,47 +607,75 @@ const SearchResults = () => {
       {!loading && results && results.length > 0 && (
         <>
           <FiltersBar>
-            <FilterGroup>
-              <FilterLabel>
-                <RenderIcon name="FaFilter" size={18} />
-                Filtrar por:
-              </FilterLabel>
-              <Select
-                options={[
-                  { value: "all", label: "Todos los precios" },
-                  { value: "under-100", label: "Menos de $100" },
-                  { value: "100-200", label: "$100 - $200" },
-                  { value: "200-300", label: "$200 - $300" },
-                  { value: "over-300", label: "Más de $300" },
-                ]}
-                value={priceRange}
-                onChange={handlePriceRangeChange}
-                placeholder="Seleccionar precio"
-                width="200px"
-                name="priceRange"
-              />
-            </FilterGroup>
+            <FiltersContent>
+              <FiltersHeader>
+                <FiltersTitle>
+                  <div>
+                    <RenderIcon name="FaFilter" size={18} />
+                    Filtros y Ordenamiento
+                  </div>
+                  <div>
+                    {/* Mostrar aviso si hay productos restringidos */}
+                    {results &&
+                      results.some((product) => !product.hasAccess) && (
+                        <RestrictedProductsNotice>
+                          <RenderIcon name="FaInfoCircle" size={16} />
+                          <span>
+                            Algunos productos requieren autorización especial.
+                            Los filtros se aplican solo a productos accesibles,
+                            mientras que los productos restringidos aparecen al
+                            final de la lista.
+                          </span>
+                        </RestrictedProductsNotice>
+                      )}
+                  </div>
+                </FiltersTitle>
 
-            <FilterGroup>
-              <FilterLabel>
-                <RenderIcon name="FaSort" size={18} />
-                Ordenar por:
-              </FilterLabel>
-              <Select
-                options={[
-                  { value: "relevance", label: "Relevancia" },
-                  { value: "price-low", label: "Precio: Menor a Mayor" },
-                  { value: "price-high", label: "Precio: Mayor a Menor" },
-                  { value: "name", label: "Nombre" },
-                  { value: "discount", label: "Mayor descuento" },
-                ]}
-                value={sortOption}
-                onChange={handleSortChange}
-                placeholder="Ordenar por..."
-                width="200px"
-                name="sortOption"
-              />
-            </FilterGroup>
+                <FiltersControls>
+                  <FilterGroup>
+                    <Select
+                      options={getPriceFilterOptions()}
+                      value={priceRange}
+                      onChange={handlePriceRangeChange}
+                      placeholder="Seleccionar precio"
+                      width="180px"
+                      label="Rango de Precio"
+                      name="priceRange"
+                    />
+                  </FilterGroup>
+
+                  <FilterGroup>
+                    <Select
+                      options={getSortOptions()}
+                      value={sortOption}
+                      onChange={handleSortChange}
+                      placeholder="Ordenar por..."
+                      width="180px"
+                      label="Ordenar por"
+                      name="sortOption"
+                    />
+                  </FilterGroup>
+
+                  <FilterGroup>
+                    <Select
+                      options={[
+                        { value: 12, label: "12 productos" },
+                        { value: 24, label: "24 productos" },
+                        { value: 36, label: "36 productos" },
+                        { value: 72, label: "72 productos" },
+                        { value: 144, label: "144 productos" },
+                      ]}
+                      value={currentLimit}
+                      onChange={handleItemsPerPageChange}
+                      label="Productos por página"
+                      placeholder="Seleccionar cantidad"
+                      width="180px"
+                      name="itemsPerPage"
+                    />
+                  </FilterGroup>
+                </FiltersControls>
+              </FiltersHeader>
+            </FiltersContent>
           </FiltersBar>
 
           {filteredResults.length > 0 && (
@@ -571,46 +694,18 @@ const SearchResults = () => {
           )}
 
           <ProductsGrid>
-            {currentProducts.map((product) =>
-              product.hasAccess ? (
-                <ProductCard
-                  key={`${product.empresaId}-${product.id}`}
-                  product={product}
-                  lineConfig={
-                    PRODUCT_LINE_CONFIG[product.lineaNegocio] ||
-                    PRODUCT_LINE_CONFIG.DEFAULT
-                  }
-                />
-              ) : (
-                // Producto restringido sin acceso
-                <RestrictedProductCard
-                  key={`${product.empresaId}-${product.id}`}
-                >
-                  <RestrictedImageContainer>
-                    <RestrictedImage src={product.image} alt={product.name} />
-                  </RestrictedImageContainer>
-                  <RestrictedContent>
-                    <RestrictedName>{product.name}</RestrictedName>
-                    <RestrictedBrand>{product.brand}</RestrictedBrand>
-                  </RestrictedContent>
-                  <RestrictedOverlay>
-                    <RestrictedMessageContainer>
-                      <RestrictedIcon>
-                        <RenderIcon name="FaLock" size={18} />
-                      </RestrictedIcon>
-                      <RestrictedText>Acceso restringido</RestrictedText>
-                      <Button
-                        text={`Solicitar acceso a ${product.empresaId}`}
-                        variant="solid" // Cambiado de outline a solid para mayor visibilidad
-                        size="small"
-                        onClick={() => handleRequestAccess(product.empresaId)}
-                        backgroundColor={({ theme }) => theme.colors.primary}
-                      />
-                    </RestrictedMessageContainer>
-                  </RestrictedOverlay>
-                </RestrictedProductCard>
-              )
-            )}
+            {currentProducts.map((product) => (
+              <ProductCard
+                key={`${product.empresaId}-${product.id}`}
+                product={product}
+                lineConfig={
+                  PRODUCT_LINE_CONFIG[product.lineaNegocio] ||
+                  PRODUCT_LINE_CONFIG.DEFAULT
+                }
+                restricted={!product.hasAccess}
+                onRequestAccess={handleRequestAccess}
+              />
+            ))}
           </ProductsGrid>
 
           {/* Agregar el componente de paginación */}

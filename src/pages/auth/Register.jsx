@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { toast } from "react-toastify";
 import { ROUTES } from "../../constants/routes";
+import PageContainer from "../../components/layout/PageContainer";
 
 const styles = {
   form: {
@@ -637,13 +638,14 @@ const Register = () => {
   };
 
   return (
-    <FlexBoxComponent
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="flex-start"
-      minHeight="100vh"
-      padding="20px"
-      style={{ overflowY: "auto" }}
+    <PageContainer
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+      }}
     >
       <FormCard
         flexDirection="column"
@@ -660,7 +662,7 @@ const Register = () => {
 
         {renderCurrentStep()}
       </FormCard>
-    </FlexBoxComponent>
+    </PageContainer>
   );
 };
 

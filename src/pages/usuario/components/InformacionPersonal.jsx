@@ -3,6 +3,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useAppTheme } from "../../../context/AppThemeContext";
 import Button from "../../../components/ui/Button";
 import { toast } from "react-toastify";
+import { ROLES } from "../../../constants/roles";
 
 const Card = styled.div`
   background-color: ${({ theme }) => theme.colors.surface};
@@ -127,14 +128,16 @@ const InformacionPersonal = () => {
               )}
             </div>
           </div>
-          <FormActions>
-            <Button
-              text="Solicitar cambio de información"
-              size="small"
-              variant="outlined"
-              onClick={handleSolicitarCambio}
-            />
-          </FormActions>
+          {user?.ROLE_NAME === ROLES.CLIENTE && (
+            <FormActions>
+              <Button
+                text="Solicitar cambio de información"
+                size="small"
+                variant="outlined"
+                onClick={handleSolicitarCambio}
+              />
+            </FormActions>
+          )}
         </FormSection>
       </ProfileSection>
     </Card>

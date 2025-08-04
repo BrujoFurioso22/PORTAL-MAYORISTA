@@ -10,13 +10,8 @@ import { api_order_getOrdersByAccount } from "../../api/order/apiOrder";
 import { useAuth } from "../../context/AuthContext";
 import Select from "../../components/ui/Select";
 import SearchBar from "../../components/ui/SearchBar";
+import PageContainer from "../../components/layout/PageContainer";
 
-// Mantener los estilos existentes para la página
-const PageContainer = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
 
 const PageTitle = styled.h1`
   margin: 0 0 24px 0;
@@ -70,6 +65,8 @@ const StatusBadge = styled.span`
     switch (status) {
       case "PENDIENTE":
         return theme.colors.warning + "33";
+      case "PENDIENTE CARTERA":
+        return theme.colors.info + "33";
       case "CONFIRMADO":
         return theme.colors.info + "33";
       case "ENTREGADO":
@@ -84,6 +81,8 @@ const StatusBadge = styled.span`
     switch (status) {
       case "PENDIENTE":
         return theme.colors.warning;
+      case "PENDIENTE CARTERA":
+        return theme.colors.info;
       case "CONFIRMADO":
         return theme.colors.info;
       case "ENTREGADO":
@@ -136,6 +135,7 @@ const MisPedidos = () => {
   const translateStatus = (status) => {
     const statusMap = {
       PENDIENTE: "Pendiente",
+      "PENDIENTE CARTERA": "Revisión",
       CONFIRMADO: "Confirmado",
       ENTREGADO: "Entregado",
       CANCELADO: "Cancelado",
@@ -153,6 +153,11 @@ const MisPedidos = () => {
         const formattedOrders = response.data.map((order) => {
           // Calcular el total si está vacío
           const total = order.CABECERA.TOTAL || order.CABECERA.SUBTOTAL;
+          const subtotal = order.CABECERA.SUBTOTAL;
+          
+          // Calcular el IVA
+          const ivaPercentage = order.CABECERA.IVA_DETAIL?.IVA_PERCENTAGE || 19; // Por defecto 19%
+          const ivaAmount = total - subtotal; // El IVA es la diferencia entre total y subtotal
 
           // Calcular la cantidad total de items
           const itemsCount = order.DETALLE.reduce(
@@ -163,6 +168,9 @@ const MisPedidos = () => {
             id: order.CABECERA.ID_CART_HEADER,
             date: order.CABECERA.createdAt,
             total: total,
+            subtotal: subtotal,
+            iva: ivaAmount,
+            ivaPercentage: ivaPercentage,
             items: itemsCount,
             status: order.CABECERA.STATUS, // Usar directamente el valor de la API
             paymentMethod: "Pendiente", // Este dato no viene en la API
@@ -198,6 +206,10 @@ const MisPedidos = () => {
             // Calcular el total si está vacío
             const total = order.CABECERA.TOTAL;
             const subtotal = order.CABECERA.SUBTOTAL;
+            
+            // Calcular el IVA
+            const ivaPercentage = order.CABECERA.IVA_DETAIL?.IVA_PERCENTAGE || 19; // Por defecto 19%
+            const ivaAmount = total - subtotal; // El IVA es la diferencia entre total y subtotal
 
             // Calcular la cantidad total de items
             const itemsCount = order.DETALLE.reduce(
@@ -210,6 +222,8 @@ const MisPedidos = () => {
               date: order.CABECERA.createdAt,
               total: total,
               subtotal: subtotal,
+              iva: ivaAmount,
+              ivaPercentage: ivaPercentage,
               items: itemsCount,
               status: order.CABECERA.STATUS, // Usar directamente el valor de la API
               paymentMethod: "Pendiente", // Este dato no viene en la API
@@ -326,15 +340,25 @@ const MisPedidos = () => {
       header: "Proveedor",
       field: "empresaId",
     },
+    // {
+    //   header: "Subtotal",
+    //   field: "subtotal",
+    //   dataType: "number",
+    //   render: (row) => `$${row.subtotal.toFixed(2)}`,
+    //   align: "right",
+    // },
+    // {
+    //   header: "IVA",
+    //   field: "iva",
+    //   dataType: "number",
+    //   render: (row) => {
+    //     const ivaAmount = row.iva || 0;
+    //     return `$${ivaAmount.toFixed(2)}`;
+    //   },
+    //   align: "right",
+    // },
     {
-      header: "Subtotal",
-      field: "subtotal",
-      dataType: "number",
-      render: (row) => `$${row.subtotal.toFixed(2)}`,
-      align: "right",
-    },
-    {
-      header: "Total",
+      header: "Total (con IVA)",
       field: "total",
       dataType: "number",
       render: (row) => `$${row.total.toFixed(2)}`,
@@ -380,6 +404,7 @@ const MisPedidos = () => {
   const statusOptions = [
     { value: "todos", label: "Todos" },
     { value: "PENDIENTE", label: "Pendiente" },
+    { value: "PENDIENTE CARTERA", label: "Revisión" },
     { value: "CONFIRMADO", label: "Confirmado" },
     { value: "ENTREGADO", label: "Entregado" },
     { value: "CANCELADO", label: "Cancelado" },

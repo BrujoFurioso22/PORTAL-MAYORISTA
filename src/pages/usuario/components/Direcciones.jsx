@@ -308,15 +308,12 @@ const Direcciones = () => {
       EMPRESA: selectedEmpresa,
       ORIGIN: "USER",
     });
-    setShowAddressForm(true);
     setAddressErrors({});
+    setShowAddressForm(true);
   };
 
   const validateAddressForm = () => {
     const errors = {};
-
-    if (!addressForm.CLASIFICATION?.trim())
-      errors.CLASIFICATION = "La clasificación es obligatoria";
     if (!addressForm.STREET?.trim())
       errors.STREET = "La dirección es obligatoria";
     if (!addressForm.CITY?.trim()) errors.CITY = "La ciudad es obligatoria";

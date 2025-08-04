@@ -18,7 +18,7 @@ export const ProductCatalogProvider = ({ children }) => {
   const mapApiProductToAppFormat = (item) => {
     try {
       if (!item) return null;
-      if (!item.DMA_CODIGO) return null;
+      if (!item.DMA_IDENTIFICADORITEM) return null;
       const lineConfig =
         PRODUCT_LINE_CONFIG[item.DMA_LINEANEGOCIO] ||
         PRODUCT_LINE_CONFIG.DEFAULT;
@@ -70,7 +70,7 @@ export const ProductCatalogProvider = ({ children }) => {
         ? parseInt(item.DMA_STOCK)
         : 0;
       return {
-        id: item.DMA_CODIGO,
+        id: item.DMA_IDENTIFICADORITEM,
         name,
         description,
         price,

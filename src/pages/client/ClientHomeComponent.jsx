@@ -1,27 +1,48 @@
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useAuth } from "../../context/AuthContext";
 import { empresas } from "../../mock/products";
 import Button from "../../components/ui/Button";
-
-const PageContainer = styled.div`
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  background-color: ${({ theme }) =>
-    theme.colors.background}; // Añadir fondo explícito
-`;
+import { api_products_getInfoProductos } from "../../api/products/apiProducts";
+import PageContainer from "../../components/layout/PageContainer";
+import RenderLoader from "../../components/ui/RenderLoader";
 
 const PageTitle = styled.h1`
   text-align: center;
   color: ${({ theme }) => theme.colors.text};
+  font-size: 2.8rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background: ${({ theme }) => theme.colors.primary};
+    border-radius: 2px;
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 2.2rem;
+    letter-spacing: 0.5px;
+  }
 `;
 
 const CompaniesGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
   gap: 2.5rem;
   padding: 1rem 0;
+  justify-items: center;
+  justify-content: center;
 `;
 
 const CompanyCard = styled.div`
@@ -120,6 +141,32 @@ const CompanyDescription = styled.p`
 const ClientHomeComponent = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [productsInfo, setProductsInfo] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProductsInfo = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api_products_getInfoProductos();
+
+        if (response.success && response.data) {
+          setProductsInfo(response.data);
+        } else {
+          console.error(
+            "Error al obtener información de productos:",
+            response.message
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching products info:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProductsInfo();
+  }, []);
 
   // Obtener accesos del usuario y convertir a mayúsculas para comparación
   const userAccess = user?.EMPRESAS || [];
@@ -128,15 +175,47 @@ const ClientHomeComponent = () => {
     navigate(`/catalogo/${empresa.nombre}`);
   };
 
+  // Función para obtener la cantidad de productos de una empresa
+  const getProductCount = (empresaName) => {
+
+    if (!productsInfo) {
+      return 0;
+    }
+    const productsInf = productsInfo.filter(
+      (product) => product.ENTERPRISE === empresaName
+    );
+    if (!productsInf) {
+      return 0;
+    }
+    const productsCount = productsInf[0].TOTAL;
+
+    return productsCount;
+  };
+
+  if (isLoading) {
+    return (
+      <PageContainer style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+      }}>
+        <RenderLoader 
+          size="32px"
+          showSpinner={true}
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <PageTitle>Nuestras Empresas</PageTitle>
 
-      <h2>Todas las Empresas</h2>
       <CompaniesGrid>
         {empresas.map((empresa) => {
           // Verificar si el usuario tiene acceso (comparando en mayúsculas)
           const hasAccess = userAccess.includes(empresa.nombre.toUpperCase());
+          const productCount = getProductCount(empresa.nombre);
 
           return (
             <CompanyCard
@@ -157,7 +236,7 @@ const ClientHomeComponent = () => {
                 <CompanyDescription>{empresa.descripcion}</CompanyDescription>
               </CardBody>
               <CardFooter>
-                <ProductCount>{empresa.products} productos</ProductCount>
+                <ProductCount>{productCount} productos</ProductCount>
                 <Button
                   size="small"
                   text={hasAccess ? "Ver catálogo" : "Solicitar acceso"}

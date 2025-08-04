@@ -31,6 +31,7 @@ const SelectButton = styled(Button)`
   cursor: pointer;
   text-align: left;
   appearance: none;
+  outline: none;
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.primary};
@@ -39,7 +40,12 @@ const SelectButton = styled(Button)`
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primaryLight};
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: none;
   }
 
   svg {
@@ -51,10 +57,12 @@ const SelectButton = styled(Button)`
 
 const DropdownMenu = styled.div`
   position: absolute;
-  top: 100%;
+  top: ${({ $dropUp }) => ($dropUp ? "auto" : "100%")};
+  bottom: ${({ $dropUp }) => ($dropUp ? "100%" : "auto")};
   left: 0;
   right: 0;
-  margin-top: 4px;
+  margin-top: ${({ $dropUp }) => ($dropUp ? "0" : "4px")};
+  margin-bottom: ${({ $dropUp }) => ($dropUp ? "4px" : "0")};
   max-height: 300px;
   background-color: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -87,10 +95,17 @@ const SearchInput = styled.input`
   background-color: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.text};
   font-size: 0.85rem;
+  outline: none;
 
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: none;
   }
 `;
 
@@ -165,6 +180,7 @@ const Select = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dropUp, setDropUp] = useState(false);
   const containerRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -200,8 +216,44 @@ const Select = ({
     }
   }, [isOpen, withSearch]);
 
+  // Escuchar cambios en el tamaño de la ventana para recalcular dirección
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen) {
+        checkDropDirection();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isOpen]);
+
+  // Función para detectar si debe desplegarse hacia arriba
+  const checkDropDirection = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const dropdownHeight = 300; // altura máxima del dropdown
+      const spaceBelow = windowHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      // Si no hay suficiente espacio abajo pero sí arriba, desplegar hacia arriba
+      if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+        setDropUp(true);
+      } else {
+        setDropUp(false);
+      }
+    }
+  };
+
   const toggleDropdown = () => {
     if (!disabled) {
+      if (!isOpen) {
+        // Verificar dirección antes de abrir
+        checkDropDirection();
+      }
       setIsOpen(!isOpen);
       setSearchTerm("");
     }
@@ -238,7 +290,7 @@ const Select = ({
         rightIconName={"FaChevronDown"}
       />
 
-      <DropdownMenu $isOpen={isOpen}>
+      <DropdownMenu $isOpen={isOpen} $dropUp={dropUp}>
         {withSearch && (
           <SearchInputWrapper>
             <FaSearch size={14} />

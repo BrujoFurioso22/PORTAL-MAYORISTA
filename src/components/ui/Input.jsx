@@ -58,6 +58,16 @@ const StyledInput = styled.input.attrs(({as}) => ({
   min-height: ${({ as }) => (as === "textarea" ? "30px" : "auto")};
   max-height: ${({ as }) => (as === "textarea" ? "200px" : "auto")};
 
+  &:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
   ::placeholder {
     color: ${({ theme, disabled }) =>
       disabled ? theme.colors.disabledPlaceholder : theme.colors.placeholder};

@@ -80,3 +80,28 @@ export const api_products_getProductByCodigo = async (value, empresaId) => {
     };
   }
 }
+
+/**
+ * Obtiene información de productos (incluyendo cantidad)
+ * @return {Promise<Object>} - Respuesta de la API
+ */
+export const api_products_getInfoProductos = async () => {
+  try {
+    const response = await api.get(`/productos/getInfoProductos`);
+    return {
+      success: true,
+      message: response.data.message || "Información de productos obtenida correctamente",
+      data: response.data.data || {},
+    };
+  } catch (error) {
+    const message =
+      error.response?.data?.message ||
+      "Ocurrió un error al obtener la información de productos";
+
+    return {
+      success: false,
+      message,
+      error: error.response?.data || null,
+    };
+  }
+}

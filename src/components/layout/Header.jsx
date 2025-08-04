@@ -9,12 +9,12 @@ import { useState } from "react";
 import {
   FaShoppingCart,
   FaUser,
-  FaSearch,
   FaSignOutAlt,
   FaHistory,
 } from "react-icons/fa";
 import { ROLES } from "../../constants/roles";
 import { ROUTES } from "../../constants/routes";
+import RenderIcon from "../ui/RenderIcon";
 
 const HeaderContainer = styled.header`
   width: 100%;
@@ -22,8 +22,8 @@ const HeaderContainer = styled.header`
   padding-right: 2rem;
   background-color: ${({ theme }) => theme.colors.primary};
   color: ${({ theme }) => theme.colors.white};
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   z-index: 10;
   box-shadow: 0 2px 4px ${({ theme }) => theme.colors.shadow};
@@ -37,42 +37,7 @@ const Logo = styled.div`
 `;
 
 const SearchBar = styled.div`
-  position: relative;
   flex-grow: 1;
-  max-width: 400px;
-  margin: 0 2rem;
-  display: none;
-
-  @media (min-width: 768px) {
-    display: block;
-  }
-`;
-
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 0.5rem 2rem 0.5rem 1rem;
-  border-radius: 20px;
-  border: none;
-  background-color: rgba(255, 255, 255, 0.2);
-  color: ${({ theme }) => theme.colors.white};
-  font-size: 0.9rem;
-
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.7);
-  }
-
-  &:focus {
-    outline: none;
-    background-color: rgba(255, 255, 255, 0.3);
-  }
-`;
-
-const SearchIcon = styled.div`
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: ${({ theme }) => theme.colors.white};
 `;
 
 const IconButton = styled(Button)`
@@ -154,20 +119,14 @@ const UserGreeting = styled.div`
 `;
 
 export default function Header() {
-  const { user, logout, isClient } = useAuth();
+  const { user, isClient, isVisualizacion, logout } = useAuth();
   const { itemCount } = useCart();
   const { isDarkMode, toggleTheme } = useAppTheme();
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");  
-
-  // Agrega esta función para manejar la búsqueda
-  const handleSearch = (e) => {
-    e.preventDefault(); // Prevenir el comportamiento por defecto del formulario
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery(""); // Opcionalmente, limpiar el campo después de la búsqueda
-    }
+  // Función para manejar la búsqueda en todas las empresas
+  const handleSearchAllCompanies = () => {
+    navigate("/search");
   };
 
   const handleGoToCart = () => {
@@ -207,22 +166,36 @@ export default function Header() {
       </FlexBoxComponent>
 
       <SearchBar>
-        <form onSubmit={handleSearch} style={{ width: "100%" }}>
-          <SearchInput
-            placeholder="Buscar productos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <SearchIcon onClick={handleSearch} style={{ cursor: "pointer" }}>
-            <FaSearch />
-          </SearchIcon>
-        </form>
+        <Button
+          text="Buscar en todas las empresas"
+          variant="outlined"
+          leftIconName="FaSearch"
+          onClick={handleSearchAllCompanies}
+          fullWidth={true}
+          style={{
+            backgroundColor: "rgba(255, 255, 255, 0.2)",
+            color: "white",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            borderRadius: "20px",
+            padding: "0.5rem 1rem",
+            fontSize: "0.9rem",
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor: "rgba(255, 255, 255, 0.3)",
+              border: "1px solid rgba(255, 255, 255, 0.5)",
+            },
+          }}
+        />
       </SearchBar>
 
-      <FlexBoxComponent width="auto" alignItems="center">
+      <FlexBoxComponent
+        width="auto"
+        alignItems="center"
+        justifyContent="flex-end"
+      >
         <UserGreeting>Hola, {user?.NAME_USER}</UserGreeting>
 
-        {isClient && (
+        {isClient && !isVisualizacion && (
           <IconButton
             text={itemCount > 0 && <CartCount>{itemCount}</CartCount>}
             leftIconName={"FaShoppingCart"}
@@ -240,19 +213,19 @@ export default function Header() {
 
           <UserMenuDropdown $isOpen={isUserMenuOpen}>
             <UserMenuItem onClick={handleProfile}>
-              <FaUser />
+              <RenderIcon name="FaUser" size={16} />
               Perfil
             </UserMenuItem>
 
-            {isClient && (
+            {isClient && !isVisualizacion && (
               <UserMenuItem onClick={handleOrderHistory}>
-                <FaHistory />
+                <RenderIcon name="FaHistory" size={16} />
                 Mis Pedidos
               </UserMenuItem>
             )}
 
             <UserMenuItem onClick={toggleTheme}>
-              {isDarkMode ? "☀️" : "🌙"}
+              <RenderIcon name={isDarkMode ? "FaSun" : "FaMoon"} size={16} />
               Cambiar a tema {isDarkMode ? "claro" : "oscuro"}
               <div style={{ marginLeft: "auto", display: "none" }}>
                 <input
@@ -267,7 +240,7 @@ export default function Header() {
               </div>
             </UserMenuItem>
             <UserMenuItem onClick={handleLogout}>
-              <FaSignOutAlt />
+              <RenderIcon name="FaSignOutAlt" size={16} />
               Cerrar Sesión
             </UserMenuItem>
           </UserMenuDropdown>

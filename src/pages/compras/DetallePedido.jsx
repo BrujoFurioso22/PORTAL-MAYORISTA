@@ -10,37 +10,14 @@ import RenderIcon from "../../components/ui/RenderIcon";
 import { baseLinkImages } from "../../constants/links";
 import ContactModal from "../../components/ui/ContactModal";
 import { copyToClipboard } from "../../utils/utils";
-import { TAXES } from "../../constants/taxes";
+import { TAXES, calculatePriceWithIVA } from "../../constants/taxes";
 import { useAuth } from "../../context/AuthContext";
 import { api_optionsCatalog_getStates } from "../../api/optionsCatalog/apiOptionsCatalog";
 import { useCart } from "../../context/CartContext";
 import { ROUTES } from "../../constants/routes";
 import { useProductCatalog } from "../../context/ProductCatalogContext";
-
-// Estilos para el componente
-const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
-
-const BackLink = styled(Button)`
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.primary};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  margin-bottom: 16px;
-  font-size: 0.9rem;
-
-  &:hover {
-    text-decoration: underline;
-  }
-`;
+import PageContainer from "../../components/layout/PageContainer";
+import RenderLoader from "../../components/ui/RenderLoader";
 
 const PageHeader = styled.div`
   display: flex;
@@ -74,10 +51,12 @@ const StatusBadge = styled.span`
   border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 500;
-  background-color: ${({ theme, status }) => {
-    switch (status) {
+  background-color: ${({ theme, $status }) => {
+    switch ($status) {
       case "PENDIENTE":
         return theme.colors.warning + "33";
+      case "PENDIENTE CARTERA":
+        return theme.colors.info + "33";
       case "CONFIRMADO":
         return theme.colors.info + "33";
       case "ENTREGADO":
@@ -88,10 +67,12 @@ const StatusBadge = styled.span`
         return theme.colors.border;
     }
   }};
-  color: ${({ theme, status }) => {
-    switch (status) {
+  color: ${({ theme, $status }) => {
+    switch ($status) {
       case "PENDIENTE":
         return theme.colors.warning;
+      case "PENDIENTE CARTERA":
+        return theme.colors.info;
       case "CONFIRMADO":
         return theme.colors.info;
       case "ENTREGADO":
@@ -156,6 +137,12 @@ const ProductName = styled.span`
   font-weight: 500;
   margin-bottom: 4px;
   color: ${({ theme }) => theme.colors.text};
+  cursor: pointer;
+  
+  &:hover {
+    color: ${({ theme }) => theme.colors.primary};
+    text-decoration: underline;
+  }
 `;
 
 const ProductSKU = styled.span`
@@ -341,6 +328,7 @@ const DetallePedido = () => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [statusOptionsApi, setStatusOptionsApi] = useState([]);
   const { addToCart } = useCart();
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const handleRepeatOrder = async () => {
     // Agrega cada producto del pedido anterior
@@ -354,8 +342,18 @@ const DetallePedido = () => {
     navigate(ROUTES.ECOMMERCE.CARRITO);
   };
 
+  const handleProductClick = (productId) => {
+    navigate(`/productos/${productId}`, {
+      state: {
+        empresaId: orderDetails?.empresaInfo?.id,
+        prevUrl: `/mis-pedidos/${orderId}`, // URL del detalle del pedido para el botón de regreso
+      },
+    });
+  };
+
   const estadosTracking = [
     { key: "PENDIENTE", label: "Pedido recibido" },
+    { key: "PENDIENTE CARTERA", label: "Revisión" },
     { key: "CONFIRMADO", label: "Pedido confirmado" },
     { key: "ENTREGADO", label: "Entregado" },
     { key: "CANCELADO", label: "Pedido cancelado" },
@@ -390,13 +388,19 @@ const DetallePedido = () => {
             (opt) => opt.id === cabecera.STATUS
           )?.value;
 
-          // Calcular el subtotal
+          // Calcular el subtotal con IVA incluido
+          const ivaPercentage = cabecera.IVA_DETAIL?.IVA_PERCENTAGE || TAXES.IVA_PERCENTAGE;
+          
           const subtotal = detalle.reduce(
-            (sum, item) => sum + item.PRICE * item.QUANTITY,
+            (sum, item) => {
+              const priceWithIVA = calculatePriceWithIVA(item.PRICE, ivaPercentage);
+              return sum + priceWithIVA * item.QUANTITY;
+            },
             0
           ); // Crear un objeto con la estructura que espera nuestro componente
           const userDiscount = user?.DESCUENTOS?.[cabecera.ENTERPRISE] || 0;
 
+          // Crear tracking steps considerando que PENDIENTE y PENDIENTE CARTERA son estados alternativos en la misma posición
           const tracking = estadosTracking
             .map((estado) => {
               const found = statusHistory.find(
@@ -409,11 +413,21 @@ const DetallePedido = () => {
                 key: estado.key,
               };
             })
-            // Si el pedido no está cancelado, no muestres el paso cancelado
-            .filter(
-              (step) =>
-                step.key !== "CANCELADO" || currentStatus === "CANCELADO"
-            );
+            // Filtrar para mostrar solo el estado inicial activo (PENDIENTE o PENDIENTE CARTERA)
+            .filter((step) => {
+              // Si el pedido está cancelado, mostrar solo PENDIENTE y CANCELADO
+              if (currentStatus === "CANCELADO") {
+                return step.key === "PENDIENTE" || step.key === "CANCELADO";
+              }
+              
+              // Para estados iniciales, mostrar solo el que está activo
+              if (step.key === "PENDIENTE" || step.key === "PENDIENTE CARTERA") {
+                return step.key === currentStatus;
+              }
+              
+              // Para otros estados, mostrar normalmente
+              return step.key !== "CANCELADO";
+            });
 
           const formattedOrder = {
             id: cabecera.ID_CART_HEADER,
@@ -443,18 +457,26 @@ const DetallePedido = () => {
               reference: "No disponible", // Este dato no viene en la API
               date: new Date(cabecera.createdAt),
             },
-            items: detalle.map((item) => ({
-              id: item.PRODUCT_CODE,
-              name: item.MAESTRO?.DMA_NOMBREITEM || "Producto",
-              sku: item.PRODUCT_CODE,
-              price: item.PRICE,
-              quantity: item.QUANTITY,
-              promotionalDiscount: item.PROMOTIONAL_DISCOUNT || 0,
-              total: item.PRICE * item.QUANTITY,
-              image: item.MAESTRO?.DMA_RUTAIMAGEN
-                ? `${baseLinkImages}${item.MAESTRO.DMA_RUTAIMAGEN}`
-                : "https://placehold.co/50x50/png",
-            })),
+            items: detalle.map((item) => {
+              const basePrice = item.PRICE;
+              const ivaPercentage = cabecera.IVA_DETAIL?.IVA_PERCENTAGE || TAXES.IVA_PERCENTAGE;
+              const priceWithIVA = calculatePriceWithIVA(basePrice, ivaPercentage);
+              const totalWithIVA = priceWithIVA * item.QUANTITY;
+              
+              return {
+                id: item.PRODUCT_CODE,
+                name: item.MAESTRO?.DMA_NOMBREITEM || "Producto",
+                sku: item.PRODUCT_CODE,
+                price: priceWithIVA, // Precio con IVA incluido
+                basePrice: basePrice, // Precio base sin IVA (para cálculos internos)
+                quantity: item.QUANTITY,
+                promotionalDiscount: item.PROMOTIONAL_DISCOUNT || 0,
+                total: totalWithIVA, // Total con IVA incluido
+                image: item.MAESTRO?.DMA_RUTAIMAGEN
+                  ? `${baseLinkImages}${item.MAESTRO.DMA_RUTAIMAGEN}`
+                  : "https://placehold.co/50x50/png",
+              };
+            }),
             subtotal: subtotal,
             total: cabecera.TOTAL || subtotal, // Si no hay total, usar subtotal
             tracking,
@@ -480,10 +502,9 @@ const DetallePedido = () => {
   }, [orderId]);
 
   const handleCancelOrder = () => {
-    const canCancel = orderDetails.status === "PENDIENTE";
+    const canCancel = orderDetails.status === "PENDIENTE" || orderDetails.status === "PENDIENTE CARTERA";
     if (canCancel) {
-      // Implementar la lógica de cancelación
-      alert("Pedido cancelado correctamente");
+      setShowCancelModal(true);
     } else {
       // Mostrar mensaje de error
       alert(
@@ -492,30 +513,42 @@ const DetallePedido = () => {
     }
   };
 
+  const handleConfirmCancel = () => {
+    // Implementar la lógica de cancelación
+    alert("Pedido cancelado correctamente");
+    setShowCancelModal(false);
+  };
+
+  const handleCancelModalClose = () => {
+    setShowCancelModal(false);
+  };
+
   const handleContactSupport = () => {
     setShowContactModal(true);
   };
 
   if (loading) {
     return (
-      <PageContainer>
-        <BackLink
-          onClick={() => navigate("/mis-pedidos")}
-          text="← Volver a mis pedidos"
+      <PageContainer
+        backButtonText="Regresar"
+        backButtonOnClick={() => navigate("/mis-pedidos")}
+      >
+        <RenderLoader
+          text="Cargando detalles del pedido..."
+          size="32px"
+          card={true}
+          showDots={false}
         />
-
-        <EmptyState>Cargando detalles del pedido...</EmptyState>
       </PageContainer>
     );
   }
 
   if (error || !orderDetails) {
     return (
-      <PageContainer>
-        <BackLink
-          onClick={() => navigate("/mis-pedidos")}
-          text="← Volver a mis pedidos"
-        />
+      <PageContainer
+        backButtonText="Regresar"
+        backButtonOnClick={() => navigate("/mis-pedidos")}
+      >
         <EmptyState>
           <h2>Pedido no encontrado</h2>
           <p>
@@ -532,7 +565,7 @@ const DetallePedido = () => {
     );
   }
 
-  const canCancel = orderDetails.status === "PENDIENTE";
+  const canCancel = orderDetails.status === "PENDIENTE" || orderDetails.status === "PENDIENTE CARTERA";
 
   // 1. Subtotal sin descuentos
   const rawSubtotal = orderDetails.subtotal;
@@ -564,17 +597,13 @@ const DetallePedido = () => {
   // 7. Total final antes de IVA
   const totalFinal = subtotalAfterGeneral - aditionalDiscount;
 
-  // IVA como porcentaje (por ejemplo, 19 para 19%)
-  const ivaPct = Number(orderDetails.iva || orderDetails.IVA || 0);
-  const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
+  // IVA ya está incluido en todos los precios
 
   return (
-    <PageContainer>
-      <BackLink
-        onClick={() => navigate("/mis-pedidos")}
-        text="← Volver a mis pedidos"
-      />
-
+    <PageContainer
+      backButtonText="Regresar"
+      backButtonOnClick={() => navigate("/mis-pedidos")}
+    >
       <PageHeader>
         <OrderTitle>
           <OrderNumber>
@@ -637,13 +666,33 @@ const DetallePedido = () => {
       <Section>
         <SectionTitle>
           Estado del pedido:
-          <StatusBadge status={orderDetails.status}>
+          <StatusBadge $status={orderDetails.status}>
             {
               statusOptionsApi.find((opt) => opt.value === orderDetails.status)
                 ?.label
             }
           </StatusBadge>
         </SectionTitle>
+        {orderDetails.status === "PENDIENTE CARTERA" && (
+          <div
+            style={{
+              background: theme.colors.info + "15",
+              border: `1px solid ${theme.colors.info}30`,
+              borderRadius: 6,
+              padding: "12px 16px",
+              marginTop: 16,
+              fontWeight: 500,
+              fontSize: "0.95rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              color: theme.colors.info,
+            }}
+          >
+            <RenderIcon name="FaExclamationTriangle" size={16} />
+            <span>Su pedido está en revisión</span>
+          </div>
+        )}
         {orderDetails.status !== "CANCELADO" ? (
           <TrackingSteps>
             {orderDetails.tracking
@@ -825,14 +874,36 @@ const DetallePedido = () => {
           </div>
         )}
 
+        {/* Información sobre IVA */}
+        <div
+          style={{
+            background: theme.colors.primary + "15",
+            border: `1px solid ${theme.colors.primary}30`,
+            borderRadius: 6,
+            padding: "8px 12px",
+            marginBottom: 16,
+            fontWeight: 500,
+            fontSize: "0.9rem",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            color: theme.colors.primary,
+          }}
+        >
+          <RenderIcon name="FaInfoCircle" size={14} />
+          <span>
+            IVA incluido. Todos los precios mostrados incluyen impuestos.
+          </span>
+        </div>
+
         <ProductsList>
           {orderDetails.items.map((item) => {
             const promoPct = Number(item.promotionalDiscount) || 0;
-            const price = item.price;
+            const price = item.price; // Ya incluye IVA
             const qty = Number(item.quantity);
             const promoDiscount = price * qty * (promoPct / 100);
-            const subtotal = price * qty;
-            const total = subtotal - promoDiscount;
+            const subtotal = price * qty; // Subtotal con IVA incluido
+            const total = subtotal - promoDiscount; // Total con IVA incluido
 
             return (
               <ProductCard key={item.id}>
@@ -854,7 +925,10 @@ const DetallePedido = () => {
                     }}
                   >
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      <ProductName style={{ fontSize: "1.08rem" }}>
+                      <ProductName 
+                        style={{ fontSize: "1.08rem" }}
+                        onClick={() => handleProductClick(item.id)}
+                      >
                         {item.name}
                       </ProductName>
                       <ProductSKU>SKU: {item.sku}</ProductSKU>
@@ -875,7 +949,7 @@ const DetallePedido = () => {
                           color: theme.colors.textLight,
                         }}
                       >
-                        Total
+                        Total (IVA incl.)
                       </div>
                     </div>
                   </div>
@@ -891,7 +965,7 @@ const DetallePedido = () => {
                     <div
                       style={{ color: theme.colors.text, fontSize: "0.98rem" }}
                     >
-                      x{qty} · ${price.toFixed(2)} c/u ={" "}
+                      x{qty} · ${price.toFixed(2)} c/u (IVA incl.) ={" "}
                       <b>${subtotal.toFixed(2)}</b>
                     </div>
                     {promoPct > 0 && (
@@ -915,7 +989,7 @@ const DetallePedido = () => {
 
         <OrderSummary>
           <SummaryRow>
-            <SummaryLabel>Subtotal:</SummaryLabel>
+            <SummaryLabel>Subtotal (con iva):</SummaryLabel>
             <SummaryValue>${orderDetails.subtotal.toFixed(2)}</SummaryValue>
           </SummaryRow>
           {totalPromotionalDiscount > 0 && (
@@ -962,16 +1036,12 @@ const DetallePedido = () => {
               </SummaryRow>
             </>
           )}
-          {/* Fila de IVA */}
-          {ivaPct > 0 && (
-            <SummaryRow>
-              <SummaryLabel>IVA ({ivaPct}%):</SummaryLabel>
-              <SummaryValue>+${valorIVA.toFixed(2)}</SummaryValue>
-            </SummaryRow>
-          )}
+
           <SummaryRow>
             <SummaryLabel>Total:</SummaryLabel>
-            <SummaryValue>${orderDetails.total.toFixed(2)}</SummaryValue>
+            <SummaryValue style={{ fontWeight: 'bold', fontSize: '1.1rem', color: theme.colors.primary }}>
+              ${orderDetails.total.toFixed(2)}
+            </SummaryValue>
           </SummaryRow>
         </OrderSummary>
       </Section>
@@ -982,6 +1052,91 @@ const DetallePedido = () => {
         selectedCompany={orderDetails?.empresaInfo?.id} // Filtrar por la empresa del pedido actual
         selectedOrderId={orderDetails?.id}
       />
+
+      {/* Modal de confirmación para cancelar pedido */}
+      {showCancelModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: theme.colors.surface,
+              borderRadius: 8,
+              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
+              width: "90%",
+              maxWidth: 400,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "16px 24px",
+                borderBottom: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  color: theme.colors.text,
+                  fontSize: "1.2rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <RenderIcon name="FaExclamationTriangle" size={20} />
+                Confirmar cancelación
+              </h3>
+            </div>
+
+            <div style={{ padding: "24px" }}>
+              <p style={{ margin: 0, color: theme.colors.text, fontSize: "1rem" }}>
+                ¿Está seguro que desea cancelar el pedido #{orderDetails?.id?.substring(0, 12)}...?
+              </p>
+              <p style={{ margin: "12px 0 0 0", color: theme.colors.textLight, fontSize: "0.9rem" }}>
+                Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 12,
+                padding: "16px 24px",
+                borderTop: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              <Button
+                text="Cancelar"
+                variant="outlined"
+                onClick={handleCancelModalClose}
+              />
+              <Button
+                text="Confirmar"
+                variant="solid"
+                backgroundColor={theme.colors.error}
+                onClick={handleConfirmCancel}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </PageContainer>
   );
 };

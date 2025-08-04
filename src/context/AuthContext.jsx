@@ -22,6 +22,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [isVisualizacion, setIsVisualizacion] = useState(false);
   const navigate = useNavigate();
 
   // Función auxiliar para enmascarar el email
@@ -117,6 +118,7 @@ export function AuthProvider({ children }) {
         setUser(userData);
         setIsAuthenticated(true);
         setIsClient(userData.ROLE_NAME === ROLES.CLIENTE);
+        setIsVisualizacion(userData.ROLE_NAME === ROLES.VISUALIZACION);
 
         toast.success("Inicio de sesión exitoso");
 
@@ -154,6 +156,8 @@ export function AuthProvider({ children }) {
     // Limpiar estado
     setUser(null);
     setIsAuthenticated(false);
+    setIsClient(false);
+    setIsVisualizacion(false);
     // Redireccionar a login
     navigate(ROUTES.AUTH.LOGIN);
   };
@@ -381,12 +385,15 @@ export function AuthProvider({ children }) {
         if (response && response.user) {
           setUser(response.user);
           setIsClient(response.user.ROLE_NAME === ROLES.CLIENTE);
+          setIsVisualizacion(response.user.ROLE_NAME === ROLES.VISUALIZACION);
           setIsAuthenticated(true);
           localStorage.setItem("auth", "true");
         } else {
           // Si la sesión no es válida, limpiar estado
           setUser(null);
           setIsAuthenticated(false);
+          setIsClient(false);
+          setIsVisualizacion(false);
           limpiarDatosUsuario();
         }
       } catch (error) {
@@ -412,6 +419,7 @@ export function AuthProvider({ children }) {
         loading,
         isAuthenticated,
         isClient,
+        isVisualizacion,
         // Registro
         verifyIdentification,
         registerUser,

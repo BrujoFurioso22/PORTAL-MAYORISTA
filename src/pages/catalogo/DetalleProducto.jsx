@@ -8,19 +8,11 @@ import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
 import { toast } from "react-toastify";
 import { useProductCatalog } from "../../context/ProductCatalogContext";
 import { TAXES, calculatePriceWithIVA } from "../../constants/taxes";
-
-const PageContainer = styled.div`
-  /* padding: 24px; */
-  max-width: 1200px;
-  margin: 0 auto;
-  background-color: ${({ theme }) =>
-    theme.colors.background}; // Añadir color de fondo
-  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
-`;
+import PageContainer from "../../components/layout/PageContainer";
 
 const ProductLayout = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 35% 1fr;
   gap: 40px;
   background-color: ${({ theme }) =>
     theme.colors.background}; // Añadir color de fondo
@@ -33,6 +25,7 @@ const ProductLayout = styled.div`
 const InfoSection = styled.div`
   display: flex;
   flex-direction: column;
+  width: 100%;
 `;
 
 const Category = styled.div`
@@ -45,6 +38,7 @@ const ProductTitle = styled.h1`
   margin: 0 0 16px 0;
   color: ${({ theme }) => theme.colors.text};
   font-size: 1.8rem;
+  word-break: break-word;
 `;
 
 const Brand = styled.div`
@@ -100,6 +94,7 @@ const Discount = styled.span`
 const Description = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text};
+  white-space: pre-line;
   /* margin-bottom: 24px; */
 `;
 const StockIndicator = styled.div`
@@ -259,6 +254,7 @@ const MainImageContainer = styled.div`
 
 const MainImage = styled.img`
   width: 100%;
+  max-width: 550px;
   height: auto;
   object-fit: contain;
   display: block;
@@ -333,9 +329,10 @@ const DetalleProducto = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { loadProductByCodigo } = useProductCatalog();
-  const { navigateToHomeByRole, isClient } = useAuth();
+  const { navigateToHomeByRole, isClient, isVisualizacion } = useAuth();
   const { addToCart, cart } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   // Intentar obtener el producto del estado de navegación primero
   const [product, setProduct] = useState(location.state?.product || null);
 
@@ -481,11 +478,17 @@ const DetalleProducto = () => {
   };
 
   const handleAddToCart = () => {
-    if (quantity <= availableStock) {
+    if (quantity <= availableStock && !isAddingToCart) {
+      setIsAddingToCart(true);
       addToCart(product, quantity);
-      // Opcionalmente, mostrar confirmación
+      // Mostrar confirmación
       toast.success(`${quantity} ${product.name} agregado al carrito`);
-    } else {
+
+      // Habilitar nuevamente después de un breve momento
+      setTimeout(() => {
+        setIsAddingToCart(false);
+      }, 1000);
+    } else if (quantity > availableStock) {
       toast.error(`Solo hay ${availableStock} unidades disponibles`);
     }
   };
@@ -498,18 +501,12 @@ const DetalleProducto = () => {
 
   // Calcular precio con IVA incluido (aplicado al precio con descuento)
   const priceWithIVA = calculatePriceWithIVA(
-    discountedPrice, 
+    discountedPrice,
     product.iva || TAXES.IVA_PERCENTAGE
   );
 
   return (
-    <PageContainer>
-      <BackLink
-        onClick={navigateBack}
-        text={"Regresar al catálogo"}
-        leftIconName={"FaChevronLeft"}
-      />
-
+    <PageContainer backButtonText="Regresar" backButtonOnClick={navigateBack}>
       <ProductLayout>
         <ImageSection>
           {/* Contenedor principal de la imagen con eventos de mouse */}
@@ -555,7 +552,9 @@ const DetalleProducto = () => {
           </Category>
           <ProductTitle>{product.name}</ProductTitle>
           <Brand>Marca: {product.brand}</Brand>
-          <Enterprise>Empresa: {product.empresa || product.empresaId}</Enterprise>
+          <Enterprise>
+            Empresa: {product.empresa || product.empresaId}
+          </Enterprise>
           {/* Nuevo indicador de stock posicionado debajo del nombre y marca */}
           <StockIndicator $inStock={availableStock > 0}>
             <StockBadge $inStock={availableStock > 0}>
@@ -605,7 +604,7 @@ const DetalleProducto = () => {
               </>
             )}
           </PriceContainer>
-          {isClient && (
+          {isClient && !isVisualizacion && (
             <div
               style={{
                 marginTop: "16px",
@@ -651,11 +650,13 @@ const DetalleProducto = () => {
               )}
             </div>
           )}
-          {isClient && (
+          {isClient && !isVisualizacion && (
             <ButtonsContainer>
               <Button
                 text={
-                  availableStock > 0
+                  isAddingToCart
+                    ? "Agregando..."
+                    : availableStock > 0
                     ? `Agregar ${quantity} al carrito`
                     : currentInCart > 0
                     ? "Producto ya en carrito"
@@ -663,7 +664,7 @@ const DetalleProducto = () => {
                 }
                 variant="solid"
                 onClick={handleAddToCart}
-                disabled={availableStock <= 0}
+                disabled={availableStock <= 0 || isAddingToCart}
                 backgroundColor={({ theme }) => theme.colors.primary}
                 size="large"
                 style={{ flex: 1 }}

@@ -15,21 +15,19 @@ import FilterSidebar from "../../components/ui/FilterSidebar";
 import { toast } from "react-toastify";
 
 import { PRODUCT_LINE_CONFIG } from "../../constants/productLineConfig";
-import RenderLoader from "../../components/ui/RenderLoader"; // Importar RenderLoader
+import RenderLoader from "../../components/ui/RenderLoader"; 
 import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
 import SearchBar from "../../components/ui/SearchBar";
+import { calculatePriceWithIVA } from "../../constants/taxes";
+import PageContainer from "../../components/layout/PageContainer";
 
-const PageContainer = styled.div`
-  padding: 20px;
-  background-color: ${({ theme }) =>
-    theme.colors.background}; // Asegurar fondo correcto
-`;
 
 const PageHeader = styled.div`
   margin-bottom: 10px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
 `;
 
@@ -215,12 +213,40 @@ const Catalogo = () => {
 
   const searchTimeoutRef = useRef(null);
 
+  // Funciones para manejar valores con comas en la URL
+  const encodeValue = (value) => {
+    if (value.includes(',')) {
+      return `b64:${btoa(encodeURIComponent(value))}`;
+    }
+    return value;
+  };
+
+  const decodeValue = (value) => {
+    if (value.startsWith('b64:')) {
+      try {
+        return decodeURIComponent(atob(value.substring(4)));
+      } catch (e) {
+        return value;
+      }
+    }
+    return value;
+  };
+
+  const encodeArray = (array) => {
+    return array.map(encodeValue).join(',');
+  };
+
+  const decodeArray = (string) => {
+    if (!string) return [];
+    return string.split(',').map(decodeValue);
+  };
+
   const currentSort = searchParams.get("sort") || "default";
   const currentLimit = parseInt(searchParams.get("limit") || "12");
   const currentPage = parseInt(searchParams.get("page") || "1");
   const currentSearch = searchParams.get("search") || "";
-  const currentCategories = searchParams.get("cat")?.split(",") || [];
-  const currentBrands = searchParams.get("brands")?.split(",") || [];
+  const currentCategories = decodeArray(searchParams.get("cat"));
+  const currentBrands = decodeArray(searchParams.get("brands"));
   const currentRin = searchParams.get("rin") || "";
   const currentAncho = searchParams.get("ancho") || "";
   const currentAlto = searchParams.get("alto") || "";
@@ -241,8 +267,8 @@ const Catalogo = () => {
       limit: parseInt(searchParams.get("limit") || "12"),
       sort: searchParams.get("sort") || "default",
       search: searchParams.get("search") || "",
-      categories: searchParams.get("cat")?.split(",") || [],
-      brands: searchParams.get("brands")?.split(",") || [],
+      categories: decodeArray(searchParams.get("cat")),
+      brands: decodeArray(searchParams.get("brands")),
       line: searchParams.get("line") || "DEFAULT",
       rin: searchParams.get("rin") || "",
       ncho: searchParams.get("ancho") || "",
@@ -354,13 +380,17 @@ const Catalogo = () => {
         return false;
       }
 
-      // 5. Filtro de precio
-      if (
-        hasPrice &&
-        product.price !== 0 &&
-        (product.price < params.price.min || product.price > params.price.max)
-      ) {
-        return false;
+      // 5. Filtro de precio (comparar con precio con IVA)
+      if (hasPrice && product.price !== null && product.price !== undefined) {
+        // Calcular precio con IVA para comparar
+        const discountedPrice = product.discount 
+          ? product.price * (1 - product.discount / 100)
+          : product.price;
+        const priceWithIVA = calculatePriceWithIVA(discountedPrice, product.iva || 15);
+        
+        if (priceWithIVA < params.price.min || priceWithIVA > params.price.max) {
+          return false;
+        }
       }
 
       // Si pasó todos los filtros, incluir el producto
@@ -434,11 +464,11 @@ const Catalogo = () => {
             else params.delete("search");
             break;
           case "categories":
-            if (value.length > 0) params.set("cat", value.join(","));
+            if (value.length > 0) params.set("cat", encodeArray(value));
             else params.delete("cat");
             break;
           case "brands":
-            if (value.length > 0) params.set("brands", value.join(","));
+            if (value.length > 0) params.set("brands", encodeArray(value));
             else params.delete("brands");
             break;
           case "line":
@@ -563,12 +593,21 @@ const Catalogo = () => {
       // Si hay líneas detectadas, actualizarlas
       if (lines.length > 0) {
         setAvailableBusinessLines(lines);
+        
+        // Si hay más de una línea de negocio y no hay línea especificada en la URL,
+        // establecer la primera línea como predeterminada en la URL
+        const currentLineInUrl = searchParams.get("line");
+        if (lines.length > 1 && !currentLineInUrl) {
+          const newSearchParams = new URLSearchParams(searchParams);
+          newSearchParams.set("line", lines[0]);
+          setSearchParams(newSearchParams);
+        }
       } else {
         // Si no hay líneas específicas, usar DEFAULT
         setAvailableBusinessLines(["DEFAULT"]);
       }
     }
-  }, [allProducts]);
+  }, [allProducts, searchParams, setSearchParams]);
 
   // Efecto para cargar productos cuando cambia la empresa o el usuario
   useEffect(() => {
@@ -588,6 +627,7 @@ const Catalogo = () => {
       setInitMessage("Cargando productos...");
       loadProductsForEmpresa(empresaName)
         .then((productos) => {
+          
           setAllProducts(productos);
           setIsLoading(false);
           setInitMessage(
@@ -703,12 +743,10 @@ const Catalogo = () => {
       : 0;
 
     return (
-      <PageContainer>
-        <BreadCrumb>
-          <BreadCrumbLink onClick={handleNavigate}>Inicio</BreadCrumbLink>
-          {">"}
-          <span>{empresaInfo.nombre}</span>
-        </BreadCrumb>
+      <PageContainer
+        backButtonText="Volver al Inicio"
+        backButtonOnClick={handleNavigate}
+      >
 
         <PageHeader>
           <PageTitle>Catálogo de {empresaInfo.nombre}</PageTitle>
@@ -728,6 +766,9 @@ const Catalogo = () => {
             selectedCategories={currentCategories}
             selectedBrands={currentBrands}
             selectedPriceRange={currentPriceRange}
+            selectedRinProp={currentRin}
+            selectedAnchoProp={currentAncho}
+            selectedAltoProp={currentAlto}
             onApplyFilters={handleFilters}
             countFilteredProducts={processedProducts.totalItems}
           />
@@ -779,11 +820,11 @@ const Catalogo = () => {
               {isLoading || !processedProducts ? (
                 <div style={{ gridColumn: "1 / -1" }}>
                   <RenderLoader
-                    size="large"
+                    size="32px"
                     text="Cargando productos..."
                     showText={true}
-                    showDots={true}
-                    showSpinner={false}
+                    showDots={false}
+                    showSpinner={true}
                   />
                 </div>
               ) : processedProducts.items.length > 0 ? (
@@ -962,7 +1003,7 @@ const Catalogo = () => {
       return (
         <NoAccessContainer>
           <RenderLoader
-            size="large"
+            size="32px"
             text={initMessage}
             showText={true}
             showDots={true}

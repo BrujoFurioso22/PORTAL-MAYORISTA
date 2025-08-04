@@ -4,34 +4,46 @@ import styled from "styled-components";
 import { useCart } from "../../context/CartContext";
 import Button from "../ui/Button";
 import { toast } from "react-toastify";
-import { useAppTheme } from "../../context/AppThemeContext";
 import { useAuth } from "../../context/AuthContext";
 import { TAXES, calculatePriceWithIVA } from "../../constants/taxes";
+import RenderIcon from "./RenderIcon";
+import ContactModal from "./ContactModal";
 
 const StyledCard = styled.div`
-  background-color: ${({ theme }) =>
-    theme.colors.surface}; // En lugar de "white" fijo
-  color: ${({ theme }) => theme.colors.text}; // Añadir color de texto
-  border-radius: 8px;
+  background-color: ${({ theme, $restricted }) =>
+    $restricted ? theme.colors.surface : theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  border-radius: ${({ $restricted }) => ($restricted ? "8px" : "12px")};
   overflow: hidden;
-  transition: box-shadow 0.3s ease;
-  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
-
-  /* Asegurar que la tarjeta tenga un alto consistente */
+  transition: all 0.3s ease;
+  box-shadow: ${({ theme, $restricted }) =>
+    $restricted
+      ? `0 2px 8px ${theme.colors.shadow}, 0 0 0 1px ${theme.colors.primary}20`
+      : `0 2px 12px ${theme.colors.shadow}`};
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
 
   &:hover {
-    cursor: pointer;
-    box-shadow: 0 4px 12px ${({ theme }) => theme.colors.shadow};
+    cursor: ${({ $restricted }) => ($restricted ? "default" : "pointer")};
+    box-shadow: ${({ theme, $restricted }) =>
+      $restricted
+        ? `0 4px 12px ${theme.colors.shadow}, 0 0 0 1px ${theme.colors.primary}30`
+        : `0 6px 20px ${theme.colors.shadow}`};
+    transform: ${({ $restricted }) =>
+      $restricted ? "none" : "translateY(-4px)"};
   }
 `;
 
 const ImageContainer = styled.div`
   position: relative;
-  padding-top: 100%; /* 1:1 Aspect Ratio */
+  padding-top: 100%; /* Mantener aspect ratio 1:1 */
   overflow: hidden;
+  background: ${({ $restricted, theme }) =>
+    $restricted
+      ? "transparent"
+      : `linear-gradient(135deg, ${theme.colors.surface}, ${theme.colors.primary}02)`};
 `;
 
 const ProductImage = styled.img`
@@ -41,65 +53,160 @@ const ProductImage = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  filter: ${({ $restricted }) => ($restricted ? "brightness(0.95)" : "none")};
+  transition: transform 0.3s ease;
+
+  ${({ $restricted }) =>
+    !$restricted &&
+    `
+    &:hover {
+      transform: scale(1.05);
+    }
+  `}
+`;
+
+const RestrictedBadge = styled.div`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  z-index: 2;
+  opacity: 0.9;
+`;
+
+const LockIcon = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  svg {
+    width: 16px;
+    height: 16px;
+    color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const DiscountBadge = styled.div`
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: ${({ theme }) => theme.colors.tertiary};
+  top: 12px;
+  right: 12px;
+  background: linear-gradient(
+    135deg,
+    ${({ theme }) => theme.colors.tertiary},
+    ${({ theme }) => theme.colors.primary}
+  );
   color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: bold;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 2;
 `;
 
 const ContentContainer = styled.div`
+  padding: ${({ $restricted }) => ($restricted ? "16px" : "20px")};
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: ${({ $restricted }) => ($restricted ? "160px" : "180px")};
+`;
+
+const RestrictedContent = styled.div`
   padding: 16px;
   display: flex;
   flex-direction: column;
-  /* Importante: esto hace que ocupe el espacio disponible */
   flex: 1;
-  /* Establecer un mínimo de altura para contenido */
   min-height: 160px;
 `;
 
 const ProductName = styled.h3`
-  margin: 0 0 8px 0;
-  font-size: 1rem;
+  margin: 0 0 ${({ $restricted }) => ($restricted ? "8px" : "12px")} 0;
+  font-size: ${({ $restricted }) => ($restricted ? "1rem" : "1.1rem")};
   color: ${({ theme }) => theme.colors.text};
+  font-weight: ${({ $restricted }) => ($restricted ? "normal" : "600")};
+  line-height: 1.3;
+  word-break: break-word;
 `;
 
 const Brand = styled.span`
-  display: block;
+  display: inline-block;
   font-size: 0.8rem;
-  color: ${({ theme }) => theme.colors.textLight};
+  color: ${({ theme, $restricted }) =>
+    $restricted ? theme.colors.primary : theme.colors.textLight};
   margin-bottom: 4px;
-  /* padding: 4px 8px;
-  border-radius: 20px;
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  width: fit-content;
-  background-color: ${({ theme }) => `${theme.colors.primary}20`}; */
+  font-weight: ${({ $restricted }) => ($restricted ? "500" : "500")};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;
 
 const Enterprise = styled.span`
-  display: block;
+  display: inline-block;
   font-size: 0.7rem;
-  color: ${({ theme }) => theme.colors.textLight};
-  margin-bottom: 8px;
+  color: ${({ theme, $restricted }) =>
+    $restricted ? theme.colors.primary : theme.colors.textLight};
+  margin-bottom: ${({ $restricted }) => ($restricted ? "8px" : "12px")};
   opacity: 0.8;
+  font-weight: ${({ $restricted }) => ($restricted ? "500" : "400")};
+`;
+
+const RestrictedMessage = styled.div`
+  margin: 12px 0;
+  padding: 12px;
+  background: ${({ theme }) => `${theme.colors.primary}05`};
+  border-radius: 6px;
+  border-left: 3px solid ${({ theme }) => theme.colors.primary};
+`;
+
+const RestrictedMessageTitle = styled.h4`
+  margin: 0 0 6px 0;
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 0.85rem;
+  font-weight: 600;
+`;
+
+const RestrictedMessageText = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.textLight};
+  font-size: 0.75rem;
+  line-height: 1.4;
+`;
+
+const RestrictedDivider = styled.div`
+  width: 30px;
+  height: 1px;
+  background: ${({ theme }) => theme.colors.primary};
+  margin: 12px 0;
+  opacity: 0.6;
 `;
 
 const Price = styled.div`
   margin-top: auto;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid ${({ theme }) => `${theme.colors.textLight}15`};
 `;
 
 const CurrentPrice = styled.span`
-  font-size: 1.2rem;
-  font-weight: bold;
+  font-size: 1.3rem;
+  font-weight: 700;
   color: ${({ theme }) => theme.colors.primary};
 `;
 
@@ -107,50 +214,70 @@ const OriginalPrice = styled.span`
   font-size: 0.9rem;
   text-decoration: line-through;
   color: ${({ theme }) => theme.colors.textLight};
+  opacity: 0.7;
 `;
 
 const IVAIndicator = styled.span`
   font-size: 0.7rem;
   color: ${({ theme }) => theme.colors.textLight};
   font-style: italic;
+  opacity: 0.8;
+  margin-left: 8px;
 `;
 
 const ButtonContainer = styled.div`
-  margin-top: 12px;
+  margin-top: 16px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
 `;
 
 const SpecsList = styled.ul`
-  margin: 8px 0;
+  margin: 12px 0;
   padding-left: 0;
   list-style: none;
   font-size: 0.8rem;
 `;
 
 const SpecItem = styled.li`
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   color: ${({ theme }) => theme.colors.textLight};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+
+  &:before {
+    content: "•";
+    color: ${({ theme }) => theme.colors.primary};
+    font-weight: bold;
+    margin-right: 8px;
+  }
 `;
 
 const SpecLabel = styled.span`
-  font-weight: bold;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const SpecValue = styled.span`
   margin-left: 4px;
+  opacity: 0.8;
 `;
 
 const StockIndicator = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
-  margin-bottom: 8px;
   font-size: 0.8rem;
+  padding: 4px 8px;
+  background: ${({ theme, $inStock }) =>
+    $inStock ? `${theme.colors.success}10` : `${theme.colors.error}10`};
+  border-radius: 12px;
+  border: 1px solid
+    ${({ theme, $inStock }) =>
+      $inStock ? `${theme.colors.success}20` : `${theme.colors.error}20`};
+  width: fit-content;
 `;
 
 const StockDot = styled.span`
@@ -163,8 +290,36 @@ const StockDot = styled.span`
 `;
 
 const StockText = styled.span`
-  color: ${({ theme }) => theme.colors.textLight};
-  font-size: 0.75rem;
+  color: ${({ theme, $inStock }) =>
+    $inStock ? theme.colors.success : theme.colors.error};
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const StockIcon = styled.div`
+  display: flex;
+  align-items: center;
+  color: ${({ theme, $inStock }) =>
+    $inStock ? theme.colors.success : theme.colors.error};
+`;
+
+const TopRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+`;
+
+const BrandEnterpriseContainer = styled.div`
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+
+  flex: 1;
 `;
 
 // Configuración de líneas de negocio para especificaciones de productos
@@ -206,12 +361,43 @@ const PRODUCT_LINE_CONFIG = {
   },
 };
 
-const ProductCard = ({ product, lineConfig }) => {
+const SupportButton = styled.button`
+  background: ${({ theme }) => theme.colors.tertiary};
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.primary};
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+`;
+
+const ProductCard = ({
+  product,
+  lineConfig,
+  restricted = false,
+  onRequestAccess,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isClient } = useAuth();
+  const { isClient, isVisualizacion } = useAuth();
   const { addToCart } = useCart();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   // Calcular precio con descuento aplicado
   const discountedPrice =
@@ -221,12 +407,15 @@ const ProductCard = ({ product, lineConfig }) => {
 
   // Calcular precio con IVA incluido (aplicado al precio con descuento)
   const priceWithIVA = calculatePriceWithIVA(
-    discountedPrice, 
+    discountedPrice,
     product.iva || TAXES.IVA_PERCENTAGE
   );
 
   // Añade verificación para asegurar que product.id exista
   const handleViewDetails = () => {
+    // Si está restringido, no permitir navegación
+    if (restricted) return;
+
     // Verificar que el ID existe
     if (!product || product.id === undefined) {
       console.error("Error: ID de producto indefinido", product);
@@ -248,15 +437,34 @@ const ProductCard = ({ product, lineConfig }) => {
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
-    if (isAddingToCart) return; // Evitar múltiples clics
+    if (isAddingToCart || restricted) return; // Evitar múltiples clics y productos restringidos
 
     setIsAddingToCart(true);
     addToCart(product, 1);
+    
+    // Mostrar mensaje de éxito
+    toast.success(`${product.name} agregado al carrito`);
 
     // Habilitar nuevamente después de un breve momento
     setTimeout(() => {
       setIsAddingToCart(false);
-    }, 500);
+    }, 1000); // Aumentado a 1 segundo para dar tiempo a la sincronización
+  };
+
+  const handleRequestAccess = (e) => {
+    e.stopPropagation();
+    if (onRequestAccess) {
+      onRequestAccess(product.empresaId);
+    }
+  };
+
+  const handleSupportClick = (e) => {
+    e.stopPropagation();
+    setIsContactModalOpen(true);
+  };
+
+  const handleCloseContactModal = () => {
+    setIsContactModalOpen(false);
   };
 
   // Lógica para renderizar especificaciones basadas en lineaNegocio
@@ -281,60 +489,138 @@ const ProductCard = ({ product, lineConfig }) => {
     PRODUCT_LINE_CONFIG[product.lineaNegocio] ||
     PRODUCT_LINE_CONFIG.DEFAULT;
 
+  // Función para renderizar el contenido del stock
+  const renderStockContent = () => {
+    if (product.stock > 0) {
+      if (product.stock >= 100) {
+        return (
+          <StockIcon $inStock={true}>
+            <RenderIcon name="FaCheckCircle" size={12} />
+          </StockIcon>
+        );
+      } else {
+        return <span>{product.stock}</span>;
+      }
+    } else {
+      return (
+        <StockIcon $inStock={false}>
+          <RenderIcon name="FaTimesCircle" size={12} />
+        </StockIcon>
+      );
+    }
+  };
+
   return (
-    <StyledCard onClick={handleViewDetails}>
-      <ImageContainer>
-        <ProductImage src={product.image} alt={product.name} />
-        {product.discount > 0 && (
-          <DiscountBadge>-{product.discount}%</DiscountBadge>
-        )}
-      </ImageContainer>
-      <ContentContainer>
-        <Brand>{product.brand}</Brand>
-        <Enterprise>{product.empresa || product.empresaId}</Enterprise>
-        {/* Indicador de stock */}
-        <StockIndicator>
-          <StockDot $inStock={product.stock > 0} />
-          <StockText>
-            {product.stock > 0
-              ? `${
-                  product.stock >= 100
-                    ? "Disponible"
-                    : `${product.stock} disponibles`
-                }`
-              : "Agotado"}
-          </StockText>
-        </StockIndicator>
-        <ProductName>{product.name}</ProductName>
-        {renderSpecs(config)}
-        <Price>
-          <div>
-            <CurrentPrice>${(priceWithIVA || 0).toFixed(2)}</CurrentPrice>
-            <IVAIndicator>IVA incluido</IVAIndicator>
-          </div>
-          {product.discount > 0 && product.price != null && (
-            <OriginalPrice>${product.price.toFixed(2)}</OriginalPrice>
-          )}
-        </Price>
-        <ButtonContainer>
-          <Button
-            text="Ver detalle"
-            variant="outlined"
-            size="small"
-            onClick={handleViewDetails}
+    <>
+      <StyledCard onClick={handleViewDetails} $restricted={restricted}>
+        <ImageContainer $restricted={restricted}>
+          <ProductImage
+            src={product.image}
+            alt={product.name}
+            $restricted={restricted}
           />
-          {isClient && product.stock > 0 && (
-            <Button
-              text={isAddingToCart ? "Agregando..." : "Agregar al carrito"}
-              variant="solid"
-              size="small"
-              onClick={handleAddToCart}
-              disabled={isAddingToCart}
-            />
+          {restricted && (
+            <>
+              <RestrictedBadge>Restringido</RestrictedBadge>
+              <LockIcon>
+                <RenderIcon name="FaLock" size={16} />
+              </LockIcon>
+            </>
           )}
-        </ButtonContainer>
-      </ContentContainer>
-    </StyledCard>
+          {product.discount > 0 && !restricted && (
+            <DiscountBadge>-{product.discount}%</DiscountBadge>
+          )}
+        </ImageContainer>
+
+        {restricted ? (
+          <RestrictedContent>
+            <Brand $restricted={restricted}>{product.brand}</Brand>
+            <Enterprise $restricted={restricted}>
+              {product.empresa || product.empresaId}
+            </Enterprise>
+            <ProductName $restricted={restricted}>{product.name}</ProductName>
+
+            <RestrictedDivider />
+
+            <RestrictedMessage>
+              <RestrictedMessageTitle>Acceso Restringido</RestrictedMessageTitle>
+              <RestrictedMessageText>
+                Este producto requiere autorización especial. Contacta a{" "}
+                {product.empresa || product.empresaId} para más información.
+              </RestrictedMessageText>
+            </RestrictedMessage>
+
+            <ButtonContainer>
+              <Button
+                text="Solicitar acceso"
+                variant="solid"
+                size="small"
+                onClick={handleRequestAccess}
+                backgroundColor={({ theme }) => theme.colors.primary}
+              />
+              <SupportButton onClick={handleSupportClick}>
+                <RenderIcon name="FaHeadset" size={16} />
+              </SupportButton>
+            </ButtonContainer>
+          </RestrictedContent>
+        ) : (
+          <ContentContainer $restricted={restricted}>
+            <TopRow>
+              <BrandEnterpriseContainer>
+                <Brand $restricted={restricted}>{product.brand}</Brand>
+                <Enterprise $restricted={restricted}>
+                  {product.empresa || product.empresaId}
+                </Enterprise>
+              </BrandEnterpriseContainer>
+              <StockIndicator $inStock={product.stock > 0}>
+                {product.stock > 0 && product.stock < 100 && (
+                  <StockDot $inStock={product.stock > 0} />
+                )}
+                <StockText $inStock={product.stock > 0}>
+                  {renderStockContent()}
+                </StockText>
+              </StockIndicator>
+            </TopRow>
+
+            <ProductName $restricted={restricted}>{product.name}</ProductName>
+            {renderSpecs(config)}
+            <Price>
+              <div>
+                <CurrentPrice>${(priceWithIVA || 0).toFixed(2)}</CurrentPrice>
+                <IVAIndicator>IVA incluido</IVAIndicator>
+              </div>
+              {product.discount > 0 && product.price != null && (
+                <OriginalPrice>${product.price.toFixed(2)}</OriginalPrice>
+              )}
+            </Price>
+            <ButtonContainer>
+              <Button
+                text="Ver detalle"
+                variant="outlined"
+                size="small"
+                onClick={handleViewDetails}
+              />
+              {isClient && !isVisualizacion && product.stock > 0 && (
+                <Button
+                  text={isAddingToCart ? "Agregando..." : "Agregar al carrito"}
+                  variant="solid"
+                  size="small"
+                  onClick={handleAddToCart}
+                  disabled={isAddingToCart}
+                />
+              )}
+            </ButtonContainer>
+          </ContentContainer>
+        )}
+      </StyledCard>
+
+      <ContactModal
+        isOpen={isContactModalOpen}
+        onClose={handleCloseContactModal}
+        title="Contactar a soporte"
+        selectedCompany={product.empresa || product.empresaId}
+      />
+    </>
   );
 };
 

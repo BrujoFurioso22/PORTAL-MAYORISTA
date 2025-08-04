@@ -13,14 +13,8 @@ import RenderLoader from "../../components/ui/RenderLoader";
 import Button from "../../components/ui/Button";
 import RenderIcon from "../../components/ui/RenderIcon";
 import { toast } from "react-toastify";
+import PageContainer from "../../components/layout/PageContainer";
 
-// Estilos
-const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
 
 const PageTitle = styled.h1`
   margin: 0 0 24px 0;

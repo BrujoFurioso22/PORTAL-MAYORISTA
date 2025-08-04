@@ -6,13 +6,7 @@ import Button from "../../components/ui/Button";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../constants/routes";
 import styled from "styled-components";
-
-// Styled Components
-const LoginContainer = styled(FlexBoxComponent)`
-  min-height: 100vh;
-  width: 100%;
-  padding: 2rem;
-`;
+import PageContainer from "../../components/layout/PageContainer";
 
 const LoginCard = styled(FlexBoxComponent)`
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -20,8 +14,8 @@ const LoginCard = styled(FlexBoxComponent)`
   border-radius: 12px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   padding: 2.5rem;
-  max-width: 420px;
-  width: 100%;
+  max-width: 550px;
+  width: 450px;
 
   @media (max-width: 480px) {
     padding: 1.5rem;
@@ -134,10 +128,14 @@ const Login = () => {
   };
 
   return (
-    <LoginContainer
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
+    <PageContainer
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+      }}
     >
       <LoginCard flexDirection="column" alignItems="center">
         <LoginTitle>Bienvenido a MISTOX</LoginTitle>
@@ -193,7 +191,7 @@ const Login = () => {
           </RegisterContainer>
         </LoginForm>
       </LoginCard>
-    </LoginContainer>
+    </PageContainer>
   );
 };
 

@@ -13,14 +13,8 @@ import { es } from "date-fns/locale";
 
 import { toast } from "react-toastify";
 import { api_order_getOrdersByEnterprises } from "../../api/order/apiOrder";
+import PageContainer from "../../components/layout/PageContainer";
 
-// Estilos
-const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
 
 const PageTitle = styled.h1`
   margin: 0 0 24px 0;
@@ -58,10 +52,12 @@ const StatusBadge = styled.span`
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 500;
-  background-color: ${({ theme, status }) => {
-    switch (status) {
+  background-color: ${({ theme, $status }) => {
+    switch ($status) {
       case "PENDIENTE":
         return theme.colors.warning + "33";
+      case "PENDIENTE CARTERA":
+        return theme.colors.info + "33";
       case "CONFIRMADO":
         return theme.colors.info + "33";
       case "ENTREGADO":
@@ -72,10 +68,12 @@ const StatusBadge = styled.span`
         return theme.colors.border;
     }
   }};
-  color: ${({ theme, status }) => {
-    switch (status) {
+  color: ${({ theme, $status }) => {
+    switch ($status) {
       case "PENDIENTE":
         return theme.colors.warning;
+      case "PENDIENTE CARTERA":
+        return theme.colors.info;
       case "CONFIRMADO":
         return theme.colors.info;
       case "ENTREGADO":
@@ -206,6 +204,7 @@ const CoordinadorHomeComponent = () => {
   // Mapa de estados
   const estadosMap = {
     PENDIENTE: "Pendiente",
+    "PENDIENTE CARTERA": "Revisión",
     CONFIRMADO: "Confirmado",
     ENTREGADO: "Entregado",
     CANCELADO: "Cancelado",
@@ -478,15 +477,15 @@ const CoordinadorHomeComponent = () => {
       field: "empresaId",
       render: (row) => empresasMap[row.empresaId] || row.empresaId,
     },
+    // {
+    //   header: "Subtotal (con iva)",
+    //   field: "subtotal",
+    //   dataType: "number",
+    //   render: (row) => `$${row.subtotal.toFixed(2)}`,
+    //   align: "right",
+    // },
     {
-      header: "Subtotal",
-      field: "subtotal",
-      dataType: "number",
-      render: (row) => `$${row.subtotal.toFixed(2)}`,
-      align: "right",
-    },
-    {
-      header: "Total",
+      header: "Total (IVA incluido)",
       field: "total",
       dataType: "number",
       render: (row) => `$${row.total.toFixed(2)}`,
@@ -503,7 +502,7 @@ const CoordinadorHomeComponent = () => {
       header: "Estado",
       field: "status",
       render: (row) => (
-        <StatusBadge status={row.status}>
+        <StatusBadge $status={row.status}>
           {estadosMap[row.status] || row.status}
         </StatusBadge>
       ),
@@ -554,6 +553,7 @@ const CoordinadorHomeComponent = () => {
   const statusOptions = [
     { value: "todos", label: "Todos los estados" },
     { value: "PENDIENTE", label: "Pendiente" },
+    { value: "PENDIENTE CARTERA", label: "Revisión" },
     { value: "CONFIRMADO", label: "Confirmado" },
     { value: "ENTREGADO", label: "Entregado" },
     { value: "CANCELADO", label: "Cancelado" },

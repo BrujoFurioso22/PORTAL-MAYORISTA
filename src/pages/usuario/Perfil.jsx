@@ -9,14 +9,7 @@ import Direcciones from "./components/Direcciones";
 import Preferencias from "./components/Preferencias";
 import Telefonos from "./components/Telefonos";
 import { useAuth } from "../../context/AuthContext";
-
-// Estilos para el componente
-const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
+import PageContainer from "../../components/layout/PageContainer";
 
 const PageTitle = styled.h1`
   margin: 0 0 24px 0;

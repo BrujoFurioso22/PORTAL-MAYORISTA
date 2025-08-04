@@ -80,7 +80,12 @@ const App = () => {
           element={
             <ProtectedRoute
               element={<AuthenticatedLayout />}
-              allowedRoles={[ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR]}
+              allowedRoles={[
+                ROLES.CLIENTE,
+                ROLES.ADMIN,
+                ROLES.COORDINADOR,
+                ROLES.VISUALIZACION,
+              ]}
             />
           }
         >

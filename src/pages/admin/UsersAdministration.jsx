@@ -17,14 +17,150 @@ import {
 import { api_roles_getAll } from "../../api/users/apiRoles";
 import RenderLoader from "../../components/ui/RenderLoader";
 import { ROLES } from "../../constants/roles";
+import PageContainer from "../../components/layout/PageContainer";
+import { useNavigate } from "react-router-dom";
 
-// Estilos
-const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
+// Constantes
+const EMPRESAS_DISPONIBLES = [
+  "MAXXIMUNDO",
+  "AUTOLLANTA",
+  "IKONIX",
+  "STOX",
+  "AUTOMAX",
+];
+
+// Componente selector de empresas
+const EmpresasSelector = ({ selectedEmpresas, onChange }) => {
+  const { theme } = useAppTheme();
+
+  const handleCheckboxChange = (empresa) => {
+    if (selectedEmpresas.includes(empresa)) {
+      onChange(selectedEmpresas.filter((e) => e !== empresa));
+    } else {
+      onChange([...selectedEmpresas, empresa]);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedEmpresas.length === EMPRESAS_DISPONIBLES.length) {
+      onChange([]);
+    } else {
+      onChange([...EMPRESAS_DISPONIBLES]);
+    }
+  };
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "12px",
+        }}
+      >
+        <label
+          style={{
+            fontWeight: "500",
+            fontSize: "1rem",
+            color: theme.colors.text,
+          }}
+        >
+          Empresas asignadas
+        </label>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.85rem",
+              color: theme.colors.textLight,
+            }}
+          >
+            {selectedEmpresas.length} de {EMPRESAS_DISPONIBLES.length}{" "}
+            seleccionadas
+          </span>
+          <Button
+            text={
+              selectedEmpresas.length === EMPRESAS_DISPONIBLES.length
+                ? "Deseleccionar todas"
+                : "Seleccionar todas"
+            }
+            size="small"
+            variant="outlined"
+            type="button"
+            onClick={handleSelectAll}
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+          gap: "12px",
+          padding: "16px",
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: "8px",
+          backgroundColor: theme.colors.surface,
+        }}
+      >
+        {EMPRESAS_DISPONIBLES.map((empresa) => (
+          <div
+            key={empresa}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "8px 12px",
+              borderRadius: "6px",
+              backgroundColor: selectedEmpresas.includes(empresa)
+                ? `${theme.colors.primary}15`
+                : "transparent",
+              transition: "all 0.2s ease",
+              cursor: "pointer",
+              border: selectedEmpresas.includes(empresa)
+                ? `1px solid ${theme.colors.primary}40`
+                : `1px solid transparent`,
+            }}
+            onClick={() => handleCheckboxChange(empresa)}
+          >
+            <div
+              style={{
+                width: "20px",
+                height: "20px",
+                border: `2px solid ${theme.colors.primary}`,
+                borderRadius: "4px",
+                marginRight: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: selectedEmpresas.includes(empresa)
+                  ? theme.colors.primary
+                  : "transparent",
+              }}
+            >
+              {selectedEmpresas.includes(empresa) && (
+                <RenderIcon name="FaCheck" size={12} color="white" />
+              )}
+            </div>
+            <span
+              style={{
+                fontSize: "0.9rem",
+                color: theme.colors.text,
+              }}
+            >
+              {empresa}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const PageTitle = styled.h1`
   margin: 0 0 24px 0;
@@ -153,7 +289,6 @@ const ModalTitle = styled.h2`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-
 const FormGroup = styled.div`
   margin-bottom: 16px;
   width: 100%;
@@ -186,6 +321,7 @@ const EmptyState = styled.div`
 
 const UsersAdministration = () => {
   const { theme } = useAppTheme();
+  const navigate = useNavigate();
 
   // Estados
   const [users, setUsers] = useState(null);
@@ -196,7 +332,9 @@ const UsersAdministration = () => {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [rolVisualizacion, setRolVisualizacion] = useState(null);
 
   // Estado para formulario
   const [formData, setFormData] = useState({
@@ -205,6 +343,7 @@ const UsersAdministration = () => {
     role: "",
     password: "",
     confirmPassword: "",
+    empresas: [],
   });
 
   // Cargar datos iniciales
@@ -217,7 +356,7 @@ const UsersAdministration = () => {
         if (rolesResponse.success) {
           setRoles(rolesResponse.data);
 
-          // Encontrar los IDs de los roles cliente y admin
+          // Encontrar los IDs de los roles cliente, admin y visualización
           const clienteRole = rolesResponse.data.find(
             (role) => role.NAME_ROLE === ROLES.CLIENTE
           );
@@ -226,14 +365,24 @@ const UsersAdministration = () => {
             (role) => role.NAME_ROLE === ROLES.ADMIN
           );
 
-          if (clienteRole || adminRole) {
-            // Ahora cargar los usuarios con rol cliente o admin
+          const visualizacionRole = rolesResponse.data.find(
+            (role) => role.NAME_ROLE === ROLES.VISUALIZACION
+          );
+
+          if (visualizacionRole) {
+            setRolVisualizacion(visualizacionRole.ID_ROLE);
+          }
+
+          if (clienteRole || adminRole || visualizacionRole) {
+            // Ahora cargar los usuarios con rol cliente, admin o visualización
             const usersResponse = await api_users_getAll();
             if (usersResponse.success) {
               const userList = usersResponse.data.filter(
                 (user) =>
                   (clienteRole && user.ROLE_USER === clienteRole.ID_ROLE) ||
-                  (adminRole && user.ROLE_USER === adminRole.ID_ROLE)
+                  (adminRole && user.ROLE_USER === adminRole.ID_ROLE) ||
+                  (visualizacionRole &&
+                    user.ROLE_USER === visualizacionRole.ID_ROLE)
               );
 
               setUsers(userList);
@@ -279,7 +428,6 @@ const UsersAdministration = () => {
     setFilteredUsers(result);
   }, [users, searchTerm, roleFilter]);
 
-
   const handleOpenEditModal = (user) => {
     setCurrentUser(user);
     setFormData({
@@ -288,6 +436,9 @@ const UsersAdministration = () => {
       role: user.ROLE_USER, // Guardar el ID del rol
       password: "",
       confirmPassword: "",
+      empresas: user.EMPRESAS
+        ? user.EMPRESAS.split(",").map((e) => e.trim())
+        : [],
     });
     setIsEditModalOpen(true);
   };
@@ -299,6 +450,7 @@ const UsersAdministration = () => {
   const handleCloseModals = () => {
     setIsEditModalOpen(false);
     setIsDeleteModalOpen(false);
+    setIsCreateModalOpen(false);
     setCurrentUser(null);
   };
 
@@ -309,6 +461,27 @@ const UsersAdministration = () => {
       ...formData,
       [name]: value,
     });
+  };
+
+  // Manejador específico para la selección de empresas
+  const handleEmpresasChange = (selectedEmpresas) => {
+    setFormData({
+      ...formData,
+      empresas: selectedEmpresas,
+    });
+  };
+
+  // Función para abrir modal de creación
+  const handleOpenCreateModal = () => {
+    setFormData({
+      name: "",
+      email: "",
+      role: "",
+      password: "",
+      confirmPassword: "",
+      empresas: [],
+    });
+    setIsCreateModalOpen(true);
   };
 
   // Actualizar el manejador de roles para un solo rol
@@ -330,38 +503,49 @@ const UsersAdministration = () => {
       return;
     }
 
-    if (!formData.role) {
-      toast.error("Debes seleccionar un rol");
+    if (!formData.name || !formData.email || !formData.password) {
+      toast.error("Todos los campos son obligatorios");
       return;
     }
 
-    // Aquí se enviaría la petición a la API
-    // Por ahora simulamos la creación
-    const newUser = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: parseInt(formData.role),
-    };
-
-    const response = await api_users_create(newUser);
-    if (!response.success) {
-      toast.error(response.message || "Error al crear usuario");
+    if (!formData.empresas || formData.empresas.length === 0) {
+      toast.error("Debes seleccionar al menos una empresa");
       return;
     }
 
-    // Recargar la lista de usuarios para obtener los datos actualizados
-    const fetchUsers = async () => {
-      const response = await api_users_getAll();
-      if (response.success) {
-        setUsers(response.data);
-        setFilteredUsers(response.data);
+    try {
+      // Crear nuevo usuario con rol de visualización
+      const newUser = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: rolVisualizacion,
+        enterprises: formData.empresas.join(","),
+      };
+      console.log(newUser);
+
+      const response = await api_users_create(newUser);
+      if (!response.success) {
+        toast.error(response.message || "Error al crear usuario");
+        return;
       }
-    };
-    await fetchUsers();
 
-    toast.success("Usuario creado correctamente");
-    handleCloseModals();
+      // Recargar la lista de usuarios para obtener los datos actualizados
+      const fetchUsers = async () => {
+        const response = await api_users_getAll();
+        if (response.success) {
+          setUsers(response.data);
+          setFilteredUsers(response.data);
+        }
+      };
+      await fetchUsers();
+
+      toast.success("Usuario creado correctamente");
+      handleCloseModals();
+    } catch (error) {
+      console.error("Error al crear usuario:", error);
+      toast.error("Ocurrió un error al crear el usuario");
+    }
   };
 
   const handleUpdateUser = async (e) => {
@@ -525,7 +709,10 @@ const UsersAdministration = () => {
   );
 
   return (
-    <PageContainer>
+    <PageContainer
+      backButtonText="Regresar"
+      backButtonOnClick={() => navigate("/admin/dashboard")}
+    >
       <PageTitle>Administración de Usuarios</PageTitle>
 
       <ActionsContainer>
@@ -556,6 +743,13 @@ const UsersAdministration = () => {
             </FilterSelect>
           </FiltersContainer>
         </div>
+
+        <Button
+          text="Crear Usuario"
+          leftIconName="FaPlus"
+          onClick={handleOpenCreateModal}
+          backgroundColor={theme.colors.primary}
+        />
       </ActionsContainer>
 
       {users === null ? (
@@ -578,8 +772,104 @@ const UsersAdministration = () => {
           emptyMessage="No hay usuarios que coincidan con los criterios de búsqueda."
           rowActions={renderRowActions}
           striped={true}
-         
         />
+      )}
+
+      {/* Modal para crear usuario */}
+      {isCreateModalOpen && (
+        <Modal>
+          <ModalContent>
+            <ModalHeader>
+              <ModalTitle>Crear Nuevo Usuario</ModalTitle>
+              <RenderIcon
+                name={"FaTimes"}
+                size={20}
+                onClick={handleCloseModals}
+              />
+            </ModalHeader>
+
+            <form onSubmit={handleCreateUser}>
+              <FormRow>
+                <FormGroup>
+                  <Input
+                    label="Nombre completo"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    fullWidth
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <Input
+                    label="Correo electrónico"
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    fullWidth
+                  />
+                </FormGroup>
+              </FormRow>
+
+              <FormRow>
+                <FormGroup>
+                  <Input
+                    label="Contraseña"
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                    fullWidth
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <Input
+                    label="Confirmar contraseña"
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                    fullWidth
+                  />
+                </FormGroup>
+              </FormRow>
+
+              <FormGroup>
+                <EmpresasSelector
+                  selectedEmpresas={formData.empresas}
+                  onChange={handleEmpresasChange}
+                />
+              </FormGroup>
+
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontSize: "0.9rem",
+                  color: theme.colors.textLight,
+                }}
+              >
+                Nota: El usuario se creará con el rol de VISUALIZACION.
+              </div>
+
+              <ButtonGroup>
+                <Button
+                  text="Cancelar"
+                  variant="outlined"
+                  onClick={handleCloseModals}
+                />
+                <Button
+                  text="Crear Usuario"
+                  type="submit"
+                  backgroundColor={theme.colors.primary}
+                />
+              </ButtonGroup>
+            </form>
+          </ModalContent>
+        </Modal>
       )}
 
       {/* Modal para editar usuario */}
@@ -646,6 +936,14 @@ const UsersAdministration = () => {
                 </select>
               </FormGroup>
 
+              <FormGroup>
+                <label>Empresas Asignadas</label>
+                <EmpresasSelector
+                  selectedEmpresas={formData.empresas}
+                  onChange={handleEmpresasChange}
+                />
+              </FormGroup>
+
               <FormRow>
                 <FormGroup>
                   <Input
@@ -676,8 +974,8 @@ const UsersAdministration = () => {
                   color: theme.colors.textLight,
                 }}
               >
-                Nota: Solo puedes modificar el rol y/o la contraseña del
-                usuario.
+                Nota: Solo puedes modificar el rol, las empresas y/o la
+                contraseña del usuario.
               </div>
 
               <ButtonGroup>

@@ -17,32 +17,9 @@ import {
 import { baseLinkImages } from "../../constants/links";
 import { api_optionsCatalog_getStates } from "../../api/optionsCatalog/apiOptionsCatalog";
 import { copyToClipboard } from "../../utils/utils";
-import { TAXES } from "../../constants/taxes";
-
-// Estilos del componente
-const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
-
-const BackLink = styled(Button)`
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.primary};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  margin-bottom: 16px;
-  font-size: 0.9rem;
-
-  &:hover {
-    text-decoration: underline;
-  }
-`;
+import { TAXES, calculatePriceWithIVA } from "../../constants/taxes";
+import PageContainer from "../../components/layout/PageContainer";
+import RenderLoader from "../../components/ui/RenderLoader";
 
 const PageHeader = styled.div`
   display: flex;
@@ -80,10 +57,12 @@ const StatusBadge = styled.span`
   border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 500;
-  background-color: ${({ theme, status }) => {
-    switch (status) {
+  background-color: ${({ theme, $status }) => {
+    switch ($status) {
       case "PENDIENTE":
         return theme.colors.warning + "33";
+      case "PENDIENTE CARTERA":
+        return theme.colors.info + "33";
       case "CONFIRMADO":
         return theme.colors.info + "33";
       case "ENTREGADO":
@@ -94,10 +73,12 @@ const StatusBadge = styled.span`
         return theme.colors.border;
     }
   }};
-  color: ${({ theme, status }) => {
-    switch (status) {
+  color: ${({ theme, $status }) => {
+    switch ($status) {
       case "PENDIENTE":
         return theme.colors.warning;
+      case "PENDIENTE CARTERA":
+        return theme.colors.info;
       case "CONFIRMADO":
         return theme.colors.info;
       case "ENTREGADO":
@@ -302,7 +283,6 @@ const DetallePedidoCoordinador = () => {
           }
 
           const apiOrder = response.data[0];
-          console.log(apiOrder);
 
           const cabecera = apiOrder.CABECERA;
           const detalle = apiOrder.DETALLE || [];
@@ -312,20 +292,28 @@ const DetallePedidoCoordinador = () => {
           )?.value;
 
           // Calcular descuentos y totales igual que en DetallePedido.jsx
-          const items = detalle.map((item) => ({
-            id: item.PRODUCT_CODE,
-            name: item.MAESTRO?.DMA_NOMBREITEM || "Producto",
-            sku: item.PRODUCT_CODE,
-            price: item.PRICE,
-            quantity: item.QUANTITY,
-            promotionalDiscount: item.PROMOTIONAL_DISCOUNT || 0,
-            total: item.PRICE * item.QUANTITY,
-            image: item.MAESTRO?.DMA_RUTAIMAGEN
-              ? `${baseLinkImages}${item.MAESTRO.DMA_RUTAIMAGEN}`
-              : "https://placehold.co/50x50/png",
-          }));
+          const ivaPercentage = cabecera.IVA_DETAIL?.IVA_PERCENTAGE || TAXES.IVA_PERCENTAGE;
+          const items = detalle.map((item) => {
+            const basePrice = item.PRICE;
+            const priceWithIVA = calculatePriceWithIVA(basePrice, ivaPercentage);
+            const totalWithIVA = priceWithIVA * item.QUANTITY;
+            
+            return {
+              id: item.PRODUCT_CODE,
+              name: item.MAESTRO?.DMA_NOMBREITEM || "Producto",
+              sku: item.PRODUCT_CODE,
+              price: priceWithIVA, // Precio con IVA incluido
+              basePrice: basePrice, // Precio base sin IVA (para cálculos internos)
+              quantity: item.QUANTITY,
+              promotionalDiscount: item.PROMOTIONAL_DISCOUNT || 0,
+              total: totalWithIVA, // Total con IVA incluido
+              image: item.MAESTRO?.DMA_RUTAIMAGEN
+                ? `${baseLinkImages}${item.MAESTRO.DMA_RUTAIMAGEN}`
+                : "https://placehold.co/50x50/png",
+            };
+          });
 
-          // 1. Subtotal sin descuentos
+          // 1. Subtotal sin descuentos (con IVA incluido)
           const rawSubtotal = items.reduce(
             (acc, item) => acc + item.price * item.quantity,
             0
@@ -350,12 +338,10 @@ const DetallePedidoCoordinador = () => {
           const aditionalDiscount =
             subtotalAfterGeneral *
             (Number(cabecera.ADITIONAL_DISCOUNT || 0) / 100);
-          // 7. Total final antes de IVA
+          // 7. Total final (IVA ya incluido en precios)
           const totalFinal = subtotalAfterGeneral - aditionalDiscount;
-          // IVA como porcentaje
-          const ivaPct = Number(cabecera.IVA_DETAIL?.IVA_PERCENTAGE || TAXES.IVA_PERCENTAGE);
-          const valorIVA = (totalFinal < 0 ? 0 : totalFinal) * (ivaPct / 100);
-          const totalConIva = (totalFinal < 0 ? 0 : totalFinal) + valorIVA;
+          // IVA ya está incluido en todos los precios
+          const totalConIva = (totalFinal < 0 ? 0 : totalFinal);
 
           // Verificar si tiene direcciones nuevas
           const hasNewAddress =
@@ -368,7 +354,7 @@ const DetallePedidoCoordinador = () => {
             status: currentStatus,
             aditionalDiscount: cabecera.ADITIONAL_DISCOUNT || 0,
             discount: cabecera.DISCOUNT || 0,
-            iva: ivaPct,
+            iva: ivaPercentage,
             customer: {
               name: cabecera.USER.NAME_USER,
               email: cabecera.USER.EMAIL,
@@ -388,7 +374,7 @@ const DetallePedidoCoordinador = () => {
               state: cabecera.BILLING_ADDRESS.STATE,
             },
             items,
-            subtotal: rawSubtotal,
+            subtotal: rawSubtotal, // Ya incluye IVA
             total: totalConIva,
             empresaInfo: {
               id: cabecera.ENTERPRISE,
@@ -403,7 +389,6 @@ const DetallePedidoCoordinador = () => {
             generalDiscount,
             subtotalAfterGeneral,
             totalFinal,
-            valorIVA,
             totalConIva,
           };
 
@@ -549,7 +534,6 @@ const DetallePedidoCoordinador = () => {
           PROMOTIONAL_DISCOUNT: item.promotionalDiscount || 0,
         })),
       };
-      console.log(body);
       // return
 
       await api_order_updateOrder(orderDetails.id, body);
@@ -594,7 +578,17 @@ const DetallePedidoCoordinador = () => {
     }
   };
 
+  const handleProductClick = (productId) => {
+    navigate(`/productos/${productId}`, {
+      state: {
+        empresaId: orderDetails?.empresaInfo?.id,
+        prevUrl: `/coordinadora/pedidos/${orderId}`,
+      },
+    });
+  };
+
   function calcularTotales(items, aditionalDiscount) {
+    // Los precios ya incluyen IVA
     const rawSubtotal = items.reduce(
       (acc, item) => acc + item.price * item.quantity,
       0
@@ -615,8 +609,8 @@ const DetallePedidoCoordinador = () => {
       subtotalAfterGeneral * (Number(aditionalDiscount) / 100);
     let totalFinal = subtotalAfterGeneral - aditionalDiscountValue;
     if (totalFinal < 0) totalFinal = 0;
-    const valorIVA = totalFinal * (Number(orderDetails.iva) / 100);
-    const totalConIva = totalFinal + valorIVA;
+    // IVA ya está incluido en todos los precios
+    const totalConIva = totalFinal;
 
     return {
       rawSubtotal,
@@ -626,30 +620,32 @@ const DetallePedidoCoordinador = () => {
       subtotalAfterGeneral,
       aditionalDiscountValue: aditionalDiscountValue,
       totalFinal,
-      valorIVA,
       totalConIva,
     };
   }
 
   if (loading) {
     return (
-      <PageContainer>
-        <BackLink
-          onClick={() => navigate("/coordinadora")}
-          text="← Volver a gestión de pedidos"
+      <PageContainer
+        backButtonText="Regresar"
+        backButtonOnClick={() => navigate("/coordinadora")}
+      >
+        <RenderLoader
+          text="Cargando detalles del pedido..."
+          size="32px"
+          card={true}
+          showDots={false}
         />
-        <EmptyState>Cargando detalles del pedido...</EmptyState>
       </PageContainer>
     );
   }
 
   if (error || !orderDetails) {
     return (
-      <PageContainer>
-        <BackLink
-          onClick={() => navigate("/coordinadora")}
-          text="← Volver a gestión de pedidos"
-        />
+      <PageContainer
+        backButtonText="Regresar"
+        backButtonOnClick={() => navigate("/coordinadora")}
+      >
         <EmptyState>
           <h2>Pedido no encontrado</h2>
           <p>
@@ -667,11 +663,10 @@ const DetallePedidoCoordinador = () => {
   }
 
   return (
-    <PageContainer>
-      <BackLink
-        onClick={() => navigate("/coordinadora")}
-        text="← Volver a gestión de pedidos"
-      />
+    <PageContainer
+      backButtonText="Regresar"
+      backButtonOnClick={() => navigate("/coordinadora")}
+    >
 
       <PageHeader>
         <OrderTitle>
@@ -700,7 +695,7 @@ const DetallePedidoCoordinador = () => {
               onClick={() => setEditMode(!editMode)}
             />
           )}
-          <StatusBadge status={orderDetails.status}>
+          <StatusBadge $status={orderDetails.status}>
             {
               statusOptionsApi.find((opt) => opt.value === orderDetails.status)
                 ?.label
@@ -708,6 +703,28 @@ const DetallePedidoCoordinador = () => {
           </StatusBadge>
         </OrderActions>
       </PageHeader>
+
+      {/* Mensaje para estado PENDIENTE CARTERA */}
+      {orderDetails.status === "PENDIENTE CARTERA" && (
+        <div
+          style={{
+            background: theme.colors.info + "15",
+            border: `1px solid ${theme.colors.info}30`,
+            borderRadius: 6,
+            padding: "12px 16px",
+            marginBottom: 16,
+            fontWeight: 500,
+            fontSize: "0.95rem",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            color: theme.colors.info,
+          }}
+        >
+          <RenderIcon name="FaExclamationTriangle" size={16} />
+          <span>Cliente con observaciones, posible problema: cartera bloqueada</span>
+        </div>
+      )}
 
       {/* Alerta de dirección nueva */}
       {orderDetails.hasNewAddress && !addressConfirmed && (
@@ -803,6 +820,11 @@ const DetallePedidoCoordinador = () => {
                     // CONFIRMADO: solo ENTREGADO (3)
                     filteredOptions = statusOptionsApi.filter(
                       (opt) => opt.id === 3
+                    );
+                  } else if (statusNum === 6) {
+                    // PENDIENTE CARTERA: solo CONFIRMADO (2) y CANCELADO (4)
+                    filteredOptions = statusOptionsApi.filter(
+                      (opt) => opt.id === 2 || opt.id === 4
                     );
                   }
 
@@ -1210,7 +1232,8 @@ const DetallePedidoCoordinador = () => {
                 }}
               >
                 <RenderIcon name="FaTag" size={16} style={{ marginRight: 6 }} />
-                Descuento general de cliente aplicado: {orderDetails.discount}%
+                Descuento general de cliente aplicado:{" "}
+                {orderDetails.discount}%
               </div>
             )}
             {orderDetails.aditionalDiscount > 0 && (
@@ -1235,6 +1258,28 @@ const DetallePedidoCoordinador = () => {
             )}
           </div>
         )}
+
+        {/* Información sobre IVA */}
+        <div
+          style={{
+            background: theme.colors.primary + "15",
+            border: `1px solid ${theme.colors.primary}30`,
+            borderRadius: 6,
+            padding: "8px 12px",
+            marginBottom: 16,
+            fontWeight: 500,
+            fontSize: "0.9rem",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            color: theme.colors.primary,
+          }}
+        >
+          <RenderIcon name="FaInfoCircle" size={14} />
+          <span>
+            IVA incluido. Todos los precios mostrados incluyen impuestos.
+          </span>
+        </div>
 
         <div
           style={{
@@ -1301,6 +1346,16 @@ const DetallePedidoCoordinador = () => {
                           marginBottom: 4,
                           color: theme.colors.text,
                           fontSize: "1.08rem",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => handleProductClick(item.id)}
+                        onMouseEnter={(e) => {
+                          e.target.style.color = theme.colors.primary;
+                          e.target.style.textDecoration = "underline";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.color = theme.colors.text;
+                          e.target.style.textDecoration = "none";
                         }}
                       >
                         {item.name}
@@ -1330,7 +1385,7 @@ const DetallePedidoCoordinador = () => {
                           color: theme.colors.textLight,
                         }}
                       >
-                        Total
+                        Total (IVA incl.)
                       </div>
                     </div>
                   </div>
@@ -1346,7 +1401,7 @@ const DetallePedidoCoordinador = () => {
                     <div
                       style={{ color: theme.colors.text, fontSize: "0.98rem" }}
                     >
-                      x{qty} · ${price.toFixed(2)} c/u ={" "}
+                      x{qty} · ${price.toFixed(2)} c/u (IVA incl.) ={" "}
                       <b>${subtotal.toFixed(2)}</b>
                     </div>
                     {promoPct > 0 && (
@@ -1370,7 +1425,7 @@ const DetallePedidoCoordinador = () => {
 
         <OrderSummary>
           <SummaryRow>
-            <SummaryLabel>Subtotal:</SummaryLabel>
+            <SummaryLabel>Subtotal (con iva):</SummaryLabel>
             <SummaryValue>${orderDetails.subtotal.toFixed(2)}</SummaryValue>
           </SummaryRow>
           {orderDetails.totalPromotionalDiscount > 0 && (
@@ -1425,13 +1480,7 @@ const DetallePedidoCoordinador = () => {
               </SummaryRow>
             </>
           )}
-          {/* Fila de IVA */}
-          {orderDetails.iva > 0 && (
-            <SummaryRow>
-              <SummaryLabel>IVA ({orderDetails.iva}%):</SummaryLabel>
-              <SummaryValue>+${orderDetails.valorIVA.toFixed(2)}</SummaryValue>
-            </SummaryRow>
-          )}
+
           <SummaryRow>
             <SummaryLabel>Total:</SummaryLabel>
             <SummaryValue>${orderDetails.total.toFixed(2)}</SummaryValue>

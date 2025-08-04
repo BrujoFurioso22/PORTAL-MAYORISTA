@@ -17,14 +17,9 @@ import {
 import { api_roles_getAll } from "../../api/users/apiRoles";
 import RenderLoader from "../../components/ui/RenderLoader";
 import { ROLES } from "../../constants/roles";
+import PageContainer from "../../components/layout/PageContainer";
+import { useNavigate } from "react-router-dom";
 
-// Estilos (reutilizados del UsersAdministration)
-const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
 
 const PageTitle = styled.h1`
   margin: 0 0 24px 0;
@@ -310,6 +305,7 @@ const EmpresasSelector = ({ selectedEmpresas, onChange }) => {
 const CoordinadorAdminComponent = () => {
   const { theme } = useAppTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Estados
   const [coordinadores, setCoordinadores] = useState(null);
@@ -758,7 +754,10 @@ const CoordinadorAdminComponent = () => {
   );
 
   return (
-    <PageContainer>
+    <PageContainer
+      backButtonText="Regresar"
+      backButtonOnClick={() => navigate("/admin/dashboard")}
+    >
       <PageTitle>Administración de Coordinadores</PageTitle>
 
       <ActionsContainer>

@@ -10,18 +10,12 @@ import { ROUTES } from "../../constants/routes";
 import RenderIcon from "../../components/ui/RenderIcon";
 import { api_order_createOrder } from "../../api/order/apiOrder";
 import { TAXES, calculatePriceWithIVA } from "../../constants/taxes";
-
-const PageContainer = styled.div`
-  padding: 24px;
-  max-width: 1000px;
-  margin: 0 auto;
-  background-color: ${({ theme }) => theme.colors.background};
-`;
+import PageContainer from "../../components/layout/PageContainer";
 
 const PageTitle = styled.div`
   display: flex;
   align-items: center;
-  margin: 0 0 24px 0;
+  margin: 0 0 12px 0;
   color: ${({ theme }) => theme.colors.text};
   gap: 12px;
 `;
@@ -574,6 +568,7 @@ const Carrito = () => {
     removeItemsByCompany,
     clearCart,
     calculateCartTotal,
+    isLoading,
   } = useCart();
   const navigate = useNavigate();
   const { theme } = useAppTheme();
@@ -715,6 +710,18 @@ const Carrito = () => {
 
     groupByCompany();
   }, [cart, addresses]);
+
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <PageTitle>Carrito de compras</PageTitle>
+        <CartEmptyState>
+          <EmptyCartIcon>⏳</EmptyCartIcon>
+          <EmptyCartText>Cargando tu carrito...</EmptyCartText>
+        </CartEmptyState>
+      </PageContainer>
+    );
+  }
 
   if (cart.length === 0) {
     return (
@@ -863,6 +870,7 @@ const Carrito = () => {
     const userDiscount = user?.DESCUENTOS?.[company] || 0;
     const discountAmount = subtotalWithIVA * (userDiscount / 100);
     const totalConIva = subtotalWithIVA - discountAmount;
+    
 
     const productsToProcess = companyData.items.map((item) => ({
       PRODUCT_CODE: item.id,

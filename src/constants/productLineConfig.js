@@ -90,8 +90,7 @@ export const PRODUCT_LINE_CONFIG = {
         transform: (value) => value.toLowerCase().replace(/ /g, "_"),
       },
     ],
-    nameTemplate: (item) =>
-      `${item.DMA_NOMBREITEM || ""}`,
+    nameTemplate: (item) => `${item.DMA_NOMBREITEM || ""}`,
     descriptionTemplate: (item) =>
       `${item.DMA_MARCA || ""} ${item.DMA_DISENIO || ""} ${
         item.DMA_APLICACION || ""
@@ -168,62 +167,48 @@ export const PRODUCT_LINE_CONFIG = {
         transform: (value) => value?.toLowerCase().replace(/ /g, "_"),
       },
     ],
-    nameTemplate: (item) =>
-      item.DMA_NOMBREITEM ??
-      `${item.DMA_MARCA || ""} ${item.DMA_VISCOSIDAD || ""} ${
-        item.DMA_VOLUMEN || ""
-      } ${item.DMA_UNIDADMEDIDA || ""}`,
+    nameTemplate: (item) => `${item.DMA_NOMBREITEM || ""}`,
     descriptionTemplate: (item) =>
       `${item.DMA_MARCA || ""} ${item.DMA_TIPO || ""} ${item.DMA_BASE || ""}`,
     categoryLabels: CATEGORY_TYPE_LABELS,
     categoryOrder: CATEGORY_TYPE_ORDER.LUBRICANTES,
   },
 
-  LUCES: {
+  HERRAMIENTAS: {
     specs: [
       {
-        field: "potencia",
-        label: "Potencia",
-        defaultValue: "N/D",
-        transform: (item) => `${item.DMA_POTENCIA || ""} W`,
+        field: "tipounidad",
+        label: "Tipo Unidad",
+        defaultValue: "-",
+        transform: (item) => item.DMA_TIPO_UNIDAD,
       },
       {
-        field: "voltaje",
-        label: "Voltaje",
-        defaultValue: "N/D",
-        transform: (item) => `${item.DMA_VOLTAJE || ""} V`,
+        field: "unidadescaja",
+        label: "Unidades Caja",
+        defaultValue: "-",
+        transform: (item) => item.DMA_UNIDADES_POR_CAJA,
       },
       {
-        field: "tipo",
-        label: "Tipo",
-        defaultValue: "N/D",
-        transform: (item) => item.DMA_TIPO,
-      },
-      {
-        field: "modelo",
-        label: "Modelo",
-        defaultValue: "N/D",
-        transform: (item) => item.DMA_MODELO,
+        field: "unidadesempaque",
+        label: "Unidades Empaque",
+        defaultValue: "-",
+        transform: (item) => item.DMA_UNIDADES_POR_EMPAQUE,
       },
     ],
     categories: [
       {
-        field: "DMA_CATEGORIA",
-        transform: (value) => value.toLowerCase().replace(/ /g, "_"),
+        field: "DMA_GRUPO",
+        transform: (value) => value?.toLowerCase().replace(/ /g, "_"),
       },
       {
-        field: "DMA_TIPO",
+        field: "DMA_SUBGRUPO",
         transform: (value) => value?.toLowerCase().replace(/ /g, "_"),
       },
     ],
-    nameTemplate: (item) =>
-      `${item.DMA_MARCA || ""} ${item.DMA_MODELO || ""} ${item.DMA_TIPO || ""}`,
-    descriptionTemplate: (item) =>
-      `${item.DMA_MARCA || ""} ${item.DMA_TIPO || ""} ${
-        item.DMA_POTENCIA || ""
-      } W`,
+    nameTemplate: (item) => `${item.DMA_NOMBREITEM || ""}`,
+    descriptionTemplate: (item) => `${item.DMA_CARACTERISTICASESP || ""}`,
     categoryLabels: CATEGORY_TYPE_LABELS,
-    categoryOrder: CATEGORY_TYPE_ORDER.LUCES,
+    categoryOrder: CATEGORY_TYPE_ORDER.HERRAMIENTAS,
   },
 
   // Configuración predeterminada para cualquier otra línea de negocio

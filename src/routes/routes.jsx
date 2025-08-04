@@ -27,17 +27,17 @@ export const ecommerceRoutes = [
     path: ROUTES.ECOMMERCE.HOME,
     element: <ClientHomeComponent />,
     exact: true,
-    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.VISUALIZACION],
   },
   {
     path: ROUTES.ECOMMERCE.CATALOGO,
     element: <Catalogo />,
-    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.VISUALIZACION],
   },
   {
     path: ROUTES.ECOMMERCE.DETALLE_PRODUCTO,
     element: <DetalleProducto />,
-    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.VISUALIZACION],
   },
   {
     path: ROUTES.ECOMMERCE.CARRITO,
@@ -57,12 +57,12 @@ export const ecommerceRoutes = [
   {
     path: ROUTES.ECOMMERCE.PERFIL,
     element: <Perfil />,
-    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.VISUALIZACION],
   },
   {
     path: ROUTES.ECOMMERCE.SEARCH,
     element: <SearchResults />,
-    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR],
+    allowedRoles: [ROLES.CLIENTE, ROLES.ADMIN, ROLES.COORDINADOR, ROLES.VISUALIZACION],
   },
 ];
 

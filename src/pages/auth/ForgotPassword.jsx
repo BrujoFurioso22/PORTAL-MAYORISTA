@@ -9,6 +9,7 @@ import styled from "styled-components";
 import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { api_users_getByEmail } from "../../api/users/apiUsers";
+import PageContainer from "../../components/layout/PageContainer";
 
 // Styled Components (reutilizando algunos del Login)
 const Container = styled(FlexBoxComponent)`
@@ -291,10 +292,13 @@ const ForgotPassword = () => {
   }, [email, code, password, confirmPassword]);
 
   return (
-    <Container
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
+    <PageContainer
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
       <Card flexDirection="column" alignItems="center">
         <BackLink onClick={handleBack}>
@@ -422,7 +426,7 @@ const ForgotPassword = () => {
           </Form>
         )}
       </Card>
-    </Container>
+    </PageContainer>
   );
 };
 

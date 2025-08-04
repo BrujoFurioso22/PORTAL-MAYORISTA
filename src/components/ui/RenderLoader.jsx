@@ -42,7 +42,7 @@ const SpinnerContainer = styled.div`
 // El spinner con su rotación
 const Loader = styled.div`
   border: 2px solid ${({ theme }) => theme?.colors?.background || "#f3f3f3"};
-  border-top: 3px solid ${({ $color }) => $color || "#fff"};
+  border-top: 3px solid ${({ $color, theme }) => $color || theme.colors.primary};
   border-radius: 50%;
   width: ${({ $size }) => $size || "24px"};
   height: ${({ $size }) => $size || "24px"};
@@ -59,10 +59,10 @@ const TextContainer = styled.div`
 
 // Texto del loader
 const LoaderText = styled.span`
-  color: ${({ $color, theme }) => $color || theme?.colors?.text || "#333"};
+  color: ${({ $color, theme }) =>
+    $color || theme?.colors?.text || theme.colors.primary};
   font-size: ${({ $size }) => {
-    const numSize = parseInt($size) || 16;
-    return `${Math.max(numSize * 0.8, 12)}px`;
+    $size || "16px";
   }};
   font-weight: 500;
 `;
@@ -136,7 +136,7 @@ const RenderLoader = ({
           <Loader $color={color} $size={size} />
         ))}
 
-      {(showText || showDots) && (
+      {(showText) && (
         <TextContainer>
           {showText && text && (
             <LoaderText $color={color} $size={size}>
