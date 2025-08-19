@@ -98,6 +98,86 @@ export const PRODUCT_LINE_CONFIG = {
     categoryLabels: CATEGORY_TYPE_LABELS,
     categoryOrder: CATEGORY_TYPE_ORDER.LLANTAS,
   },
+  ["LLANTAS MOTO"]: {
+    specs: [
+      {
+        field: "rin",
+        label: "Rin",
+        defaultValue: "-",
+        transform: (item) => item.DMA_RIN,
+      },
+      {
+        field: "ancho",
+        label: "Ancho",
+        defaultValue: "-",
+        transform: (item) => item.DMA_ANCHO,
+      },
+      {
+        field: "serie",
+        label: "Serie",
+        defaultValue: "",
+        transform: (item) => item.DMA_SERIE,
+      },
+      {
+        field: "medida",
+        label: "Medida",
+        defaultValue: "N/A",
+        transform: (item) => `${item.DMA_ANCHO || ""}R${item.DMA_RIN || ""}`,
+      },
+      {
+        field: "indiceVelocidad",
+        label: "Índice de velocidad",
+        defaultValue: "-",
+        transform: (item) => item.DMA_VELOCIDAD,
+      },
+      {
+        field: "indiceCarga",
+        label: "Índice de carga",
+        defaultValue: "-",
+        transform: (item) => item.DMA_CARGA,
+      },
+      {
+        field: "lonas",
+        label: "Lonas",
+        defaultValue: "N/D",
+        transform: (item) => item.DMA_LONAS,
+      },
+
+      {
+        field: "eje",
+        label: "Posición",
+        defaultValue: "N/A",
+        transform: (item) => item.DMA_EJE,
+      },
+      {
+        field: "aplicacion",
+        label: "Aplicación",
+        defaultValue: "N/A",
+        transform: (item) => item.DMA_APLICACION,
+      },
+    ],
+    categories: [
+      {
+        field: "DMA_CATEGORIA",
+        transform: (value) => value.toLowerCase().replace(/ /g, "_"),
+      },
+      {
+        field: "DMA_APLICACION",
+        transform: (value) => value.toLowerCase().replace(/ /g, "_"),
+      },
+      {
+        field: "DMA_SEGMENTO",
+        transform: (value) => value.toLowerCase().replace(/ /g, "_"),
+      },
+    ],
+    nameTemplate: (item) => `${item.DMA_NOMBREITEM || ""}`,
+    descriptionTemplate: (item) =>
+      `${item.DMA_MARCA || ""} ${item.DMA_DISENIO || ""} ${
+        item.DMA_APLICACION || ""
+      }`,
+    categoryLabels: CATEGORY_TYPE_LABELS,
+    categoryOrder: CATEGORY_TYPE_ORDER.LLANTAS,
+  },
 
   LUBRICANTES: {
     specs: [

@@ -627,7 +627,6 @@ const Catalogo = () => {
       setInitMessage("Cargando productos...");
       loadProductsForEmpresa(empresaName)
         .then((productos) => {
-          
           setAllProducts(productos);
           setIsLoading(false);
           setInitMessage(

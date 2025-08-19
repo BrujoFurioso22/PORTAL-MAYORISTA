@@ -8,39 +8,47 @@ import { api_products_getInfoProductos } from "../../api/products/apiProducts";
 import PageContainer from "../../components/layout/PageContainer";
 import RenderLoader from "../../components/ui/RenderLoader";
 
-const PageTitle = styled.h1`
+const WelcomeSection = styled.div`
   text-align: center;
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 2.8rem;
-  font-weight: 500;
-  margin-bottom: 1rem;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  position: relative;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 3px;
-    background: ${({ theme }) => theme.colors.primary};
-    border-radius: 2px;
-  }
-  
+  margin-bottom: 2rem;
+  padding: 1.5rem 1rem;
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  box-shadow: 0 2px 8px ${({ theme }) => theme.colors.shadow};
+`;
+
+const WelcomeTitle = styled.h2`
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+
   @media (max-width: 768px) {
-    font-size: 2.2rem;
-    letter-spacing: 0.5px;
+    font-size: 1.6rem;
   }
+`;
+
+const WelcomeSubtitle = styled.p`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 1rem;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+  }
+`;
+
+const CompaniesSection = styled.div`
+  margin-top: 1rem;
 `;
 
 const CompaniesGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
-  gap: 2.5rem;
-  padding: 1rem 0;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
   justify-items: center;
   justify-content: center;
 `;
@@ -125,14 +133,8 @@ const CompanyLogo = styled.div`
     object-fit: contain;
   }
 `;
-const CompanyName = styled.h3`
-  margin: 0;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.primary};
-  font-size: 1.3rem;
-`;
+
 const CompanyDescription = styled.p`
-  margin-top: 0.8rem;
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.9rem;
   line-height: 1.5;
@@ -177,7 +179,6 @@ const ClientHomeComponent = () => {
 
   // Función para obtener la cantidad de productos de una empresa
   const getProductCount = (empresaName) => {
-
     if (!productsInfo) {
       return 0;
     }
@@ -194,59 +195,68 @@ const ClientHomeComponent = () => {
 
   if (isLoading) {
     return (
-      <PageContainer style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-      }}>
-        <RenderLoader 
-          size="32px"
-          showSpinner={true}
-        />
+      <PageContainer
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
+        <RenderLoader size="32px" showSpinner={true} />
       </PageContainer>
     );
   }
 
   return (
     <PageContainer>
-      <PageTitle>Nuestras Empresas</PageTitle>
+      <WelcomeSection>
+        <WelcomeTitle>
+          ¡Bienvenido de vuelta,
+          <br /> {user?.NAME_USER || "Cliente"}!
+        </WelcomeTitle>
+        <WelcomeSubtitle>
+          Estamos emocionados de tenerte aquí. Explora nuestros catálogos y
+          descubre productos increíbles de las mejores empresas.
+        </WelcomeSubtitle>
+      </WelcomeSection>
 
-      <CompaniesGrid>
-        {empresas.map((empresa) => {
-          // Verificar si el usuario tiene acceso (comparando en mayúsculas)
-          const hasAccess = userAccess.includes(empresa.nombre.toUpperCase());
-          const productCount = getProductCount(empresa.nombre);
+      <CompaniesSection>
+        <CompaniesGrid>
+          {empresas.map((empresa) => {
+            // Verificar si el usuario tiene acceso (comparando en mayúsculas)
+            const hasAccess = userAccess.includes(empresa.nombre.toUpperCase());
+            const productCount = getProductCount(empresa.nombre);
 
-          return (
-            <CompanyCard
-              key={empresa.id}
-              onClick={() => handleCardClick(empresa)}
-            >
-              <AccessRibbon>
-                <RibbonContent $hasAccess={hasAccess}>
-                  {hasAccess ? "ACCESO" : "SIN ACCESO"}
-                </RibbonContent>
-              </AccessRibbon>
+            return (
+              <CompanyCard
+                key={empresa.id}
+                onClick={() => handleCardClick(empresa)}
+              >
+                <AccessRibbon>
+                  <RibbonContent $hasAccess={hasAccess}>
+                    {hasAccess ? "ACCESO" : "SIN ACCESO"}
+                  </RibbonContent>
+                </AccessRibbon>
 
-              <CompanyLogo>
-                <img src={empresa.logo} alt={`Logo de ${empresa.nombre}`} />
-              </CompanyLogo>
-              <CardBody>
-                <CompanyName>{empresa.nombre}</CompanyName>
-                <CompanyDescription>{empresa.descripcion}</CompanyDescription>
-              </CardBody>
-              <CardFooter>
-                <ProductCount>{productCount} productos</ProductCount>
-                <Button
-                  size="small"
-                  text={hasAccess ? "Ver catálogo" : "Solicitar acceso"}
-                  variant="outlined"
-                />
-              </CardFooter>
-            </CompanyCard>
-          );
-        })}
-      </CompaniesGrid>
+                <CompanyLogo>
+                  <img src={empresa.logo} alt={`Logo de ${empresa.nombre}`} />
+                </CompanyLogo>
+                <CardBody>
+                  <CompanyDescription>{empresa.descripcion}</CompanyDescription>
+                </CardBody>
+                <CardFooter>
+                  <ProductCount>{productCount} productos</ProductCount>
+                  <Button
+                    size="small"
+                    text={hasAccess ? "Ver catálogo" : "Solicitar acceso"}
+                    variant={hasAccess ? "solid" : "outlined"}
+                  />
+                </CardFooter>
+              </CompanyCard>
+            );
+          })}
+        </CompaniesGrid>
+      </CompaniesSection>
     </PageContainer>
   );
 };

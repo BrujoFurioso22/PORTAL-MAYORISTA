@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { useProductCatalog } from "../../context/ProductCatalogContext";
 import { TAXES, calculatePriceWithIVA } from "../../constants/taxes";
 import PageContainer from "../../components/layout/PageContainer";
+import ContactModal from "../../components/ui/ContactModal";
 
 const ProductLayout = styled.div`
   display: grid;
@@ -26,6 +27,7 @@ const InfoSection = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
+  position: relative;
 `;
 
 const Category = styled.div`
@@ -185,18 +187,6 @@ const ButtonsContainer = styled.div`
   margin-top: 20px;
 `;
 
-const BackLink = styled(Button)`
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.colors.primary};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding: 0;
-  margin-bottom: 24px;
-  font-size: 0.9rem;
-`;
-
 // Agregar este nuevo componente para las especificaciones
 const SpecificationsSection = styled.div`
   margin-top: 24px;
@@ -342,6 +332,7 @@ const DetalleProducto = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const imageContainerRef = useRef(null);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   const prevUrl = location.state?.prevUrl;
 
@@ -505,6 +496,14 @@ const DetalleProducto = () => {
     product.iva || TAXES.IVA_PERCENTAGE
   );
 
+  const handleOpenContactModal = () => {
+    setIsContactModalOpen(true);
+  };
+
+  const handleCloseContactModal = () => {
+    setIsContactModalOpen(false);
+  };
+
   return (
     <PageContainer backButtonText="Regresar" backButtonOnClick={navigateBack}>
       <ProductLayout>
@@ -540,7 +539,22 @@ const DetalleProducto = () => {
         </ImageSection>
 
         <InfoSection>
-          {" "}
+          {/* Botón de contacto para productos sin stock */}
+          {availableStock <= 0 && (
+            <Button
+              variant="solid"
+              size="small"
+              onClick={handleOpenContactModal}
+              leftIconName="FaHeadset"
+              iconSize={20}
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                width: "auto",
+              }}
+            />
+          )}
           {/* Mostrar categorías desde filtersByType de forma amigable */}
           <Category>
             {product.filtersByType &&
@@ -588,6 +602,7 @@ const DetalleProducto = () => {
               )}
             </StockMessage>
           </StockIndicator>
+
           <Description>{product.description}</Description>
           {renderSpecifications(product)}
           <PriceContainer>
@@ -673,6 +688,15 @@ const DetalleProducto = () => {
           )}
         </InfoSection>
       </ProductLayout>
+      {console.log(product)}
+
+      {/* Modal de contacto */}
+      <ContactModal
+        isOpen={isContactModalOpen}
+        onClose={handleCloseContactModal}
+        title="Cualquier duda, no dude en contactarnos"
+        selectedCompany={product?.empresaId}
+      />
     </PageContainer>
   );
 };
