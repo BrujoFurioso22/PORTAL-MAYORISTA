@@ -4,10 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "pm2Dev": "pm2 delete PMayoristaDev || true && pm2 start npm --name 'PMayoristaDev' -- run dev && pm2 log 'PMayoristaDev'",
     "dev": "vite --host --port 4200",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "build": "vite build"
   },
   "dependencies": {
     "@date-io/date-fns": "^3.2.1",
