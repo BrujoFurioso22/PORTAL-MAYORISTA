@@ -120,8 +120,6 @@ export function AuthProvider({ children }) {
         setIsClient(userData.ROLE_NAME === ROLES.CLIENTE);
         setIsVisualizacion(userData.ROLE_NAME === ROLES.VISUALIZACION);
 
-        toast.success("Inicio de sesión exitoso");
-
         // Redireccionar según el rol del usuario
         let redirectPath = getHomeRouteByRole(userData);
 
