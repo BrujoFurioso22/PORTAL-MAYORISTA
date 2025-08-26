@@ -37,7 +37,7 @@ const Category = styled.div`
 `;
 
 const ProductTitle = styled.h1`
-  margin: 0 0 16px 0;
+  margin: 0 0 5px 0;
   color: ${({ theme }) => theme.colors.text};
   font-size: 1.8rem;
   word-break: break-word;
@@ -57,7 +57,6 @@ const Enterprise = styled.div`
 `;
 
 const PriceContainer = styled.div`
-  margin-top: 16px;
   margin-bottom: 10px;
   display: flex;
   align-items: baseline;
@@ -75,7 +74,7 @@ const IVAIndicator = styled.span`
   color: ${({ theme }) => theme.colors.textLight};
   font-style: italic;
   display: block;
-  margin-top: 4px;
+  margin-bottom: 5px;
 `;
 
 const OriginalPrice = styled.span`
@@ -100,7 +99,7 @@ const Description = styled.p`
   /* margin-bottom: 24px; */
 `;
 const StockIndicator = styled.div`
-  margin: 16px 0;
+  margin: 10px 0;
   padding: 12px 16px;
   border-radius: 6px;
   background-color: ${
@@ -111,6 +110,7 @@ const StockIndicator = styled.div`
   };
   display: flex;
   align-items: center;
+  width: max-content;
   gap: 10px;
 `;
 
@@ -225,6 +225,55 @@ const SpecValue = styled.td`
   color: ${({ theme }) => theme.colors.text};
 `;
 
+// Componentes para los breadcrumbs
+const BreadcrumbsContainer = styled.nav`
+  margin-bottom: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const BreadcrumbsList = styled.ol`
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 8px;
+`;
+
+const BreadcrumbItem = styled.li`
+  display: flex;
+  align-items: center;
+`;
+
+const BreadcrumbLink = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme, $active }) =>
+    $active ? theme.colors.text : theme.colors.textLight};
+  text-decoration: ${({ $active }) => ($active ? "none" : "underline")};
+  cursor: ${({ $active }) => ($active ? "default" : "pointer")};
+  font-size: 0.9rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+
+  &:hover:not([disabled]) {
+    background-color: ${({ theme }) => theme.colors.background};
+    color: ${({ theme }) => theme.colors.primary};
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+`;
+
+const BreadcrumbSeparator = styled.span`
+  color: ${({ theme }) => theme.colors.textLight};
+  margin: 0 4px;
+  font-size: 0.8rem;
+`;
+
 // Estilos adicionales para el zoom de la imagen
 const ImageSection = styled.div`
   display: flex;
@@ -336,6 +385,116 @@ const DetalleProducto = () => {
 
   const prevUrl = location.state?.prevUrl;
 
+  // Función para renderizar los breadcrumbs dinámicos según el origen
+  const renderBreadcrumbs = () => {
+    let breadcrumbs = [
+      {
+        label: "Inicio",
+        onClick: () => navigateToHomeByRole(),
+        active: false,
+      },
+    ];
+
+    // Determinar el segundo breadcrumb según el origen
+    if (prevUrl) {
+      if (prevUrl.includes("/catalogo/")) {
+        // Vino desde el catálogo
+        breadcrumbs.push({
+          label: `Catálogo ${product?.empresa || product?.empresaId || ""}`,
+          onClick: () => {
+            const currentFilters = location.state?.filters || {};
+            const currentSearch = location.state?.searchTerm || "";
+            const currentSort = location.state?.sortBy || "";
+
+            navigate(prevUrl, {
+              state: {
+                filters: currentFilters,
+                searchTerm: currentSearch,
+                sortBy: currentSort,
+                preserveFilters: true,
+              },
+            });
+          },
+          active: false,
+        });
+      } else if (prevUrl.includes("/carrito")) {
+        // Vino desde el carrito
+        breadcrumbs.push({
+          label: "Carrito",
+          onClick: () => navigate(prevUrl),
+          active: false,
+        });
+      } else if (prevUrl.includes("/mis-pedidos/")) {
+        // Vino desde detalle de pedido del cliente
+        breadcrumbs.push({
+          label: "Detalle del Pedido",
+          onClick: () => navigate(prevUrl),
+          active: false,
+        });
+      } else if (prevUrl.includes("/coordinadora/pedidos/")) {
+        // Vino desde detalle de pedido del coordinador
+        breadcrumbs.push({
+          label: "Detalle del Pedido",
+          onClick: () => navigate(prevUrl),
+          active: false,
+        });
+      } else if (prevUrl.includes("/busqueda")) {
+        // Vino desde búsqueda global
+        const searchParams = new URLSearchParams(prevUrl.split("?")[1]);
+        const searchTerm = searchParams.get("q") || "Búsqueda";
+        breadcrumbs.push({
+          label: `Búsqueda: ${searchTerm}`,
+          onClick: () => navigate(prevUrl),
+          active: false,
+        });
+      } else {
+        // Otro origen - mostrar la ruta
+        const pathParts = prevUrl.split("/").filter((part) => part);
+        const lastPart = pathParts[pathParts.length - 1];
+        breadcrumbs.push({
+          label: lastPart.charAt(0).toUpperCase() + lastPart.slice(1),
+          onClick: () => navigate(prevUrl),
+          active: false,
+        });
+      }
+    } else {
+      // Sin prevUrl - ir al catálogo de la empresa
+      breadcrumbs.push({
+        label: `Catálogo ${product?.empresa || product?.empresaId || ""}`,
+        onClick: () => navigate(`/catalogo/${product?.empresaId || empresaId}`),
+        active: false,
+      });
+    }
+
+    // Agregar el producto actual
+    breadcrumbs.push({
+      label: product?.name || "Producto",
+      onClick: null,
+      active: true,
+    });
+
+    return (
+      <BreadcrumbsContainer>
+        <BreadcrumbsList>
+          {breadcrumbs.map((breadcrumb, index) => (
+            <BreadcrumbItem key={index}>
+              <BreadcrumbLink
+                onClick={breadcrumb.onClick}
+                $active={breadcrumb.active}
+                disabled={breadcrumb.active || !breadcrumb.onClick}
+              >
+                {breadcrumb.label}
+              </BreadcrumbLink>
+              {index < breadcrumbs.length - 1 && (
+                <BreadcrumbSeparator>/</BreadcrumbSeparator>
+              )}
+            </BreadcrumbItem>
+          ))}
+        </BreadcrumbsList>
+      </BreadcrumbsContainer>
+    );
+  };
+
   // Funciones para manejar el zoom
   const handleMouseEnter = () => {
     setIsHovering(true);
@@ -435,19 +594,6 @@ const DetalleProducto = () => {
     return <div>Cargando...</div>;
   }
 
-  const navigateBack = () => {
-    if (prevUrl) {
-      // Si tenemos una URL anterior guardada, navegar a ella
-      navigate(prevUrl);
-    } else if (product?.empresaId) {
-      // Fallback: navegar al catálogo de la empresa
-      navigate(`/catalogo/${product.empresaId}`);
-    } else {
-      // Si no hay información suficiente, ir al inicio
-      navigateToHomeByRole();
-    }
-  };
-
   const handleQuantityChange = (e) => {
     const value = parseInt(e.target.value);
     const max = availableStock > 100 ? 5000 : availableStock;
@@ -505,7 +651,8 @@ const DetalleProducto = () => {
   };
 
   return (
-    <PageContainer backButtonText="Regresar" backButtonOnClick={navigateBack}>
+    <PageContainer>
+      {renderBreadcrumbs()}
       <ProductLayout>
         <ImageSection>
           {/* Contenedor principal de la imagen con eventos de mouse */}
@@ -565,11 +712,31 @@ const DetalleProducto = () => {
               : "Producto sin categoría"}
           </Category>
           <ProductTitle>{product.name}</ProductTitle>
-          <Brand>Marca: {product.brand}</Brand>
-          <Enterprise>
-            Empresa: {product.empresa || product.empresaId}
-          </Enterprise>
-          {/* Nuevo indicador de stock posicionado debajo del nombre y marca */}
+
+          {/* Precio en la parte superior */}
+          <PriceContainer>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                gap: "5px",
+                alignItems: "flex-end",
+              }}
+            >
+              <CurrentPrice>${(priceWithIVA || 0).toFixed(2)}</CurrentPrice>
+              <IVAIndicator>IVA incluido</IVAIndicator>
+            </div>
+            {product.discount > 0 && (
+              <>
+                {product.discount > 0 && product.price != null && (
+                  <OriginalPrice>${product.price.toFixed(2)}</OriginalPrice>
+                )}
+                <Discount>-{product.discount}%</Discount>
+              </>
+            )}
+          </PriceContainer>
+
+          {/* Nuevo indicador de stock posicionado debajo del precio */}
           <StockIndicator $inStock={availableStock > 0}>
             <StockBadge $inStock={availableStock > 0}>
               {availableStock > 0 ? "DISPONIBLE" : "AGOTADO"}
@@ -602,71 +769,65 @@ const DetalleProducto = () => {
               )}
             </StockMessage>
           </StockIndicator>
-
-          <Description>{product.description}</Description>
-          {renderSpecifications(product)}
-          <PriceContainer>
-            <div>
-              <CurrentPrice>${(priceWithIVA || 0).toFixed(2)}</CurrentPrice>
-              <IVAIndicator>IVA incluido</IVAIndicator>
-            </div>
-            {product.discount > 0 && (
-              <>
-                {product.discount > 0 && product.price != null && (
-                  <OriginalPrice>${product.price.toFixed(2)}</OriginalPrice>
-                )}
-                <Discount>-{product.discount}%</Discount>
-              </>
-            )}
-          </PriceContainer>
+          {/* Sección de cantidad y botón en la misma línea */}
           {isClient && !isVisualizacion && (
             <div
               style={{
-                marginTop: "16px",
+                marginTop: "10px",
+                marginBottom: "20px",
                 display: "flex",
                 flexDirection: "row",
                 alignItems: "center",
-                gap: "10px",
+                gap: "20px",
+                flexWrap: "wrap",
               }}
             >
-              <div style={{ marginBottom: "0px", fontWeight: "500" }}>
-                Cantidad:
+              {/* Controles de cantidad */}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ fontWeight: "500", minWidth: "80px" }}>
+                  Cantidad:
+                </div>
+                <QuantitySelector>
+                  <QuantityButton
+                    onClick={decreaseQuantity}
+                    disabled={quantity <= 1}
+                    text={"-"}
+                  />
+                  <QuantityInput
+                    type="number"
+                    min="1"
+                    max={availableStock > 100 ? 5000 : availableStock}
+                    value={quantity}
+                    onChange={handleQuantityChange}
+                    disabled={availableStock <= 0}
+                  />
+                  <QuantityButton
+                    onClick={increaseQuantity}
+                    disabled={quantity >= availableStock}
+                    text={"+"}
+                  />
+                </QuantitySelector>
+                {currentInCart > 0 && (
+                  <span
+                    style={{
+                      fontSize: "0.85em",
+                      color: "#666",
+                      marginLeft: "8px",
+                    }}
+                  >
+                    {currentInCart} en carrito
+                  </span>
+                )}
               </div>
-              <QuantitySelector>
-                <QuantityButton
-                  onClick={decreaseQuantity}
-                  disabled={quantity <= 1}
-                  text={"-"}
-                />
-                <QuantityInput
-                  type="number"
-                  min="1"
-                  max={availableStock > 100 ? 5000 : availableStock}
-                  value={quantity}
-                  onChange={handleQuantityChange}
-                  disabled={availableStock <= 0}
-                />
-                <QuantityButton
-                  onClick={increaseQuantity}
-                  disabled={quantity >= availableStock}
-                  text={"+"}
-                />
-              </QuantitySelector>
-              {currentInCart > 0 && (
-                <span
-                  style={{
-                    fontSize: "0.85em",
-                    color: "#666",
-                    marginLeft: "8px",
-                  }}
-                >
-                  {currentInCart} en carrito
-                </span>
-              )}
-            </div>
-          )}
-          {isClient && !isVisualizacion && (
-            <ButtonsContainer>
+
+              {/* Botón de agregar al carrito */}
               <Button
                 text={
                   isAddingToCart
@@ -681,14 +842,45 @@ const DetalleProducto = () => {
                 onClick={handleAddToCart}
                 disabled={availableStock <= 0 || isAddingToCart}
                 backgroundColor={({ theme }) => theme.colors.primary}
-                size="large"
-                style={{ flex: 1 }}
+                size="medium"
+                style={{
+                  minWidth: "180px",
+                  maxWidth: "250px",
+                }}
               />
-            </ButtonsContainer>
+            </div>
           )}
+
+          <Description>
+            {/* Información de marca y empresa */}
+            <div
+              style={{
+                marginTop: "16px",
+                paddingTop: "16px",
+                borderTop: "1px solid #e0e0e0",
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ marginBottom: "10px", fontSize: "1.1em" }}>
+                  Descripción
+                </span>
+                <div
+                  style={{
+                    color: "#666",
+                    fontSize: "0.85em",
+                    marginBottom: "10px",
+                  }}
+                >
+                  Marca: {product.brand} · Empresa:{" "}
+                  {product.empresa || product.empresaId}
+                </div>
+                <span style={{ color: "#666" }}>{product.description}</span>
+              </div>
+            </div>
+          </Description>
+          {renderSpecifications(product)}
         </InfoSection>
       </ProductLayout>
-      {console.log(product)}
 
       {/* Modal de contacto */}
       <ContactModal

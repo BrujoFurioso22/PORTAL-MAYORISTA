@@ -704,6 +704,14 @@ const SearchResults = () => {
                 }
                 restricted={!product.hasAccess}
                 onRequestAccess={handleRequestAccess}
+                // Pasar información de búsqueda para preservar contexto
+                currentFilters={{
+                  searchTerm: query,
+                  sortBy: sortOption,
+                  priceRange: priceRange
+                }}
+                currentSearch={query}
+                currentSort={sortOption}
               />
             ))}
           </ProductsGrid>
@@ -727,26 +735,28 @@ const SearchResults = () => {
 
               {/* Generar botones de página */}
               {[...Array(totalPages)].map((_, index) => {
+                const pageNumber = index + 1;
+                
                 // Mostrar máximo 5 botones de página
                 if (
-                  index === 0 || // Primera página
-                  index === totalPages - 1 || // Última página
-                  (index >= currentPage - 2 && index <= currentPage + 0) // Páginas cercanas a la actual
+                  pageNumber === 1 || // Primera página
+                  pageNumber === totalPages || // Última página
+                  (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1) // Páginas cercanas a la actual
                 ) {
                   return (
                     <PageButton
-                      key={index + 1}
-                      $active={currentPage === index + 1}
-                      onClick={() => handlePageChange(index + 1)}
-                      text={index + 1}
+                      key={`page-${pageNumber}`}
+                      $active={currentPage === pageNumber}
+                      onClick={() => handlePageChange(pageNumber)}
+                      text={pageNumber}
                       size="small"
                     />
                   );
                 } else if (
-                  (index === 1 && currentPage > 3) || // Mostrar puntos suspensivos después de la primera página
-                  (index === totalPages - 2 && currentPage < totalPages - 2) // Mostrar puntos suspensivos antes de la última página
+                  (pageNumber === 2 && currentPage > 3) || // Mostrar puntos suspensivos después de la primera página
+                  (pageNumber === totalPages - 1 && currentPage < totalPages - 2) // Mostrar puntos suspensivos antes de la última página
                 ) {
-                  return <span key={index}>...</span>;
+                  return <span key={`dots-${pageNumber}`}>...</span>;
                 }
                 return null;
               })}

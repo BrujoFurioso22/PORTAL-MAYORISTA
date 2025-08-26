@@ -146,6 +146,16 @@ const ClientHomeComponent = () => {
   const [productsInfo, setProductsInfo] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
+  // Función para formatear el nombre en modo título (cada palabra con mayúscula)
+  const formatNameToTitle = (name) => {
+    if (!name) return "Cliente";
+    
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   useEffect(() => {
     const fetchProductsInfo = async () => {
       try {
@@ -212,7 +222,7 @@ const ClientHomeComponent = () => {
       <WelcomeSection>
         <WelcomeTitle>
           ¡Bienvenido de vuelta,
-          <br /> {user?.NAME_USER || "Cliente"}!
+          <br /> {formatNameToTitle(user?.NAME_USER)}!
         </WelcomeTitle>
         <WelcomeSubtitle>
           Estamos emocionados de tenerte aquí. Explora nuestros catálogos y

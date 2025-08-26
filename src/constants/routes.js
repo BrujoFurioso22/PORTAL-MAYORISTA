@@ -24,7 +24,7 @@ export const ROUTES = {
     MIS_PEDIDOS: "/mis-pedidos",
     DETALLE_PEDIDO: "/mis-pedidos/:orderId",
     PERFIL: "/perfil",
-    SEARCH: "/search",
+    SEARCH: "/busqueda",
   },
   PUBLIC: {
     NOT_FOUND: "/404",

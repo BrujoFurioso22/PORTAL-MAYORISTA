@@ -92,7 +92,7 @@ const ItemName = styled.h3`
   font-size: 1rem;
   color: ${({ theme }) => theme.colors.text};
   cursor: pointer;
-  
+
   &:hover {
     color: ${({ theme }) => theme.colors.primary};
     text-decoration: underline;
@@ -178,7 +178,7 @@ const OrderSummary = styled.div`
 
 const SummaryTitle = styled.h2`
   font-size: 1.2rem;
-  margin: 0 0 20px 0;
+  margin: 0 0 10px 0;
   padding-bottom: 12px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   color: ${({ theme }) => theme.colors.text};
@@ -200,9 +200,7 @@ const SummaryValue = styled.span`
 `;
 
 const TotalRow = styled(SummaryRow)`
-  margin-top: 20px;
-  padding-top: 12px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  padding-top: 2px;
   font-size: 1.1rem;
 `;
 
@@ -277,7 +275,6 @@ const AddressName = styled.div`
 
 const AddressDetails = styled.div`
   font-size: 0.9rem;
-  color: ${({ theme }) => theme.colors.textLight};
 `;
 
 const AddressActions = styled.div`
@@ -449,22 +446,34 @@ const CompanyCheckoutButton = styled(Button)`
   }
 `;
 
-const CartItem = ({ item, handleQuantityChange, removeFromCart, theme, navigate }) => {
+const CartItem = ({
+  item,
+  handleQuantityChange,
+  removeFromCart,
+  theme,
+  navigate,
+}) => {
   const discount = item?.discount || 0;
   const maxStock = item?.stock || 0;
-  
+
   // Calcular precio con descuento aplicado
-  const discountedPrice = discount ? item.price * (1 - discount / 100) : item.price;
-  
+  const discountedPrice = discount
+    ? item.price * (1 - discount / 100)
+    : item.price;
+
   // Calcular precio con IVA incluido
-  const priceWithIVA = calculatePriceWithIVA(discountedPrice, item.iva || TAXES.IVA_PERCENTAGE);
-  
+  const priceWithIVA = calculatePriceWithIVA(
+    discountedPrice,
+    item.iva || TAXES.IVA_PERCENTAGE
+  );
+
   const subTotal = priceWithIVA * item.quantity;
   const isOverStock = item.quantity > maxStock;
 
   const handleItemClick = () => {
     navigate(`/productos/${item.id}`, {
       state: {
+        product: item, // Pasar el producto completo
         empresaId: item.empresaId,
         prevUrl: "/carrito", // URL del carrito para el botón de regreso
       },
@@ -514,20 +523,22 @@ const CartItem = ({ item, handleQuantityChange, removeFromCart, theme, navigate 
         </StockInfo>
       </ItemDetails>
 
-              <ItemPricing>
-          <ItemPrice>${subTotal.toFixed(2)}</ItemPrice>
-          {discount > 0 && (
-            <ItemPrice $subtotal>${(item.price * item.quantity).toFixed(2)}</ItemPrice>
-          )}
-          <Button
-            onClick={() => removeFromCart(item.id)}
-            text={"Eliminar"}
-            color={theme.colors.error}
-            size="small"
-            backgroundColor={"transparent"}
-            style={{ marginTop: "auto" }}
-          />
-        </ItemPricing>
+      <ItemPricing>
+        <ItemPrice>${subTotal.toFixed(2)}</ItemPrice>
+        {discount > 0 && (
+          <ItemPrice $subtotal>
+            ${(item.price * item.quantity).toFixed(2)}
+          </ItemPrice>
+        )}
+        <Button
+          onClick={() => removeFromCart(item.id)}
+          text={"Eliminar"}
+          color={theme.colors.error}
+          size="small"
+          backgroundColor={"transparent"}
+          style={{ marginTop: "auto" }}
+        />
+      </ItemPricing>
     </CartItemContainer>
   );
 };
@@ -852,25 +863,32 @@ const Carrito = () => {
     );
 
     // Calcular total con IVA incluido para cada item
-    const itemsWithIVA = companyData.items.map(item => {
+    const itemsWithIVA = companyData.items.map((item) => {
       const discount = item?.discount || 0;
-      const discountedPrice = discount ? item.price * (1 - discount / 100) : item.price;
-      const priceWithIVA = calculatePriceWithIVA(discountedPrice, item.iva || TAXES.IVA_PERCENTAGE);
+      const discountedPrice = discount
+        ? item.price * (1 - discount / 100)
+        : item.price;
+      const priceWithIVA = calculatePriceWithIVA(
+        discountedPrice,
+        item.iva || TAXES.IVA_PERCENTAGE
+      );
       return {
         ...item,
         priceWithIVA,
-        totalWithIVA: priceWithIVA * item.quantity
+        totalWithIVA: priceWithIVA * item.quantity,
       };
     });
 
     // Subtotal con IVA incluido
-    const subtotalWithIVA = itemsWithIVA.reduce((acc, item) => acc + item.totalWithIVA, 0);
-    
+    const subtotalWithIVA = itemsWithIVA.reduce(
+      (acc, item) => acc + item.totalWithIVA,
+      0
+    );
+
     // Aplicar descuento de empresa (userDiscount)
     const userDiscount = user?.DESCUENTOS?.[company] || 0;
     const discountAmount = subtotalWithIVA * (userDiscount / 100);
     const totalConIva = subtotalWithIVA - discountAmount;
-    
 
     const productsToProcess = companyData.items.map((item) => ({
       PRODUCT_CODE: item.id,
@@ -1037,15 +1055,16 @@ const Carrito = () => {
                                 marginLeft: "8px",
                                 fontSize: "0.75rem",
                                 padding: "2px 6px",
-                                backgroundColor: theme.colors.background,
+                                backgroundColor: "transparent",
+                                border: `solid 1px ${theme.colors.primary}`,
                                 borderRadius: "4px",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "4px",
-                                color: theme.colors.textLight,
+                                color: theme.colors.primary,
                               }}
                             >
-                              <RenderIcon name="FaLock" size={10} />
+                              {/* <RenderIcon name="FaLock" size={10} /> */}
                               <span>Sistema</span>
                             </span>
                           )}
@@ -1078,7 +1097,7 @@ const Carrito = () => {
                             style={{
                               color: theme.colors.textLight,
                             }}
-                            leftIconName={"FaLock"}
+                            // leftIconName={"FaLock"}
                             size="small"
                           />
                         ) : (
@@ -1163,15 +1182,16 @@ const Carrito = () => {
                                 marginLeft: "8px",
                                 fontSize: "0.75rem",
                                 padding: "2px 6px",
-                                backgroundColor: theme.colors.background,
+                                backgroundColor: "transparent",
+                                border: `solid 1px ${theme.colors.primary}`,
                                 borderRadius: "4px",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "4px",
-                                color: theme.colors.textLight,
+                                color: theme.colors.primary,
                               }}
                             >
-                              <RenderIcon name="FaLock" size={10} />
+                              {/* <RenderIcon name="FaLock" size={10} /> */}
                               <span>Sistema</span>
                             </span>
                           )}
@@ -1202,7 +1222,7 @@ const Carrito = () => {
                               );
                             }}
                             style={{ color: theme.colors.textLight }}
-                            leftIconName={"FaLock"}
+                            // leftIconName={"FaLock"}
                             size="small"
                           />
                         ) : (
@@ -1251,23 +1271,73 @@ const Carrito = () => {
 
         <OrderSummary>
           <SummaryTitle>Resumen del pedido</SummaryTitle>
+
+          {Object.keys(groupedCart).length > 1 && (
+            <TotalRow>
+              <SummaryLabel>Total General</SummaryLabel>
+              <SummaryValue $bold>${cartTotal.toFixed(2)}</SummaryValue>
+            </TotalRow>
+          )}
+          {/* Mostrar alerta solo si hay más de una empresa */}
+          {Object.keys(groupedCart).length > 1 && (
+            <StockAlertBanner style={{ marginBottom: 12 }}>
+              <b>¡Importante!</b> Al pedir todo junto se generará un pedido
+              independiente por cada empresa. Antes de continuar, revisa que las
+              direcciones de envío y facturación estén correctas para todas las
+              empresas.
+            </StockAlertBanner>
+          )}
+          {/* Botón para pagar todo junto, solo si hay más de una empresa */}
+          {Object.keys(groupedCart).length > 1 && (
+            <Button
+              text="Pedir todo junto"
+              variant="solid"
+              backgroundColor={theme.colors.success}
+              style={{ width: "100%", marginTop: "0px" }}
+              onClick={() => {
+                setIsCheckoutAll(true);
+                setShowConfirmModal(true);
+              }}
+              disabled={!isAllAddressesSelected() || hasInsufficientStock}
+            />
+          )}
+          <Button
+            text="Seguir comprando"
+            variant="outlined"
+            style={{ width: "100%", marginTop: "12px", marginBottom: "12px" }}
+            onClick={() => navigate("/")}
+          />
+          <div
+            style={{
+              borderTop: `1px solid ${theme.colors.border}`,
+              marginBottom: "12px",
+            }}
+          ></div>
           {/* Resumen por empresa */}
           {Object.entries(groupedCart).map(([company, data]) => {
             // Calcular total con IVA incluido para cada item
-            const itemsWithIVA = data.items.map(item => {
+            const itemsWithIVA = data.items.map((item) => {
               const discount = item?.discount || 0;
-              const discountedPrice = discount ? item.price * (1 - discount / 100) : item.price;
-              const priceWithIVA = calculatePriceWithIVA(discountedPrice, item.iva || TAXES.IVA_PERCENTAGE);
+              const discountedPrice = discount
+                ? item.price * (1 - discount / 100)
+                : item.price;
+              const priceWithIVA = calculatePriceWithIVA(
+                discountedPrice,
+                item.iva || TAXES.IVA_PERCENTAGE
+              );
               return {
                 ...item,
                 priceWithIVA,
-                totalWithIVA: priceWithIVA * item.quantity
+                totalWithIVA: priceWithIVA * item.quantity,
               };
             });
 
             // Subtotal con IVA incluido
-            const subtotalWithIVA = itemsWithIVA.reduce((acc, item) => acc + item.totalWithIVA, 0);
-            
+            const subtotalWithIVA = itemsWithIVA.reduce(
+              (acc, item) => acc + item.totalWithIVA,
+              0
+            );
+
             // Aplicar descuento de empresa (userDiscount)
             const userDiscount = user?.DESCUENTOS?.[company] || 0;
             const discountAmount = subtotalWithIVA * (userDiscount / 100);
@@ -1289,7 +1359,9 @@ const Carrito = () => {
                   </SummaryRow>
                 )}
                 <SummaryRow>
-                  <SummaryLabel style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
+                  <SummaryLabel
+                    style={{ fontSize: "0.8rem", fontStyle: "italic" }}
+                  >
                     * Precios con IVA incluido
                   </SummaryLabel>
                 </SummaryRow>
@@ -1378,41 +1450,6 @@ const Carrito = () => {
               </ProcessingCard>
             </ProcessingOverlay>
           )}
-          {Object.keys(groupedCart).length > 1 && (
-            <TotalRow>
-              <SummaryLabel>Total General</SummaryLabel>
-              <SummaryValue $bold>${cartTotal.toFixed(2)}</SummaryValue>
-            </TotalRow>
-          )}
-          {/* Mostrar alerta solo si hay más de una empresa */}
-          {Object.keys(groupedCart).length > 1 && (
-            <StockAlertBanner style={{ marginBottom: 12 }}>
-              <b>¡Importante!</b> Al pedir todo junto se generará un pedido
-              independiente por cada empresa. Antes de continuar, revisa que las
-              direcciones de envío y facturación estén correctas para todas las
-              empresas.
-            </StockAlertBanner>
-          )}
-          {/* Botón para pagar todo junto, solo si hay más de una empresa */}
-          {Object.keys(groupedCart).length > 1 && (
-            <Button
-              text="Pedir todo junto"
-              variant="solid"
-              backgroundColor={theme.colors.success}
-              style={{ width: "100%", marginTop: "20px" }}
-              onClick={() => {
-                setIsCheckoutAll(true);
-                setShowConfirmModal(true);
-              }}
-              disabled={!isAllAddressesSelected() || hasInsufficientStock}
-            />
-          )}
-          <Button
-            text="Seguir comprando"
-            variant="outlined"
-            style={{ width: "100%", marginTop: "12px" }}
-            onClick={() => navigate("/")}
-          />
         </OrderSummary>
       </CartLayout>
 

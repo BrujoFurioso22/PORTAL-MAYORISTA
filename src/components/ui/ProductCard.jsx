@@ -241,18 +241,10 @@ const SpecsList = styled.ul`
 const SpecItem = styled.li`
   margin-bottom: 6px;
   color: ${({ theme }) => theme.colors.textLight};
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   display: flex;
   align-items: center;
-
-  &:before {
-    content: "•";
-    color: ${({ theme }) => theme.colors.primary};
-    font-weight: bold;
-    margin-right: 8px;
-  }
+  gap: 4px;
+  font-size: 0.85rem;
 `;
 
 const SpecLabel = styled.span`
@@ -391,6 +383,9 @@ const ProductCard = ({
   lineConfig,
   restricted = false,
   onRequestAccess,
+  currentFilters = {},
+  currentSearch = "",
+  currentSort = "",
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -423,14 +418,29 @@ const ProductCard = ({
       return;
     }
 
-    const currentUrl = `${location.pathname}${location.search}`;
+    // Construir la URL anterior según el contexto
+    let currentUrl = `${location.pathname}${location.search}`;
+    
+    // Si estamos en búsqueda, construir la URL de búsqueda
+    if (location.pathname.includes('/busqueda') && currentSearch) {
+      currentUrl = `/busqueda?q=${encodeURIComponent(currentSearch)}`;
+      if (currentSort && currentSort !== 'relevance') {
+        currentUrl += `&sort=${currentSort}`;
+      }
+      if (currentFilters?.priceRange && currentFilters.priceRange !== 'all') {
+        currentUrl += `&price=${currentFilters.priceRange}`;
+      }
+    }
 
-    // Navegar al detalle del producto pasando la URL anterior
+    // Navegar al detalle del producto pasando la URL anterior y filtros
     navigate(`/productos/${product.id}`, {
       state: {
         product,
         empresaId: product.empresaId,
         prevUrl: currentUrl, // Guardar la URL anterior para poder volver
+        filters: currentFilters,
+        searchTerm: currentSearch,
+        sortBy: currentSort,
       },
     });
   };
@@ -441,7 +451,7 @@ const ProductCard = ({
 
     setIsAddingToCart(true);
     addToCart(product, 1);
-    
+
     // Mostrar mensaje de éxito
     toast.success(`${product.name} agregado al carrito`);
 
@@ -471,15 +481,17 @@ const ProductCard = ({
   const renderSpecs = (config) => {
     if (!product.specs) return null;
 
+    const specsText = config.specs
+      .slice(0, 3)
+      .map((spec) => `${spec.label}: ${product.specs[spec.field]}`)
+      .join(" • ");
+
     return (
-      <SpecsList>
-        {config.specs.slice(0, 3).map((spec, index) => (
-          <SpecItem key={index}>
-            <SpecLabel>{spec.label}:</SpecLabel>
-            <SpecValue>{product.specs[spec.field]}</SpecValue>
-          </SpecItem>
-        ))}
-      </SpecsList>
+      <span>
+        <SpecItem>
+          <SpecValue>{specsText}</SpecValue>
+        </SpecItem>
+      </span>
     );
   };
 
@@ -543,7 +555,9 @@ const ProductCard = ({
             <RestrictedDivider />
 
             <RestrictedMessage>
-              <RestrictedMessageTitle>Acceso Restringido</RestrictedMessageTitle>
+              <RestrictedMessageTitle>
+                Acceso Restringido
+              </RestrictedMessageTitle>
               <RestrictedMessageText>
                 Este producto requiere autorización especial. Contacta a{" "}
                 {product.empresa || product.empresaId} para más información.

@@ -150,7 +150,22 @@ const App = () => {
         />
       </Routes>
 
-      <ToastContainer />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        style={{
+          top: "50px",
+          right: "20px",
+        }}
+      />
     </>
   );
 };

@@ -5,7 +5,7 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useLocation } from "react-router-dom";
 import styled from "styled-components";
 import { useAuth } from "../../context/AuthContext";
 import { empresas } from "../../mock/products";
@@ -187,6 +187,7 @@ const PageButton = styled(Button)`
 const Catalogo = () => {
   // Hooks existentes
   const { empresaName } = useParams();
+  const location = useLocation();
   const { user, navigateToHomeByRole } = useAuth();
   const [allProducts, setAllProducts] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -732,6 +733,50 @@ const Catalogo = () => {
     }
   }, [availableBusinessLines, searchParams]);
 
+  // Efecto para detectar filtros preservados al regresar del detalle del producto
+  useEffect(() => {
+    if (location.state?.preserveFilters && location.state?.filters) {
+      const { filters, searchTerm, sortBy } = location.state;
+      
+      // Aplicar filtros preservados a los searchParams
+      const newSearchParams = new URLSearchParams(searchParams);
+      
+      if (filters.categories && filters.categories.length > 0) {
+        newSearchParams.set("cat", encodeArray(filters.categories));
+      }
+      if (filters.brands && filters.brands.length > 0) {
+        newSearchParams.set("brands", encodeArray(filters.brands));
+      }
+      if (filters.priceRange) {
+        const { min, max } = filters.priceRange;
+        if (min !== undefined && max !== undefined) {
+          newSearchParams.set("price", `${min}-${max}`);
+        }
+      }
+      if (filters.rin) {
+        newSearchParams.set("rin", filters.rin);
+      }
+      if (filters.ancho) {
+        newSearchParams.set("ancho", filters.ancho);
+      }
+      if (filters.alto) {
+        newSearchParams.set("alto", filters.alto);
+      }
+      if (searchTerm) {
+        newSearchParams.set("search", searchTerm);
+      }
+      if (sortBy) {
+        newSearchParams.set("sort", sortBy);
+      }
+      
+      // Limpiar el estado para evitar re-aplicar filtros
+      setSearchParams(newSearchParams);
+      
+      // Limpiar el location.state para evitar re-aplicar en futuras navegaciones
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, searchParams, setSearchParams]);
+
   // --- Renderizado modularizado ---
 
   // Renderiza el catálogo de productos
@@ -845,6 +890,18 @@ const Catalogo = () => {
                         PRODUCT_LINE_CONFIG[product.lineaNegocio] ||
                         PRODUCT_LINE_CONFIG.DEFAULT
                       }
+                      // Pasar los filtros actuales para preservarlos en la navegación
+                      currentFilters={{
+                        categories: currentCategories,
+                        brands: currentBrands,
+                        priceRange: currentPriceRange,
+                        rin: currentRin,
+                        ancho: currentAncho,
+                        alto: currentAlto,
+                        line: selectedBusinessLine
+                      }}
+                      currentSearch={currentSearch}
+                      currentSort={currentSort}
                     />
                   );
                 })

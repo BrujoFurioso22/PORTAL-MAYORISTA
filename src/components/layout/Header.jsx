@@ -32,18 +32,14 @@ const HeaderContainer = styled.header`
 
   @media (min-width: 768px) {
     padding: 0.5rem 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
   }
 
   @media (min-width: 1024px) {
     padding: 0.5rem 3rem;
-    max-width: 1400px;
   }
 
   @media (min-width: 1440px) {
     padding: 0.5rem 4rem;
-    max-width: 1600px;
   }
 `;
 
@@ -262,7 +258,7 @@ export default function Header() {
 
   // Función para manejar la búsqueda en todas las empresas
   const handleSearchAllCompanies = () => {
-    navigate("/search");
+    navigate("/busqueda");
     setIsMobileMenuOpen(false);
   };
 
